@@ -84,10 +84,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span className="material-symbols-outlined text-[20px] transition-transform duration-300 group-hover:scale-110">inventory_2</span>
             Products
           </Link>
-          <a className="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant text-sm font-medium hover:bg-surface-container-highest hover:text-on-surface transition-all duration-300 hover:translate-x-1 cursor-pointer" href="#">
+          <Link href="/dashboard/reports" className={`nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all duration-300 ${pathname === '/dashboard/reports' ? 'bg-primary/20 text-primary border border-primary/30 shadow-[0_0_10px_rgba(125,211,252,0.1)]' : 'text-on-surface-variant border border-transparent hover:bg-surface-container-highest hover:text-on-surface hover:translate-x-1'}`}>
             <span className="material-symbols-outlined text-[20px] transition-transform duration-300 group-hover:scale-110">bar_chart</span>
             Reports
-          </a>
+          </Link>
           <a className="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant text-sm font-medium hover:bg-surface-container-highest hover:text-on-surface transition-all duration-300 hover:translate-x-1 cursor-pointer" href="#">
             <span className="material-symbols-outlined text-[20px] transition-transform duration-300 group-hover:scale-110">trending_up</span>
             Profit Report
