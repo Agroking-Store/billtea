@@ -145,7 +145,7 @@ export default function LoginPage() {
 
         setLoginSuccess(true);
         setTimeout(() => {
-          router.push('/dashboard');
+          router.push('/home');
         }, 2500);
       } catch (error: any) {
         setLoginLoading(false);

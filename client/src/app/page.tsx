@@ -43,7 +43,7 @@ export default function LandingPage() {
 
   useEffect(() => {
     if (isLoggedIn()) {
-      router.push('/dashboard');
+      router.push('/home');
     }
   }, [router]);
 
@@ -293,7 +293,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-xl font-bold text-on-surface mb-2">Web Dashboard</h3>
               <p className="text-on-surface-variant text-sm mb-6">Full-featured desktop experience for complex business management.</p>
-              <button onClick={() => router.push('/dashboard')} className="inline-flex items-center gap-2 text-primary font-semibold hover:gap-3 transition-all duration-300 cursor-pointer">
+              <button onClick={() => router.push('/home')} className="inline-flex items-center gap-2 text-primary font-semibold hover:gap-3 transition-all duration-300 cursor-pointer">
                 Launch Web App
                 <span className="material-symbols-outlined text-sm">open_in_new</span>
               </button>
