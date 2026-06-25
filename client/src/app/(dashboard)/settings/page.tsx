@@ -28,7 +28,7 @@ export default function SettingsPage() {
 
         {/* Reference Visualization */}
         <div className="mb-6 rounded-3xl overflow-hidden glass-panel h-48 relative border-none border border-primary/10">
-          <img alt="System Overview Visualization" className="w-full h-full object-cover opacity-40 mix-blend-overlay" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCd7T2gh1eueyp6qw2_5F0OMthugBtIxGUf-ChQH3t9g1sKztsekZAFcgZpLxMAqnIYqom_ljRUVMf9CqQj4eeX08dnYTOkzcOWcFmYGOL-8ZNAVdyVfXzdBuxmzlF-0TjXAZNiG0GP0UC2E9jtIKgz-bsy1lwBWg6fcjcEtFfHnAQKL6Uf1CXGWrZHzol-fw-_eiErWrsRZXhitOnF6AUY4CF-2jZBKwtLgCwL9XPcfSKxTZRKSTSSY5IsRK4amQBz9LN52NXnHfg" />
+          <img alt="System Overview Visualization" className="w-full h-full object-cover opacity-40 mix-blend-overlay" src="/images/settings-overview.png" />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent"></div>
           <div className="absolute bottom-6 left-8">
             <span className="text-primary text-xs font-bold uppercase tracking-[0.2em] mb-1 block">Global Configuration</span>

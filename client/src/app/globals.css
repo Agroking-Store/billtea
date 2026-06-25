@@ -1,4 +1,68 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
+
+@font-face {
+  font-family: 'Material Symbols Outlined';
+  font-style: normal;
+  font-weight: 200;
+  font-display: swap;
+  src: url('/fonts/material-symbols-outlined-200.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Material Symbols Outlined';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('/fonts/material-symbols-outlined-300.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Material Symbols Outlined';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/material-symbols-outlined-400.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Material Symbols Outlined';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/material-symbols-outlined-500.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Material Symbols Outlined';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/material-symbols-outlined-600.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Material Symbols Outlined';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/material-symbols-outlined-700.ttf') format('truetype');
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
 @theme {
   --color-primary: var(--primary);
@@ -202,9 +266,17 @@
 }
 
 @keyframes shimmer {
-  0% { left: -100%; }
-  20% { left: 200%; }
-  100% { left: 200%; }
+  0% {
+    left: -100%;
+  }
+
+  20% {
+    left: 200%;
+  }
+
+  100% {
+    left: 200%;
+  }
 }
 
 /* Login Page Specific Styling */
@@ -226,6 +298,7 @@
 .btn-login-glow {
   box-shadow: 0 0 15px rgba(3, 105, 161, 0.18) !important;
 }
+
 .btn-login-glow:hover {
   box-shadow: 0 0 25px rgba(3, 105, 161, 0.35) !important;
 }
@@ -233,6 +306,7 @@
 .dark .btn-login-glow {
   box-shadow: 0 0 15px rgba(125, 211, 252, 0.25) !important;
 }
+
 .dark .btn-login-glow:hover {
   box-shadow: 0 0 25px rgba(125, 211, 252, 0.45) !important;
 }
@@ -305,6 +379,7 @@
   0% {
     background-position: -1000px 0;
   }
+
   100% {
     background-position: 1000px 0;
   }
@@ -407,10 +482,13 @@
   from {
     transform: scaleY(0);
   }
+
   to {
     transform: scaleY(1);
   }
-}/* Invert calendar picker indicator in dark mode for better visibility */
+}
+
+/* Invert calendar picker indicator in dark mode for better visibility */
 .dark input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(1) brightness(1.5);
   cursor: pointer;

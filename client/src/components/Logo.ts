@@ -1,3 +1,4 @@
-export const darkLogo = "https://lh3.googleusercontent.com/aida-public/AB6AXuCI8ty8MAnAr1bn8UEJoIwEheG777PYbA1Uc8oXcBgYBgYh8ZCs78ymYZiczpAXUSefGXKLoUQlsDVrEudkAoSQKxOVyepnw8hqL4i9izowU--3kjANbkFVO_wJzWvAzb-jcOfvwJ2XwYUDvoSzGPvk5DiPumzqb5JpU7ClXKnbXOGC78MH_VzzGmwinxA-2vLQkUOO_MmXS1o334qBdhugPz0Q0jcH9Oz0nsbyGgoJg2ByrCDuMQG2Cxpq8DoEaBexXjky5sYbfFs";
+export const darkLogo = "/images/logo.png";
 
-export const lightLogo = "https://lh3.googleusercontent.com/aida-public/AB6AXuCI8ty8MAnAr1bn8UEJoIwEheG777PYbA1Uc8oXcBgYBgYh8ZCs78ymYZiczpAXUSefGXKLoUQlsDVrEudkAoSQKxOVyepnw8hqL4i9izowU--3kjANbkFVO_wJzWvAzb-jcOfvwJ2XwYUDvoSzGPvk5DiPumzqb5JpU7ClXKnbXOGC78MH_VzzGmwinxA-2vLQkUOO_MmXS1o334qBdhugPz0Q0jcH9Oz0nsbyGgoJg2ByrCDuMQG2Cxpq8DoEaBexXjky5sYbfFs";
+export const lightLogo = "/images/logo.png";
+

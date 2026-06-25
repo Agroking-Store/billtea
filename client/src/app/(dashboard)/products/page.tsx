@@ -61,7 +61,7 @@ export default function ProductsPage() {
                 <td className="px-6 py-6 text-on-surface-variant font-medium">3</td>
                 <td className="px-6 py-6">
                   <div className="w-12 h-12 rounded-lg bg-surface-container-high border border-primary/10 overflow-hidden">
-                    <img className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="CHATUR ceramic planter" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8BLudaoXQG0uj2E9FZKXFjtQV7AHhqJdyJ-deaFkJr3_PyBlwZyx0WfYPGZSZnjsRHM3Y2C0ApSqZk99W3xmV6_5HNukrJ_yi4ym2Xw2E0kfQLLL_eFYXsdCcD46X2HE10Syq0HFbam3x2nrzQqP09Nb8UF7iwaITKM3SVxAjPSXCXYJUpvKBb_ll7dLkrbJSM5Ra05jqfZYxtRNOhWeTN4A4vtWnHYtrT9StaG7zsfHgTJZbDaDg_xFxhAq97rfHw-qKUbjM8Ps"/>
+                    <img className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="CHATUR ceramic planter" src="/images/product-chatur.png"/>
                   </div>
                 </td>
                 <td className="px-6 py-6">
@@ -94,7 +94,7 @@ export default function ProductsPage() {
                 <td className="px-6 py-6 text-on-surface-variant font-medium">2</td>
                 <td className="px-6 py-6">
                   <div className="w-12 h-12 rounded-lg bg-surface-container-high border border-primary/10 overflow-hidden">
-                    <img className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="GULARKA stone planter" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCAxSCkdIdFly0JpYElVhbl2itoBEP1Sd938dglVnuimjOVyS7vI00LLV3_8NVRDMpP6Mmd_VeCrJGpFcKslP3cqEpJsx_PSGXZ8yBd1E53aX_OV1Lb8gw2i_3PreoIVXWCrDIGWSqx6iHt-tMHBP39zzsIDNnBITHjhBAcjktcz-ujJtpXNAGJodTkijh4rixQp-YWVd08J5yNdzUUvYsr6BjjNYp4pQIc4d92B8Q2qMPRPbWSSiTshUCQ19K-bQN6m_9uJnArUIM"/>
+                    <img className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="GULARKA stone planter" src="/images/product-gularka.png"/>
                   </div>
                 </td>
                 <td className="px-6 py-6">
@@ -127,7 +127,7 @@ export default function ProductsPage() {
                 <td className="px-6 py-6 text-on-surface-variant font-medium">4</td>
                 <td className="px-6 py-6">
                   <div className="w-12 h-12 rounded-lg bg-surface-container-high border border-primary/10 overflow-hidden">
-                    <img className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="PRITHVI vase" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCtAU0gPWqanlOcFR3cz5Q75xXZ8avJXYRTIdk3AejqOoLd7uyvyoNO-yA3xjL-UnsRa_lkpypVHBiZ3tXcJUKOj9xhYT1gEFeyG9HMTKGopWJ-D8_k9FKbA6clye0jXxiYfNYQh8Qt4X0lp3GB9NABLiSevNxnloLGqhZoIwPefIAMUgjlW2sApBUHGVTqQlwSwnKevynGXfivL9pxGd4t0afmtwTQOyD2biUAy1SDGcPOFB3iiYLrEkLG-r2rnBuWYwDD4m1Pydw"/>
+                    <img className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="PRITHVI vase" src="/images/product-prithvi.png"/>
                   </div>
                 </td>
                 <td className="px-6 py-6">
@@ -160,7 +160,7 @@ export default function ProductsPage() {
                 <td className="px-6 py-6 text-on-surface-variant font-medium">1</td>
                 <td className="px-6 py-6">
                   <div className="w-12 h-12 rounded-lg bg-surface-container-high border border-primary/10 overflow-hidden">
-                    <img className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="VRINDA decorative pot" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9NMz6QCn4j6XEq8ooB2eebjuMxpyHJrW1QsRVZNvMHuJOyOVGOlDdDevDOiH74Ab6dPjlzpMN7cYXz80ofAd9fw9-RRmsu8W-XuYOBfW7nrYGTmPw_BVyn2fz5It8wILJbMkcvvmWltTZpAVpC9BGOHA0tzigU7AJiZjj30JYTBpgJDfkjAnpw2E8cHIJ2JfB_raBS0kjLx3PXIGhTvstm0Wnwoyt9LPYX7A9pFRslZQ1ewO6ukXVoGR-XGnLVqmOpbTTsIlQL7k"/>
+                    <img className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="VRINDA decorative pot" src="/images/product-vrinda.png"/>
                   </div>
                 </td>
                 <td className="px-6 py-6">

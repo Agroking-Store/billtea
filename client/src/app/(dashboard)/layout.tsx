@@ -49,7 +49,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }`}>
         <div className="p-5 flex items-center gap-3 min-w-[224px] relative border-b border-outline-variant/10">
           <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none"></div>
-          <div className="size-10 shrink-0 rounded-full bg-cover bg-center border border-primary/20 shadow-[0_0_15px_rgba(125,211,252,0.1)] z-10" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCI8ty8MAnAr1bn8UEJoIwEheG777PYbA1Uc8oXcBgYBgYh8ZCs78ymYZiczpAXUSefGXKLoUQlsDVrEudkAoSQKxOVyepnw8hqL4i9izowU--3kjANbkFVO_wJzWvAzb-jcOfvwJ2XwYUDvoSzGPvk5DiPumzqb5JpU7ClXKnbXOGC78MH_VzzGmwinxA-2vLQkUOO_MmXS1o334qBdhugPz0Q0jcH9Oz0nsbyGgoJg2ByrCDuMQG2Cxpq8DoEaBexXjky5sYbfFs')" }}></div>
+          <div className="size-10 shrink-0 rounded-full bg-cover bg-center border border-primary/20 shadow-[0_0_15px_rgba(125,211,252,0.1)] z-10" style={{ backgroundImage: "url('/images/logo.png')" }}></div>
           <div className="z-10 flex-1 flex flex-col min-w-0">
             <h1 className="text-on-surface font-semibold text-lg tracking-wide leading-tight truncate">Indux Tech</h1>
             

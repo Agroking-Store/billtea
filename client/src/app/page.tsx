@@ -189,7 +189,7 @@ export default function LandingPage() {
               <img 
                 className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
                 alt="Indux Dashboard Interface" 
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuBKsx2Ph1RS-RkHTV1hXXpgVcmuCQHJUfruandWvM0KjAiLG_0fcBNOe5Bvqc6j2_oITAU_8dvpS0RygWdslm8lu3UtekdqVoXNKtlWBFsNQhnWV71iE9ZCSWuF3RJhFADpeQewh7D7qxWqbY0RlWA_eynyGGGmCIluJk8Hm67F5S2e4xGIehsftsMJtBqlLumR_oTnSrWhi8vmMCNrRQ95uFHhHG_oTb0wXQH5v-UcfBTE2r2yJ0l276yY6RmWeYBFsY1O_-sILlk" 
+                src="/images/dashboard-preview.png" 
               />
               <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-60"></div>
             </div>

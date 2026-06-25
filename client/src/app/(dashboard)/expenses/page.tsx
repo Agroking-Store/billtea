@@ -476,7 +476,7 @@ export default function ExpensesPage() {
             <img 
               className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
               alt="System crystal pattern visualization" 
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuA96SFqufnpFWpzWUvuki-oRaVPBZm1QjqEYBnhkpOGysttAGO3YL6kpbQgUOH7kCbM8KP269wRAcaloxlPP6WzYhpKE2hWBE2P9Nuc4FZK4cSf3Ih_aDPAlMkB1mGmOc0VKUyBesH0WyaB99l4pcV3Cp0vjCwSiYa-_4uuZd8msPgUBkNdzZTaKFlHQfbLhGFhkKFIqSqEIN6uGZiRGpNJsGkKoXwmMriF3XxTCPJhN92kfvmHlv-pC_sm8fUz3diFehfCqy97UTA"
+              src="/images/expenses-visualization.png"
             />
           </div>
         </section>
