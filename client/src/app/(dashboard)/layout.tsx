@@ -12,8 +12,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [user, setUser] = useState({ fullName: 'Sarang Wagh', email: 'admin@indux.com' });
+  const [user, setUser] = useState<{ fullName: string; email: string; role?: string }>({
+    fullName: 'Sarang Wagh',
+    email: 'admin@indux.com',
+    role: 'owner',
+  });
   const [mounted, setMounted] = useState(false);
+
+  // Navigation items with role-based access
+  const allNavItems = [
+    { href: '/home', icon: 'grid_view', label: 'Dashboard', roles: ['owner', 'manager', 'staff'] },
+    { href: '/quotations', icon: 'request_quote', label: 'Quotations', roles: ['owner', 'manager', 'staff'] },
+    { href: '/invoices', icon: 'receipt_long', label: 'Invoices', roles: ['owner', 'manager', 'staff'] },
+    { href: '/customers', icon: 'group', label: 'Customers', roles: ['owner', 'manager', 'staff'] },
+    { href: '/products', icon: 'inventory_2', label: 'Products', roles: ['owner', 'manager', 'staff'] },
+    { href: '/reports', icon: 'bar_chart', label: 'Reports', roles: ['owner', 'manager', 'staff'] },
+    { href: '/profit', icon: 'trending_up', label: 'Profit Report', roles: ['owner', 'manager'] },
+    { href: '/expenses', icon: 'account_balance_wallet', label: 'Expenses', roles: ['owner', 'manager', 'staff'] },
+  ];
+
+  const userRole = user.role || 'staff';
+  const filteredNavItems = allNavItems.filter(item => item.roles.includes(userRole));
+  const showSettings = userRole === 'owner' || userRole === 'manager';
 
   useEffect(() => {
     setMounted(true);
@@ -64,44 +84,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </div>
         <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto min-w-[224px] custom-scrollbar">
-          <Link href="/home" className={`nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all duration-300 ${pathname === '/home' ? 'bg-primary/20 text-primary border border-primary/30 shadow-[0_0_10px_rgba(125,211,252,0.1)]' : 'text-on-surface-variant border border-transparent hover:bg-surface-container-highest hover:text-on-surface hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-[20px] transition-transform duration-300 group-hover:scale-110">grid_view</span>
-            Dashboard
-          </Link>
-          <Link href="/quotations" className={`nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all duration-300 ${pathname === '/quotations' ? 'bg-primary/20 text-primary border border-primary/30 shadow-[0_0_10px_rgba(125,211,252,0.1)]' : 'text-on-surface-variant border border-transparent hover:bg-surface-container-highest hover:text-on-surface hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-[20px] transition-transform duration-300 group-hover:scale-110">request_quote</span>
-            Quotations
-          </Link>
-          <Link href="/invoices" className={`nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all duration-300 ${pathname === '/invoices' ? 'bg-primary/20 text-primary border border-primary/30 shadow-[0_0_10px_rgba(125,211,252,0.1)]' : 'text-on-surface-variant border border-transparent hover:bg-surface-container-highest hover:text-on-surface hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-[20px] transition-transform duration-300 group-hover:scale-110">receipt_long</span>
-            Invoices
-          </Link>
-          <Link href="/customers" className={`nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all duration-300 ${pathname === '/customers' ? 'bg-primary/20 text-primary border border-primary/30 shadow-[0_0_10px_rgba(125,211,252,0.1)]' : 'text-on-surface-variant border border-transparent hover:bg-surface-container-highest hover:text-on-surface hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-[20px] transition-transform duration-300 group-hover:scale-110">group</span>
-            Customers
-          </Link>
-          <Link href="/products" className={`nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all duration-300 ${pathname === '/products' ? 'bg-primary/20 text-primary border border-primary/30 shadow-[0_0_10px_rgba(125,211,252,0.1)]' : 'text-on-surface-variant border border-transparent hover:bg-surface-container-highest hover:text-on-surface hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-[20px] transition-transform duration-300 group-hover:scale-110">inventory_2</span>
-            Products
-          </Link>
-          <Link href="/reports" className={`nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all duration-300 ${pathname === '/reports' ? 'bg-primary/20 text-primary border border-primary/30 shadow-[0_0_10px_rgba(125,211,252,0.1)]' : 'text-on-surface-variant border border-transparent hover:bg-surface-container-highest hover:text-on-surface hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-[20px] transition-transform duration-300 group-hover:scale-110">bar_chart</span>
-            Reports
-          </Link>
-          <Link href="/profit" className={`nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all duration-300 ${pathname === '/profit' ? 'bg-primary/20 text-primary border border-primary/30 shadow-[0_0_10px_rgba(125,211,252,0.1)]' : 'text-on-surface-variant border border-transparent hover:bg-surface-container-highest hover:text-on-surface hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-[20px] transition-transform duration-300 group-hover:scale-110">trending_up</span>
-            Profit Report
-          </Link>
-          <Link href="/expenses" className={`nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all duration-300 ${pathname === '/expenses' ? 'bg-primary/20 text-primary border border-primary/30 shadow-[0_0_10px_rgba(125,211,252,0.1)]' : 'text-on-surface-variant border border-transparent hover:bg-surface-container-highest hover:text-on-surface hover:translate-x-1'}`}>
-            <span className="material-symbols-outlined text-[20px] transition-transform duration-300 group-hover:scale-110">account_balance_wallet</span>
-            Expenses
-          </Link>
-          <div className="pt-2">
-            <Link href="/settings" className={`nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all duration-300 ${pathname === '/settings' ? 'bg-primary/20 text-primary border border-primary/30 shadow-[0_0_10px_rgba(125,211,252,0.1)]' : 'text-on-surface-variant border border-transparent hover:bg-surface-container-highest hover:text-on-surface hover:translate-x-1'}`}>
-              <span className="material-symbols-outlined text-[20px] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-90">settings</span>
-              Settings
+          {filteredNavItems.map((item) => (
+            <Link key={item.href} href={item.href} className={`nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all duration-300 ${pathname === item.href ? 'bg-primary/20 text-primary border border-primary/30 shadow-[0_0_10px_rgba(125,211,252,0.1)]' : 'text-on-surface-variant border border-transparent hover:bg-surface-container-highest hover:text-on-surface hover:translate-x-1'}`}>
+              <span className="material-symbols-outlined text-[20px] transition-transform duration-300 group-hover:scale-110">{item.icon}</span>
+              {item.label}
             </Link>
-          </div>
+          ))}
+          {showSettings && (
+            <div className="pt-2">
+              <Link href="/settings" className={`nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium cursor-pointer transition-all duration-300 ${pathname === '/settings' ? 'bg-primary/20 text-primary border border-primary/30 shadow-[0_0_10px_rgba(125,211,252,0.1)]' : 'text-on-surface-variant border border-transparent hover:bg-surface-container-highest hover:text-on-surface hover:translate-x-1'}`}>
+                <span className="material-symbols-outlined text-[20px] transition-transform duration-300 group-hover:scale-110 group-hover:rotate-90">settings</span>
+                Settings
+              </Link>
+            </div>
+          )}
         </nav>
         <div className="p-4 border-t border-outline-variant/30 min-w-[224px]">
           <div 
@@ -139,15 +135,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {isDark ? 'light_mode' : 'dark_mode'}
               </span>
             </button>
-            <div className="p-1.5 glass-panel rounded-xl pl-2 pr-4 border border-outline-variant/30 hover:border-primary/45 transition-colors cursor-pointer flex items-center gap-3">
+            <Link href="/profile" className="p-1.5 glass-panel rounded-xl pl-2 pr-4 border border-outline-variant/30 hover:border-primary/45 hover:bg-surface-container-highest/20 transition-all cursor-pointer flex items-center gap-3">
               <div className="size-11 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0 overflow-hidden shadow-[0_0_10px_rgba(125,211,252,0.1)]">
                 <span className="material-symbols-outlined text-primary text-[28px] select-none">account_circle</span>
               </div>
               <div className="flex flex-col">
                 <span className="text-sm font-semibold text-on-surface leading-tight">{user.fullName}</span>
-                <span className="text-[10px] text-on-surface-variant/80 tracking-wide uppercase leading-none mt-0.5">Admin</span>
+                <span className="text-[10px] text-on-surface-variant/80 tracking-wide uppercase leading-none mt-0.5">{userRole}</span>
               </div>
-            </div>
+            </Link>
           </div>
         </header>
 

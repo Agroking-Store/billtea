@@ -3,6 +3,10 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth';
+import companyRoutes from './routes/company';
+import usersRoutes from './routes/users';
+import branchesRoutes from './routes/branches';
+import profileRoutes from './routes/profile';
 import { seedDefaultUser } from './seed';
 
 dotenv.config();
@@ -13,7 +17,16 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/billar
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+// Error handler for body-parser exceptions
+app.use((err: any, req: Request, res: Response, next: express.NextFunction) => {
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({ success: false, message: 'Payload too large. Please upload a smaller file.' });
+  }
+  next(err);
+});
 
 // Routes
 app.get('/api/health', (req: Request, res: Response) => {
@@ -21,6 +34,10 @@ app.get('/api/health', (req: Request, res: Response) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/company', companyRoutes);
+app.use('/api/users', usersRoutes);
+app.use('/api/branches', branchesRoutes);
+app.use('/api/profile', profileRoutes);
 
 // Start server and connect DB
 mongoose.connect(MONGODB_URI)

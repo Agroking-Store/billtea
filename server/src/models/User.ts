@@ -1,12 +1,20 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
+export type UserRole = 'owner' | 'manager' | 'staff';
+
 export interface IUser extends Document {
+  companyId: mongoose.Types.ObjectId | null;
+  branches: mongoose.Types.ObjectId[];
   fullName: string;
   phoneNumber: string;
   email: string;
   password: string;
   profilePicture: string;
+  role: UserRole;
+  isActive: boolean;
+  createdBy: mongoose.Types.ObjectId | null;
+  lastLoginAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -14,6 +22,16 @@ export interface IUser extends Document {
 
 const UserSchema = new Schema<IUser>(
   {
+    companyId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Company',
+      default: null,
+      index: true,
+    },
+    branches: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'Branch' }],
+      default: [],
+    },
     fullName: {
       type: String,
       required: [true, 'Full name is required'],
@@ -42,6 +60,24 @@ const UserSchema = new Schema<IUser>(
     profilePicture: {
       type: String,
       default: '',
+    },
+    role: {
+      type: String,
+      enum: ['owner', 'manager', 'staff'],
+      default: 'staff',
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    lastLoginAt: {
+      type: Date,
+      default: null,
     },
   },
   { timestamps: true }

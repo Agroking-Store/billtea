@@ -1,12 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { UserRole } from '../models/User';
 
 export interface AuthRequest extends Request {
   userId?: string;
+  companyId?: string;
+  role?: UserRole;
+  branches?: string[];
 }
 
 /**
  * Middleware to protect routes — verifies JWT from Authorization header.
+ * Injects userId, companyId, role, and branches into the request.
  * Usage: router.get('/protected', authMiddleware, handler)
  */
 export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction): void {
@@ -24,8 +29,17 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
 
   try {
     const jwtSecret = process.env.JWT_SECRET || 'fallback_secret';
-    const decoded = jwt.verify(token, jwtSecret) as { userId: string; phoneNumber: string };
+    const decoded = jwt.verify(token, jwtSecret) as {
+      userId: string;
+      phoneNumber: string;
+      companyId: string | null;
+      role: UserRole;
+      branches: string[];
+    };
     req.userId = decoded.userId;
+    req.companyId = decoded.companyId || undefined;
+    req.role = decoded.role;
+    req.branches = decoded.branches || [];
     next();
   } catch (error) {
     res.status(401).json({
