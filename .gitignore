@@ -32,6 +32,16 @@ pnpm-debug.log*
 *.sw?
 .DS_Store
 
+# Uploaded files (keep directory structure via .gitkeep)
+server/uploads/**
+!server/uploads/**/.gitkeep
+
+# Next.js
+.next/
+
 # User templates and specific directories to ignore
 Page Templates/
 stitch_indux_technology_landing_page/
+
+# Backup of old server
+server_old/

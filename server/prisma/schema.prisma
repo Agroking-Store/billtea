@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  OWNER
+  MANAGER
+  STAFF
+}
+
+enum SignatureType {
+  TEXT
+  IMAGE
+}
+
+model Company {
+  id          String   @id @default(uuid())
+  name        String
+  logo        String   @default("")
+  identifiers Json     @default("[]")
+  isActive    Boolean  @default(true)
+  createdById String?
+  createdBy   User?    @relation("CompanyCreator", fields: [createdById], references: [id])
+  branches    Branch[]
+  users       User[]   @relation("CompanyUsers")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("companies")
+}
+
+model User {
+  id               String         @id @default(uuid())
+  fullName         String
+  phoneNumber      String         @unique
+  email            String         @unique
+  password         String
+  profilePicture   String         @default("")
+  role             UserRole       @default(STAFF)
+  isActive         Boolean        @default(true)
+  companyId        String?
+  company          Company?       @relation("CompanyUsers", fields: [companyId], references: [id])
+  createdById      String?
+  createdBy        User?          @relation("UserCreator", fields: [createdById], references: [id])
+  createdUsers     User[]         @relation("UserCreator")
+  companiesCreated Company[]      @relation("CompanyCreator")
+  branches         Branch[]       @relation("UserBranches")
+  refreshTokens    RefreshToken[]
+  lastLoginAt      DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@map("users")
+}
+
+model Branch {
+  id             String        @id @default(uuid())
+  companyId      String
+  company        Company       @relation(fields: [companyId], references: [id])
+  name           String
+  isMainBranch   Boolean       @default(false)
+  address        String        @default("")
+  city           String        @default("")
+  state          String        @default("")
+  pincode        String        @default("")
+  phone          String        @default("")
+  email          String        @default("")
+  bankName       String        @default("")
+  accountNumber  String        @default("")
+  ifscCode       String        @default("")
+  upiId          String        @default("")
+  signatureType  SignatureType @default(TEXT)
+  signatureValue String        @default("")
+  isActive       Boolean       @default(true)
+  users          User[]        @relation("UserBranches")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([companyId, name])
+  @@map("branches")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}

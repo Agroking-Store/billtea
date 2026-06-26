@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { saveAuthData, API_BASE } from '../../../lib/auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -122,7 +123,7 @@ export default function LoginPage() {
     if (loginMethod === 'password') {
       setLoginLoading(true);
       try {
-        const response = await fetch('/api/auth/login', {
+        const response = await fetch(`${API_BASE}/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -134,14 +135,13 @@ export default function LoginPage() {
         const data = await response.json();
         setLoginLoading(false);
 
-        if (!response.ok) {
+        if (!response.ok || !data.success) {
           setLoginOtpError(data.message || 'Login failed. Please try again.');
           return;
         }
 
-        // Store token and user data
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+        // Store tokens and user data using updated utility
+        saveAuthData(data.accessToken, data.refreshToken, data.user);
 
         setLoginSuccess(true);
         setTimeout(() => {

@@ -31,7 +31,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: '/expenses', icon: 'account_balance_wallet', label: 'Expenses', roles: ['owner', 'manager', 'staff'] },
   ];
 
-  const userRole = user.role || 'staff';
+  const userRole = (user.role || 'staff').toLowerCase();
   const filteredNavItems = allNavItems.filter(item => item.roles.includes(userRole));
   const showSettings = userRole === 'owner' || userRole === 'manager';
 

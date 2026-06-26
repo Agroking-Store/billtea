@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { getToken } from '../../../lib/auth';
+import { apiFetch } from '../../../lib/auth';
 
 interface BranchInfo {
   _id: string;
@@ -53,10 +53,7 @@ export default function ProfilePage() {
     try {
       setLoading(true);
       setError('');
-      const token = getToken();
-      const res = await fetch('/api/profile', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await apiFetch('/profile');
       const data = await res.json();
       if (data.success) {
         setProfile(data);
@@ -84,13 +81,8 @@ export default function ProfilePage() {
     setSaving(true);
     setSaveMessage({ type: '', text: '' });
     try {
-      const token = getToken();
-      const res = await fetch('/api/profile', {
+      const res = await apiFetch('/profile', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(editForm),
       });
       let data;
@@ -133,13 +125,8 @@ export default function ProfilePage() {
       setSaving(true);
       setSaveMessage({ type: '', text: '' });
       try {
-        const token = getToken();
-        const res = await fetch('/api/profile', {
+        const res = await apiFetch('/profile', {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
           body: JSON.stringify({ profilePicture: base64String }),
         });
         let data;
