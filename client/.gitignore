@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# eslint
+.eslintcache
+
+# AI and IDE specific
+.cursor/
+.cursorignore
+.gemini/
+.antigravityignore
