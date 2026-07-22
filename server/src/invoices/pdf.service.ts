@@ -352,8 +352,6 @@ export class PdfService {
 
       <div class="header-grid">
         <div class="header-left">
-          <!-- Placeholder logo mimicking the image layout -->
-          <div style="width: 80px; height: 50px; background: #eee; display: flex; align-items:center; justify-content:center; border: 1px solid #ddd; font-size:10px; color:#999;">Logo</div>
           <div class="company-info">
             <h1 class="company-name">${company.name}</h1>
             <p>${branch.address}, ${branch.city}, ${branch.state} ${branch.pincode}</p>

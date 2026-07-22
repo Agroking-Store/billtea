@@ -367,26 +367,26 @@ function BranchSettingsContent() {
           <div className="bg-surface w-full max-w-3xl max-h-[90vh] flex flex-col rounded-[2rem] relative shadow-2xl shadow-primary/10 border border-outline-variant/20 overflow-hidden">
             
             {/* Modal Header */}
-            <div className="px-8 py-6 border-b border-outline-variant/20 flex justify-between items-center bg-surface-container-lowest">
+            <div className="px-6 py-5 sm:px-8 sm:py-6 border-b border-outline-variant/20 flex justify-between items-center bg-surface-container-lowest">
               <div className="flex items-center gap-5">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary flex items-center justify-center border border-primary/20 shadow-inner">
-                  <span className="material-symbols-outlined text-[28px]">{modalMode === 'create' ? 'add_business' : 'edit_square'}</span>
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary flex items-center justify-center border border-primary/20 shadow-inner shrink-0">
+                  <span className="material-symbols-outlined text-[24px] sm:text-[28px]">{modalMode === 'create' ? 'add_business' : 'edit_square'}</span>
                 </div>
                 <div>
-                  <h2 className="text-2xl md:text-3xl font-black text-on-surface tracking-tight">{modalMode === 'create' ? 'Create New Branch' : 'Edit Branch'}</h2>
-                  <p className="text-sm text-on-surface-variant mt-1 font-medium">{modalMode === 'create' ? 'Add a new operational location to your company.' : 'Update the details for this location.'}</p>
+                  <h2 className="text-xl md:text-3xl font-black text-on-surface tracking-tight">{modalMode === 'create' ? 'Create New Branch' : 'Edit Branch'}</h2>
+                  <p className="text-xs sm:text-sm text-on-surface-variant mt-1 font-medium">{modalMode === 'create' ? 'Add a new operational location to your company.' : 'Update the details for this location.'}</p>
                 </div>
               </div>
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="w-12 h-12 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full transition-all"
+                className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full transition-all"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
             {/* Modal Body (Scrollable) */}
-            <div className="p-8 overflow-y-auto bg-surface">
+            <div className="p-6 sm:p-8 overflow-y-auto bg-surface">
               
               {/* Form Error Banner */}
               {formError && (
@@ -409,7 +409,7 @@ function BranchSettingsContent() {
                     </div>
                     <h3 className="text-base font-bold text-on-surface uppercase tracking-widest">Basic Details</h3>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/20">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface-container-lowest p-4 sm:p-6 rounded-3xl border border-outline-variant/20">
                     <div className="md:col-span-2">
                       <label className="block text-sm font-bold text-on-surface mb-2">Branch Name <span className="text-red-500">*</span></label>
                       <input 
@@ -448,7 +448,7 @@ function BranchSettingsContent() {
                     </div>
                     <h3 className="text-base font-bold text-on-surface uppercase tracking-widest">Location & Tax</h3>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/20">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface-container-lowest p-4 sm:p-6 rounded-3xl border border-outline-variant/20">
                     <div className="md:col-span-2">
                       <label className="block text-sm font-bold text-on-surface mb-2">Address Line</label>
                       <input 
@@ -522,7 +522,7 @@ function BranchSettingsContent() {
                     </div>
                     <span className="px-3 py-1 bg-surface-container text-on-surface-variant text-xs font-bold rounded-full">OPTIONAL</span>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/20">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface-container-lowest p-4 sm:p-6 rounded-3xl border border-outline-variant/20">
                     <div>
                       <label className="block text-sm font-bold text-on-surface mb-2">Bank Name</label>
                       <input 
@@ -573,7 +573,7 @@ function BranchSettingsContent() {
                     </div>
                     <span className="px-3 py-1 bg-surface-container text-on-surface-variant text-xs font-bold rounded-full">OPTIONAL</span>
                   </div>
-                  <div className="bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/20">
+                  <div className="bg-surface-container-lowest p-4 sm:p-6 rounded-3xl border border-outline-variant/20">
                     <div>
                       <label className="block text-sm font-bold text-on-surface mb-2">Signature Text</label>
                       <input 
@@ -627,24 +627,24 @@ function BranchSettingsContent() {
             </div>
 
             {/* Modal Footer */}
-            <div className="px-8 py-6 border-t border-outline-variant/20 bg-surface-container-lowest flex justify-between items-center gap-4">
+            <div className="px-6 py-4 sm:px-8 sm:py-6 border-t border-outline-variant/20 bg-surface-container-lowest flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 {modalMode === 'edit' && !formData.isMainBranch && (
                   <button
                     type="button"
                     onClick={() => selectedBranchId && handleDeactivate(selectedBranchId, formData.name)}
-                    className="px-6 py-4 rounded-xl text-base font-bold text-red-500 hover:bg-red-500/10 transition-colors flex items-center gap-2"
+                    className="w-full sm:w-auto px-6 py-4 rounded-xl text-base font-bold text-red-500 hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2"
                   >
                     <span className="material-symbols-outlined text-[20px]">delete</span>
                     Delete
                   </button>
                 )}
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto justify-end">
                 <button 
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-8 py-4 rounded-xl text-base font-bold text-on-surface hover:bg-surface-container-high transition-colors"
+                  className="w-full sm:w-auto px-8 py-4 rounded-xl text-base font-bold text-on-surface hover:bg-surface-container-high transition-colors"
                 >
                   Cancel
                 </button>
@@ -652,7 +652,7 @@ function BranchSettingsContent() {
                   type="submit"
                   form="branch-form"
                   disabled={isSubmitting}
-                  className="bg-primary text-on-primary px-10 py-4 rounded-xl text-base font-bold transition-all shadow-lg shadow-primary/30 hover:-translate-y-1 hover:shadow-primary/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-3 relative overflow-hidden group"
+                  className="w-full sm:w-auto bg-primary text-on-primary px-10 py-4 rounded-xl text-base font-bold transition-all shadow-lg shadow-primary/30 hover:-translate-y-1 hover:shadow-primary/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-3 relative overflow-hidden group"
                 >
                   <div className="absolute inset-0 w-full h-full bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out" />
                   {isSubmitting ? (

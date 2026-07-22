@@ -12,6 +12,10 @@ export default function SettingsPage() {
   const [themeColor, setThemeColor] = useState('#0ea5e9');
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingSettings, setIsLoadingSettings] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const toggleDropdown = (name: string) => {
+    setActiveDropdown(prev => prev === name ? null : name);
+  };
 
   // Fetch branch details when modal opens
   useEffect(() => {
@@ -57,7 +61,14 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 md:p-8 z-0 relative overflow-x-hidden selection:bg-primary/30">
+    <>
+      {activeDropdown && (
+        <div 
+          className="fixed inset-0 z-40 cursor-default" 
+          onClick={() => setActiveDropdown(null)} 
+        />
+      )}
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 z-0 relative overflow-x-hidden selection:bg-primary/30">
       <style dangerouslySetInnerHTML={{
         __html: `
         @keyframes fadeSlideUp {
@@ -134,13 +145,13 @@ export default function SettingsPage() {
                 <p className="text-on-surface-variant text-sm leading-relaxed mb-8 flex-grow">
                   Invite team members, assign roles, and manage access permissions across your organization.
                 </p>
-                <div className="flex items-center gap-3">
-                  <Link href="/settings/users" className="flex-1 glass-button-icon py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 group-hover:border-tertiary/30 group-hover:text-tertiary transition-all">
+                <div className="flex flex-col sm:flex-row items-center gap-3">
+                  <Link href="/settings/users" className="w-full sm:flex-1 glass-button-icon py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 group-hover:border-tertiary/30 group-hover:text-tertiary transition-all">
                     <span className="material-symbols-outlined text-lg">settings</span> Manage
                   </Link>
-                  <button className="flex-1 bg-tertiary/10 border border-tertiary/30 hover:bg-tertiary/20 text-tertiary py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:shadow-[0_0_20px_rgba(200,160,240,0.2)]">
+                  <Link href="/settings/users?action=create" className="w-full sm:flex-1 bg-tertiary/10 border border-tertiary/30 hover:bg-tertiary/20 text-tertiary py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:shadow-[0_0_20px_rgba(200,160,240,0.2)]">
                     <span className="material-symbols-outlined text-lg">person_add</span> Create User
-                  </button>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -311,7 +322,7 @@ export default function SettingsPage() {
       {/* Quotation Settings Modal - Refined */}
       {showQuotationSettings && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-fade-slide-up" style={{ animationDuration: '0.3s' }}>
-          <div className="glass-elevated w-full max-w-lg p-8 rounded-3xl relative border border-primary/20 shadow-[0_0_50px_rgba(125,211,252,0.2)]">
+          <div className="glass-elevated w-full max-w-lg p-6 sm:p-8 rounded-3xl relative border border-primary/20 shadow-[0_0_50px_rgba(125,211,252,0.2)]">
             <button
               onClick={() => setShowQuotationSettings(false)}
               className="absolute top-6 right-6 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high p-2 rounded-full transition-all"
@@ -336,15 +347,38 @@ export default function SettingsPage() {
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-bold text-on-surface mb-2">Layout Layout</label>
-                  <select
-                    value={quotationTheme}
-                    onChange={(e) => setQuotationTheme(e.target.value)}
-                    className="w-full bg-surface-container/50 border border-outline-variant/30 rounded-xl px-4 py-3.5 text-on-surface focus:outline-none focus:border-primary/60 focus:ring-4 focus:ring-primary/10 transition-all cursor-pointer font-medium"
-                  >
-                    <option value="INDUX_MODERN">Indux Modern (Recommended)</option>
-                    <option value="CLASSIC">Classic Corporate</option>
-                    <option value="MINIMAL">Minimalist</option>
-                  </select>
+                  <div className="relative w-full" style={{ zIndex: activeDropdown === 'quotationTheme' ? 50 : 10 }}>
+                    <button
+                      type="button"
+                      className="w-full bg-surface-container/50 border border-outline-variant/30 rounded-xl px-4 py-3.5 text-on-surface focus:outline-none focus:border-primary/60 focus:ring-4 focus:ring-primary/10 transition-all cursor-pointer font-medium flex items-center justify-between"
+                      onClick={() => toggleDropdown('quotationTheme')}
+                    >
+                      <span>
+                        {quotationTheme === 'INDUX_MODERN' ? 'Indux Modern (Recommended)' :
+                         quotationTheme === 'CLASSIC' ? 'Classic Corporate' :
+                         quotationTheme === 'MINIMAL' ? 'Minimalist' : 'Select Layout'}
+                      </span>
+                      <span className={`material-symbols-outlined text-on-surface-variant text-[20px] transition-transform duration-200 ${activeDropdown === 'quotationTheme' ? 'rotate-180' : ''}`}>expand_more</span>
+                    </button>
+                    
+                    {activeDropdown === 'quotationTheme' && (
+                      <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-surface-container-highest rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
+                        {[
+                          { value: 'INDUX_MODERN', label: 'Indux Modern (Recommended)' },
+                          { value: 'CLASSIC', label: 'Classic Corporate' },
+                          { value: 'MINIMAL', label: 'Minimalist' }
+                        ].map(theme => (
+                          <div 
+                            key={theme.value}
+                            onClick={() => { setQuotationTheme(theme.value); setActiveDropdown(null); }} 
+                            className={`px-4 py-3 text-sm cursor-pointer transition-colors ${quotationTheme === theme.value ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
+                          >
+                            {theme.label}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div>
@@ -414,5 +448,6 @@ export default function SettingsPage() {
         <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-on-surface-variant to-transparent"></div>
       </footer>
     </div>
+    </>
   );
 }

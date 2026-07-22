@@ -156,7 +156,7 @@ export default function SubscriptionPage() {
   const filteredPlans = plans.filter(p => p.billingCycle === billingCycle && p.rank !== 'TRIAL');
 
   return (
-    <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
+    <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8">
       <div className="max-w-6xl mx-auto space-y-8">
         
         {/* Header */}
@@ -249,22 +249,23 @@ export default function SubscriptionPage() {
             <p className="text-on-surface-variant mt-2 text-sm">Choose the perfect plan for your business needs.</p>
             
             {/* Billing Toggle */}
-            <div className="inline-flex bg-surface-container-low p-1 rounded-full border border-outline-variant/30 mt-6 relative">
+            <div className="flex w-full max-w-xs sm:max-w-md mx-auto bg-surface-container-low p-1 rounded-full border border-outline-variant/30 mt-6 relative">
               <div 
                 className="absolute top-1 bottom-1 w-[calc(50%-4px)] bg-primary rounded-full transition-all duration-300 shadow-md shadow-primary/20"
                 style={{ left: billingCycle === 'MONTHLY' ? '4px' : 'calc(50% + 0px)' }}
               ></div>
               <button 
                 onClick={() => setBillingCycle('MONTHLY')}
-                className={`relative z-10 px-6 py-2 text-sm font-semibold rounded-full transition-colors ${billingCycle === 'MONTHLY' ? 'text-on-primary' : 'text-on-surface-variant hover:text-on-surface'}`}
+                className={`flex-1 relative z-10 py-2.5 text-sm font-semibold rounded-full transition-colors text-center ${billingCycle === 'MONTHLY' ? 'text-on-primary' : 'text-on-surface-variant hover:text-on-surface'}`}
               >
                 Monthly
               </button>
               <button 
                 onClick={() => setBillingCycle('YEARLY')}
-                className={`relative z-10 px-6 py-2 text-sm font-semibold rounded-full transition-colors flex items-center gap-2 ${billingCycle === 'YEARLY' ? 'text-on-primary' : 'text-on-surface-variant hover:text-on-surface'}`}
+                className={`flex-1 relative z-10 py-2.5 text-sm font-semibold rounded-full transition-colors flex items-center justify-center gap-1 sm:gap-2 ${billingCycle === 'YEARLY' ? 'text-on-primary' : 'text-on-surface-variant hover:text-on-surface'}`}
               >
-                Yearly <span className="text-[10px] bg-success/20 text-success px-2 py-0.5 rounded-full font-bold">SAVE 20%</span>
+                <span>Yearly</span>
+                <span className="text-[9px] sm:text-[10px] bg-success/20 text-success px-1.5 sm:px-2 py-0.5 rounded-full font-bold whitespace-nowrap">SAVE 20%</span>
               </button>
             </div>
           </div>

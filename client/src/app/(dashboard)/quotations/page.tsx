@@ -48,6 +48,7 @@ export default function QuotationsPage() {
 
   // ---- Filters state (Customer / Date range) ----
   const [customerFilter, setCustomerFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
@@ -58,9 +59,9 @@ export default function QuotationsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const [activeDropdown, setActiveDropdown] = useState<'customer' | 'entries' | null>(null);
+  const [activeDropdown, setActiveDropdown] = useState<'customer' | 'status' | 'entries' | null>(null);
 
-  const toggleDropdown = (name: 'customer' | 'entries') => {
+  const toggleDropdown = (name: 'customer' | 'status' | 'entries') => {
     setActiveDropdown(prev => prev === name ? null : name);
   };
 
@@ -260,6 +261,10 @@ export default function QuotationsPage() {
       return false;
     }
 
+    if (statusFilter && q.status !== statusFilter) {
+      return false;
+    }
+
     if (fromDate || toDate) {
       const qDate = new Date(q.quotationDate);
 
@@ -279,10 +284,11 @@ export default function QuotationsPage() {
     return true;
   });
   const hasActiveFilters = Boolean(
-    searchQuery || customerFilter || fromDate || toDate
+    searchQuery || customerFilter || statusFilter || fromDate || toDate
   );
   const handleClearFilters = () => {
     setCustomerFilter('');
+    setStatusFilter('');
     setFromDate('');
     setToDate('');
     setSearchQuery('');
@@ -511,7 +517,7 @@ export default function QuotationsPage() {
 
           {/* Filters Section */}
           <section
-            className="glass-panel rounded-3xl p-6 transition-transform duration-300 hover:-translate-y-1 animate-fade-slide-up relative overflow-hidden shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]"
+            className="glass-panel rounded-3xl p-6 transition-transform duration-300 hover:-translate-y-1 animate-fade-slide-up relative overflow-visible shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]"
             style={{ animationDelay: '0.15s' }}
           >
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
@@ -563,6 +569,51 @@ export default function QuotationsPage() {
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${customerFilter === name ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           {name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex-1 min-w-[200px] relative" style={{ zIndex: activeDropdown === 'status' ? 50 : 10 }}>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-on-surface-variant mb-2 ml-1">
+                  Status
+                </label>
+                <div className="relative">
+                  <button
+                    type="button"
+                    className="w-full bg-surface-container border border-outline-variant/30 rounded-xl pl-4 pr-10 py-3 text-sm font-medium text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all text-left flex items-center justify-between min-h-[46px] cursor-pointer"
+                    onClick={() => toggleDropdown('status')}
+                  >
+                    <span>
+                      {statusFilter === '' && 'All Status'}
+                      {statusFilter === 'DRAFT' && 'Draft'}
+                      {statusFilter === 'SENT' && 'Sent'}
+                      {statusFilter === 'ACCEPTED' && 'Accepted'}
+                      {statusFilter === 'EXPIRED' && 'Expired'}
+                    </span>
+                    <span className={`material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] transition-transform duration-200 ${activeDropdown === 'status' ? 'rotate-180' : ''}`}>expand_more</span>
+                  </button>
+
+                  {activeDropdown === 'status' && (
+                    <div className="absolute top-full left-0 right-0 mt-1 z-[60] bg-surface-container-highest rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
+                      <div 
+                        onClick={() => { setStatusFilter(''); setActiveDropdown(null); }} 
+                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${statusFilter === '' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
+                      >
+                        All Status
+                      </div>
+                      {['DRAFT', 'SENT', 'ACCEPTED', 'EXPIRED'].map((status) => (
+                        <div 
+                          key={status}
+                          onClick={() => { setStatusFilter(status); setActiveDropdown(null); }} 
+                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${statusFilter === status ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
+                        >
+                          {status === 'DRAFT' && 'Draft'}
+                          {status === 'SENT' && 'Sent'}
+                          {status === 'ACCEPTED' && 'Accepted'}
+                          {status === 'EXPIRED' && 'Expired'}
                         </div>
                       ))}
                     </div>

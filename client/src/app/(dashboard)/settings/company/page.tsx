@@ -351,7 +351,7 @@ export default function CompanySettingsPage() {
                           type="text"
                           readOnly
                           defaultValue={company?.id || ""}
-                          className="w-full bg-surface-container border-2 border-transparent rounded-xl px-5 py-4 text-on-surface font-mono opacity-80"
+                          className="w-full bg-surface-container border-2 border-transparent rounded-xl pl-5 pr-12 py-4 text-on-surface font-mono opacity-80"
                         />
                         <span className="material-symbols-outlined absolute right-5 top-1/2 -translate-y-1/2 text-on-surface-variant/50">lock</span>
                       </div>
@@ -364,7 +364,7 @@ export default function CompanySettingsPage() {
                           type="text"
                           readOnly
                           defaultValue={company?.createdBy?.fullName || ""}
-                          className="w-full bg-surface-container border-2 border-transparent rounded-xl px-5 py-4 text-on-surface opacity-80 font-medium"
+                          className="w-full bg-surface-container border-2 border-transparent rounded-xl pl-5 pr-12 py-4 text-on-surface opacity-80 font-medium"
                         />
                         <span className="material-symbols-outlined absolute right-5 top-1/2 -translate-y-1/2 text-on-surface-variant/50">person</span>
                       </div>

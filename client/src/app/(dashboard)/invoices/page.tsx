@@ -595,7 +595,7 @@ export default function InvoicesPage() {
       </div>
 
        {/* Filters Section */}
-        <section className="glass-panel p-6 md:p-8 rounded-3xl relative overflow-hidden animate-fade-slide-up shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]" style={{ animationDelay: '0.2s' }}>
+        <section className="glass-panel p-6 md:p-8 rounded-3xl relative z-20 overflow-visible animate-fade-slide-up shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]" style={{ animationDelay: '0.2s' }}>
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
           
           <div className="flex items-center justify-between gap-3 mb-6 flex-wrap relative z-10">

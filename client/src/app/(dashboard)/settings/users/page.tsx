@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { apiFetch, API_BASE } from '@/lib/auth';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function UserManagementPage() {
+function UserManagementContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [users, setUsers] = useState<any[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +48,12 @@ export default function UserManagementPage() {
     // In a real app we might get the user role from auth context
     // We assume the caller checks or we handle 403 gracefully
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get("action") === "create" && !loading) {
+      handleOpenModal('create');
+    }
+  }, [searchParams, loading]);
 
   const fetchData = async () => {
     try {
@@ -352,12 +359,12 @@ export default function UserManagementPage() {
                     </div>
 
                     {/* Footer Actions */}
-                    <div className="pt-5 border-t border-outline-variant/20 flex items-center justify-between">
+                    <div className="pt-5 border-t border-outline-variant/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex items-center gap-2 text-xs font-medium text-on-surface-variant">
                         <span className="material-symbols-outlined text-[16px] text-primary/70">history</span>
                         Last Login: {formatLastLogin(user.lastLoginAt)}
                       </div>
-                      <button onClick={() => handleOpenModal('edit', user)} className="h-10 px-5 rounded-xl bg-surface-container hover:bg-primary border border-outline-variant/30 text-on-surface hover:text-on-primary font-bold flex items-center gap-2 transition-all duration-300">
+                      <button onClick={() => handleOpenModal('edit', user)} className="h-10 w-full sm:w-auto px-5 rounded-xl bg-surface-container hover:bg-primary border border-outline-variant/30 text-on-surface hover:text-on-primary font-bold flex items-center justify-center gap-2 transition-all duration-300">
                         <span className="material-symbols-outlined text-[16px]">edit</span>
                         Manage
                       </button>
@@ -375,22 +382,22 @@ export default function UserManagementPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-background/80 backdrop-blur-md animate-fade-slide-up" style={{ animationDuration: '0.4s' }}>
           <div className="bg-surface w-full max-w-3xl max-h-[90vh] flex flex-col rounded-[2rem] relative shadow-2xl shadow-primary/10 border border-outline-variant/20 overflow-hidden">
             
-            <div className="px-8 py-6 border-b border-outline-variant/20 flex justify-between items-center bg-surface-container-lowest">
+            <div className="px-6 py-5 sm:px-8 sm:py-6 border-b border-outline-variant/20 flex justify-between items-center bg-surface-container-lowest">
               <div className="flex items-center gap-5">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary flex items-center justify-center border border-primary/20 shadow-inner">
-                  <span className="material-symbols-outlined text-[28px]">{modalMode === 'create' ? 'person_add' : 'manage_accounts'}</span>
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary flex items-center justify-center border border-primary/20 shadow-inner shrink-0">
+                  <span className="material-symbols-outlined text-[24px] sm:text-[28px]">{modalMode === 'create' ? 'person_add' : 'manage_accounts'}</span>
                 </div>
                 <div>
-                  <h2 className="text-2xl md:text-3xl font-black text-on-surface tracking-tight">{modalMode === 'create' ? 'Add New Staff' : 'Manage Staff Profile'}</h2>
-                  <p className="text-sm text-on-surface-variant mt-1 font-medium">{modalMode === 'create' ? 'Create a manager account and assign branches.' : 'Update credentials, status, or branch assignments.'}</p>
+                  <h2 className="text-xl md:text-3xl font-black text-on-surface tracking-tight">{modalMode === 'create' ? 'Add New Staff' : 'Manage Staff Profile'}</h2>
+                  <p className="text-xs sm:text-sm text-on-surface-variant mt-1 font-medium">{modalMode === 'create' ? 'Create a manager account and assign branches.' : 'Update credentials, status, or branch assignments.'}</p>
                 </div>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="w-12 h-12 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full transition-all">
+              <button onClick={() => setIsModalOpen(false)} className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full transition-all">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            <div className="p-8 overflow-y-auto bg-surface">
+            <div className="p-6 sm:p-8 overflow-y-auto bg-surface">
               {formError && (
                 <div className="mb-8 p-5 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 flex items-start gap-4">
                   <span className="material-symbols-outlined mt-0.5 bg-red-500/20 p-1 rounded-full">error</span>
@@ -410,7 +417,7 @@ export default function UserManagementPage() {
                     <h3 className="text-base font-bold text-on-surface uppercase tracking-widest">Personal Details</h3>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/20">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface-container-lowest p-4 sm:p-6 rounded-3xl border border-outline-variant/20">
                     <div className="md:col-span-2 flex items-center gap-6 mb-2">
                       <div className="w-24 h-24 rounded-2xl bg-surface-container border border-outline-variant/30 flex items-center justify-center overflow-hidden relative group/photo">
                         {formData.profilePicture ? (
@@ -469,7 +476,7 @@ export default function UserManagementPage() {
                     <h3 className="text-base font-bold text-on-surface uppercase tracking-widest">Branch Access</h3>
                   </div>
                   
-                  <div className="bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/20">
+                  <div className="bg-surface-container-lowest p-4 sm:p-6 rounded-3xl border border-outline-variant/20">
                     <p className="text-sm font-medium text-on-surface-variant mb-4">Select the branches this manager should have access to.</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {branches.map(b => (
@@ -489,19 +496,19 @@ export default function UserManagementPage() {
               </form>
             </div>
 
-            <div className="px-8 py-6 border-t border-outline-variant/20 bg-surface-container-lowest flex justify-between items-center gap-4">
+            <div className="px-6 py-4 sm:px-8 sm:py-6 border-t border-outline-variant/20 bg-surface-container-lowest flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 {modalMode === 'edit' && (
-                  <button type="button" onClick={handleDelete} className="px-6 py-4 rounded-xl text-base font-bold text-red-500 hover:bg-red-500/10 transition-colors flex items-center gap-2">
+                  <button type="button" onClick={handleDelete} className="w-full sm:w-auto px-6 py-4 rounded-xl text-base font-bold text-red-500 hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2">
                     <span className="material-symbols-outlined text-[20px]">delete</span> Delete
                   </button>
                 )}
               </div>
-              <div className="flex items-center gap-4">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-8 py-4 rounded-xl text-base font-bold text-on-surface hover:bg-surface-container-high transition-colors">
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto justify-end">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="w-full sm:w-auto px-8 py-4 rounded-xl text-base font-bold text-on-surface hover:bg-surface-container-high transition-colors">
                   Cancel
                 </button>
-                <button type="submit" form="staff-form" disabled={isSubmitting} className="bg-primary text-on-primary px-10 py-4 rounded-xl text-base font-bold transition-all shadow-lg shadow-primary/30 hover:-translate-y-1 hover:shadow-primary/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-3 relative overflow-hidden group">
+                <button type="submit" form="staff-form" disabled={isSubmitting} className="w-full sm:w-auto bg-primary text-on-primary px-10 py-4 rounded-xl text-base font-bold transition-all shadow-lg shadow-primary/30 hover:-translate-y-1 hover:shadow-primary/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-3 relative overflow-hidden group">
                   <div className="absolute inset-0 w-full h-full bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out" />
                   {isSubmitting ? (
                     <><span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span> Saving...</>
@@ -516,5 +523,13 @@ export default function UserManagementPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function UserManagementPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-on-surface-variant flex items-center justify-center h-full"><span className="material-symbols-outlined animate-spin text-4xl">progress_activity</span></div>}>
+      <UserManagementContent />
+    </Suspense>
   );
 }

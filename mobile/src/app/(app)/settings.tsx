@@ -86,10 +86,26 @@ export default function SettingsScreen() {
 
       <SafeAreaView style={styles.safeArea}>
         {/* Custom Header Bar */}
-        <View style={styles.header}>
-          {Platform.OS === 'ios' && (
-            <BlurView intensity={10} tint="dark" style={StyleSheet.absoluteFill} />
-          )}
+        <View
+  style={[
+    styles.header,
+    {
+      backgroundColor: isDark
+        ? 'rgba(15,21,36,0.65)'
+        : 'rgba(255,255,255,0.95)',
+      borderBottomColor: isDark
+        ? 'rgba(125,211,252,0.12)'
+        : 'rgba(0,0,0,0.08)',
+    },
+  ]}
+>
+  {Platform.OS === 'ios' && (
+    <BlurView
+      intensity={35}
+      tint={isDark ? 'dark' : 'light'}
+      style={StyleSheet.absoluteFill}
+    />
+  )}
           <View style={styles.headerContent}>
             <Pressable
               onPress={() => router.push(('/dashboard' as any))}
@@ -98,10 +114,10 @@ export default function SettingsScreen() {
                 pressed && styles.headerButtonPressed
               ]}
             >
-              <Home size={24} color={colors.textSecondary} />
+             <Home size={24} color={colors.primary} />
             </Pressable>
 
-            <Text style={[styles.headerTitle, { color: colors.text }]}>BillTea</Text>
+            <Text style={[styles.headerTitle, { color:colors.primary }]}>BillTea</Text>
 
             <View style={[styles.themeToggle, { backgroundColor: colors.glassBackground, borderColor: colors.glassBorder }]}>
               {(['System', 'Light', 'Dark'] as const).map((m) => {
@@ -168,12 +184,12 @@ export default function SettingsScreen() {
 
             {/* User Management */}
             <SettingsItem
-              label="User Management"
+              label="Staff Management"
               subLabel="Team roles, permissions"
               iconName="group-add"
               iconColor={colors.primary}
               borderColor="rgba(125, 211, 252, 0.15)"
-              onPress={() => router.push(('/settings/user-management' as any))}
+              onPress={() => router.push(('/settings/staff-management' as any))}
             />
           </View>
 
@@ -328,13 +344,11 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 250,
   },
-  header: {
-    width: '100%',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(125, 211, 252, 0.1)',
-    backgroundColor: 'rgba(15, 21, 36, 0.6)',
-    zIndex: 10,
-  },
+ header: {
+  width: '100%',
+  borderBottomWidth: 1,
+  zIndex: 10,
+},
   headerContent: {
     height: 56,
     flexDirection: 'row',

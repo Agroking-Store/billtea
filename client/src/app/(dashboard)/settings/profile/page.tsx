@@ -261,7 +261,7 @@ export default function ProfilePage() {
           {/* Profile Header Card */}
           <div className="lg:col-span-4 group relative bg-surface border border-outline-variant/30 rounded-[2rem] p-1 overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 h-full order-1">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <div className="relative h-full bg-surface-container-lowest rounded-[1.8rem] p-8 flex flex-col items-center justify-center text-center">
+            <div className="relative h-full bg-surface-container-lowest rounded-[1.8rem] p-6 sm:p-8 flex flex-col items-center justify-center text-center">
               <div className="relative mb-6">
                 <div className="w-32 h-32 rounded-full border-4 border-surface-container p-1 shadow-lg overflow-hidden bg-surface-container-low">
                   {(editing && editForm.profilePicture ? editForm.profilePicture : user.profilePicture) ? (
@@ -304,7 +304,7 @@ export default function ProfilePage() {
           {/* Access Records Card */}
           <div className="lg:col-span-4 group relative bg-surface border border-outline-variant/30 rounded-[2rem] p-1 overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 h-full order-3 lg:order-3">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <div className="relative h-full bg-surface-container-lowest rounded-[1.8rem] p-8 space-y-6 flex flex-col">
+            <div className="relative h-full bg-surface-container-lowest rounded-[1.8rem] p-6 sm:p-8 space-y-6 flex flex-col">
               <h3 className="text-sm font-bold text-primary uppercase tracking-widest flex items-center gap-2">
                 <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
                 Access Records
@@ -341,8 +341,8 @@ export default function ProfilePage() {
           {/* Personal Info */}
           <div className="lg:col-span-8 group relative bg-surface border border-outline-variant/30 rounded-[2rem] p-1 overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 h-full order-2 lg:order-2">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <div className="relative h-full bg-surface-container-lowest rounded-[1.8rem] p-8">
-              <div className="flex items-center justify-between mb-8">
+            <div className="relative h-full bg-surface-container-lowest rounded-[1.8rem] p-6 sm:p-8">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
                 <h3 className="text-xl font-bold flex items-center gap-3 text-on-surface">
                   <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                     <span className="material-symbols-outlined text-[20px]">account_circle</span>
@@ -352,13 +352,13 @@ export default function ProfilePage() {
                 {!editing ? (
                   <button
                     onClick={() => setEditing(true)}
-                    className="h-12 px-6 rounded-xl bg-surface-container hover:bg-primary border border-outline-variant/30 text-on-surface hover:text-on-primary font-bold flex items-center gap-2 transition-all duration-300 cursor-pointer"
+                    className="w-full sm:w-auto h-12 px-6 rounded-xl bg-surface-container hover:bg-primary border border-outline-variant/30 text-on-surface hover:text-on-primary font-bold flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[18px]">edit</span>
                     Edit details
                   </button>
                 ) : (
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto justify-end">
                     <button
                       onClick={() => {
                         setEditing(false);
@@ -370,14 +370,14 @@ export default function ProfilePage() {
                         });
                         setSaveMessage({ type: '', text: '' });
                       }}
-                      className="px-6 py-3 rounded-xl text-sm font-bold text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
+                      className="w-full sm:w-auto px-6 py-3 rounded-xl text-sm font-bold text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer text-center"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleSaveProfile}
                       disabled={saving}
-                      className="bg-primary text-on-primary px-6 py-3 rounded-xl text-sm font-bold transition-all shadow-lg shadow-primary/30 hover:-translate-y-0.5 hover:shadow-primary/40 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                      className="w-full sm:w-auto bg-primary text-on-primary px-6 py-3 rounded-xl text-sm font-bold transition-all shadow-lg shadow-primary/30 hover:-translate-y-0.5 hover:shadow-primary/40 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                     >
                       {saving ? (
                         <>
@@ -453,7 +453,7 @@ export default function ProfilePage() {
           {/* Organization Section */}
           <div className="lg:col-span-8 group relative bg-surface border border-outline-variant/30 rounded-[2rem] p-1 overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 h-full order-4 lg:order-4">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <div className="relative h-full bg-surface-container-lowest rounded-[1.8rem] p-8">
+            <div className="relative h-full bg-surface-container-lowest rounded-[1.8rem] p-6 sm:p-8">
               <h3 className="text-xl font-bold flex items-center gap-3 text-on-surface mb-8">
                 <div className="w-10 h-10 rounded-xl bg-tertiary/10 text-tertiary flex items-center justify-center">
                   <span className="material-symbols-outlined text-[20px]">corporate_fare</span>

@@ -58,11 +58,11 @@ export default function ThemeSettingsPage() {
 
   return (
     <main className="bg-background text-on-background min-h-screen w-full overflow-y-auto">
-      <div className="max-w-[1500px] mx-auto px-10 py-8">
+      <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
 
         {/* HEADER */}
 
-        <div className="flex items-center justify-between mb-10">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
 
           <div>
             <h1 className="text-4xl font-bold">
@@ -74,16 +74,16 @@ export default function ThemeSettingsPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
 
             <input
               placeholder="Search..."
-              className="glass-input rounded-xl px-4 py-2 w-72"
+              className="glass-input rounded-xl px-4 py-2 w-full sm:w-64"
             />
 
             <button
               onClick={toggleTheme}
-              className="btn-primary rounded-xl px-5 py-2"
+              className="btn-primary rounded-xl px-5 py-2 whitespace-nowrap"
             >
               {theme === "dark" ? "🌙 Dark" : "☀️ Light"}
             </button>
@@ -99,11 +99,11 @@ export default function ThemeSettingsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
           {/* LEFT PANEL */}
 
-          <div className="col-span-8 space-y-6">
+          <div className="col-span-1 lg:col-span-8 space-y-6">
 
             {sections.map((section) => (
 
@@ -161,9 +161,9 @@ export default function ThemeSettingsPage() {
             ))}
 
           </div>
-                    {/* RIGHT PANEL */}
+          {/* RIGHT PANEL */}
 
-          <div className="col-span-4">
+          <div className="col-span-1 lg:col-span-4">
 
             <div className="glass-elevated rounded-2xl p-6 sticky top-8">
 
