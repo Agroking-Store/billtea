@@ -551,62 +551,74 @@ export default function CreateInvoiceScreen() {
       >
         
         {/* Quotation Selection */}
-        <GlassPanel style={styles.sectionCard}>
-          <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Select Quotation</Text>
-          <View style={styles.dropdownContainer}>
-            <View style={[styles.dropdownTrigger, { backgroundColor: colors.background + '66', borderColor: colors.border }]}>
-              <Search color={colors.textSecondary} size={16} style={styles.dropdownSearchIcon} />
-              <TextInput
-                value={selectedQuotationNo}
-                onChangeText={(text) => {
-                  setSelectedQuotationNo(text);
-                  setQuotationSearchQuery(text);
-                  setShowQuotationDropdown(true);
-                }}
-                onFocus={() => {
-                  setShowQuotationDropdown(true);
-                }}
-                style={[styles.dropdownTriggerInput, { color: colors.text }]}
-                placeholder="Search quotations..."
-                placeholderTextColor={colors.textSecondary + '80'}
-              />
-              <TouchableOpacity onPress={() => setShowQuotationDropdown(!showQuotationDropdown)}>
-                <ChevronDown color={colors.textSecondary} size={18} />
-              </TouchableOpacity>
+        <View style={{ position: 'relative', zIndex: 50, marginBottom: 12 }}>
+          <GlassPanel style={styles.sectionCard}>
+            <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Select Quotation</Text>
+            <View style={styles.dropdownContainer}>
+              <View style={[styles.dropdownTrigger, { backgroundColor: colors.background + '66', borderColor: colors.border }]}>
+                <Search color={colors.textSecondary} size={16} style={styles.dropdownSearchIcon} />
+                <TextInput
+                  value={selectedQuotationNo}
+                  onChangeText={(text) => {
+                    setSelectedQuotationNo(text);
+                    setQuotationSearchQuery(text);
+                    setShowQuotationDropdown(true);
+                  }}
+                  onFocus={() => {
+                    setShowQuotationDropdown(true);
+                  }}
+                  style={[styles.dropdownTriggerInput, { color: colors.text }]}
+                  placeholder="Search quotations..."
+                  placeholderTextColor={colors.textSecondary + '80'}
+                />
+                <TouchableOpacity onPress={() => setShowQuotationDropdown(!showQuotationDropdown)}>
+                  <ChevronDown color={colors.textSecondary} size={18} />
+                </TouchableOpacity>
+              </View>
             </View>
-            
-            {showQuotationDropdown && filteredQuotations.length > 0 && (
-              <View style={[styles.dropdownList, { backgroundColor: colors.surfaceVariant, borderColor: colors.glassBorder }]}>
-                {filteredQuotations.map((q) => (
-                  <TouchableOpacity 
-                    key={q.id} 
-                    style={[styles.dropdownItem, { borderBottomColor: colors.border + '33' }]}
-                    onPress={() => handleSelectQuotation(q)}
-                  >
-                    <Text style={[styles.dropdownItemText, { color: colors.text }]}>
-                      {q.quotationNumber} - {q.customer?.customerName}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+
+            {selectedQuotationId !== "" && (
+              <View style={[styles.linkedQuotationRow, { backgroundColor: colors.surfaceVariant + '33', borderColor: colors.primary + '1A' }]}>
+                <View style={[styles.avatarWrapper, { borderColor: colors.primary + '33' }]}>
+                  <Image 
+                    source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDomVgL2a5ZiZgRYKaFu7uX873ViwvEEGmF9TBnIQOYhJApXJb7W4z07hH4p7cvDqaRadY5nq3s4jfr8CqbWLJ6x8kMv-deL-lxhBAr7U4_wv8L4KcbHD3X3uzf-J1Rct4ZSwMwtk9log0-U3GHRnQM-FL1MyUiY5jCbV1gYMDb0haWmY2Vt4K0yGl0LbfM3c3UdnKHCgXNdVVvV91vvtdfNp4yate73hHsPQ_HTAk-3aJa5arWP2p5' }} 
+                    style={styles.avatar} 
+                  />
+                </View>
+                <View>
+                  <Text style={[styles.avatarName, { color: colors.text }]}>{contactName}</Text>
+                  <Text style={[styles.avatarPhone, { color: colors.textSecondary }]}>{mobile}</Text>
+                </View>
               </View>
             )}
-          </View>
+          </GlassPanel>
 
-          {selectedQuotationId !== "" && (
-            <View style={[styles.linkedQuotationRow, { backgroundColor: colors.surfaceVariant + '33', borderColor: colors.primary + '1A' }]}>
-              <View style={[styles.avatarWrapper, { borderColor: colors.primary + '33' }]}>
-                <Image 
-                  source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDomVgL2a5ZiZgRYKaFu7uX873ViwvEEGmF9TBnIQOYhJApXJb7W4z07hH4p7cvDqaRadY5nq3s4jfr8CqbWLJ6x8kMv-deL-lxhBAr7U4_wv8L4KcbHD3X3uzf-J1Rct4ZSwMwtk9log0-U3GHRnQM-FL1MyUiY5jCbV1gYMDb0haWmY2Vt4K0yGl0LbfM3c3UdnKHCgXNdVVvV91vvtdfNp4yate73hHsPQ_HTAk-3aJa5arWP2p5' }} 
-                  style={styles.avatar} 
-                />
-              </View>
-              <View>
-                <Text style={[styles.avatarName, { color: colors.text }]}>{contactName}</Text>
-                <Text style={[styles.avatarPhone, { color: colors.textSecondary }]}>{mobile}</Text>
-              </View>
+          {/* Rendered OUTSIDE GlassPanel so it isn't clipped by the card's overflow:hidden */}
+          {showQuotationDropdown && filteredQuotations.length > 0 && (
+            <View
+              style={[
+                styles.dropdownList,
+                styles.dropdownListFloating,
+                { backgroundColor: colors.surfaceVariant, borderColor: colors.glassBorder },
+              ]}
+            >
+              {filteredQuotations.map((q) => (
+                <TouchableOpacity
+                  key={q.id}
+                  style={[styles.dropdownItem, { borderBottomColor: colors.border + '33' }]}
+                  onPress={() => {
+                    handleSelectQuotation(q);
+                    setShowQuotationDropdown(false);
+                  }}
+                >
+                  <Text style={[styles.dropdownItemText, { color: colors.text }]}>
+                    {q.quotationNumber} - {q.customer?.customerName}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
           )}
-        </GlassPanel>
+        </View>
 
         {/* Customer Details */}
         <GlassPanel style={styles.sectionCard}>
@@ -1335,6 +1347,17 @@ const styles = StyleSheet.create({
     zIndex: 45,
     maxHeight: 180,
     overflow: 'hidden',
+  },
+  dropdownListFloating: {
+    top: 90,
+    left: 20,
+    right: 20,
+    zIndex: 60,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   dropdownItem: {
     paddingVertical: 12,

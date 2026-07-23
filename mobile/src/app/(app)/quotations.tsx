@@ -4,13 +4,19 @@ import {
   Alert,
   Dimensions,
   FlatList,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import { useRouter } from "expo-router";
+import * as Clipboard from "expo-clipboard";
+import * as Sharing from "expo-sharing";
+import * as FileSystem from "expo-file-system";
 import {
   Eye,
   PencilLine,
@@ -21,6 +27,8 @@ import {
   Trash2,
   MessageSquare,
   Phone,
+  Wallet,
+  X,
 } from "lucide-react-native";
 
 import { AppHeader } from "../../components/ui/AppHeader";
@@ -29,6 +37,9 @@ import { ActionIconButton } from "../../components/billing/ActionIconButton";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { useTheme } from "../../hooks/useTheme";
 import { apiClient } from "@/api/client";
+import { ENV } from "@/config/env";
+import { getStorageItemAsync } from "@/utils/storage";
+import { TOKEN_KEYS } from "@/constants/keys";
 
 const { width } = Dimensions.get("window");
 
@@ -120,6 +131,7 @@ function formatAbbreviatedCurrency(amount: number) {
 }
 
 export default function QuotationsScreen() {
+  const router = useRouter();
   const searchInputRef = useRef<TextInput>(null);
   const [activeTab, setActiveTab] = useState<Tab>("Quotations");
   const { colors, isDark } = useTheme();
@@ -128,6 +140,16 @@ export default function QuotationsScreen() {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+
+  // Payment modal state
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<Invoice | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<
+    "CASH" | "BANK_TRANSFER" | "CHEQUE" | "CREDIT_CARD" | "UPI" | "OTHER"
+  >("CASH");
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // Fetching & Loading states
   const [loading, setLoading] = useState(false);
@@ -333,6 +355,112 @@ export default function QuotationsScreen() {
         },
       ]
     );
+  };
+
+  const handleEditInvoice = (item: Invoice) => {
+    // Opens the same create-invoice screen, in edit mode via the id param.
+    // NOTE: create-invoice.tsx still needs to read this id and pre-fill the form —
+    // that part isn't built yet, this just wires the navigation.
+    router.push({ pathname: "/create-invoice", params: { id: item.id } });
+  };
+
+  const handleCopyInvoice = async (item: Invoice) => {
+    const summary =
+      `Invoice ${item.invoiceNumber}\n` +
+      `Customer: ${item.customer?.customerName ?? "N/A"}\n` +
+      `Company: ${item.customer?.companyName ?? "N/A"}\n` +
+      `Amount: ${formatCurrency(item.totals?.grandTotal ?? 0)}\n` +
+      `Status: ${item.status}`;
+    await Clipboard.setStringAsync(summary);
+    Alert.alert("Copied", "Invoice details copied. Paste it anywhere to share.");
+  };
+
+  const handleShareInvoice = async (item: Invoice) => {
+    try {
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) {
+        Alert.alert("Not Available", "Sharing isn't available on this device.");
+        return;
+      }
+
+      const token = await getStorageItemAsync(TOKEN_KEYS.ACCESS);
+      const fileUri = `${FileSystem.cacheDirectory}Invoice-${item.invoiceNumber}.pdf`;
+      const pdfUrl = `${ENV.API_URL}/invoices/${item.id}/pdf`;
+
+      const downloadResult = await FileSystem.downloadAsync(pdfUrl, fileUri, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+
+      if (downloadResult.status !== 200) {
+        Alert.alert("Failed", "Could not download the invoice PDF.");
+        return;
+      }
+
+      await Sharing.shareAsync(downloadResult.uri, {
+        mimeType: "application/pdf",
+        dialogTitle: `Share Invoice ${item.invoiceNumber}`,
+        UTI: "com.adobe.pdf",
+      });
+    } catch (err) {
+      console.error("Failed to share invoice PDF:", err);
+      Alert.alert("Failed", "Could not share the invoice PDF.");
+    }
+  };
+
+  const handleOpenPayment = (item: Invoice) => {
+    setSelectedInvoiceForPayment(item);
+    setPaymentAmount(item.amountDue ? String(item.amountDue) : "");
+    setPaymentMethod("CASH");
+    setPaymentError(null);
+    setPaymentModalOpen(true);
+  };
+
+  const handleSubmitPayment = async () => {
+    if (!selectedInvoiceForPayment) return;
+
+    const amountNum = parseFloat(paymentAmount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      setPaymentError("Enter a valid amount.");
+      return;
+    }
+    if (amountNum > selectedInvoiceForPayment.amountDue) {
+      setPaymentError("Amount cannot be more than the due amount.");
+      return;
+    }
+
+    setPaymentSubmitting(true);
+    setPaymentError(null);
+    try {
+      const res = await apiClient.post(`/invoices/${selectedInvoiceForPayment.id}/payments`, {
+        amount: amountNum,
+        method: paymentMethod,
+        date: new Date().toISOString(),
+      });
+
+      if (res.status === 200 || res.status === 201) {
+        // Update this invoice locally so the card reflects the new balance right away
+        setInvoices((current) =>
+          current.map((inv) =>
+            inv.id === selectedInvoiceForPayment.id
+              ? {
+                  ...inv,
+                  amountPaid: inv.amountPaid + amountNum,
+                  amountDue: Math.max(inv.amountDue - amountNum, 0),
+                  status: inv.amountDue - amountNum <= 0 ? "PAID" : "PARTIAL",
+                }
+              : inv
+          )
+        );
+        setPaymentModalOpen(false);
+        Alert.alert("Success", "Payment recorded successfully.");
+      } else {
+        setPaymentError("Failed to record payment.");
+      }
+    } catch (err: any) {
+      setPaymentError(err?.response?.data?.message || "Failed to record payment.");
+    } finally {
+      setPaymentSubmitting(false);
+    }
   };
 
   const handleDeleteExpense = async (id: string) => {
@@ -547,25 +675,20 @@ export default function QuotationsScreen() {
 
         {/* Actions Row */}
         <View style={[styles.actionsRow, { justifyContent: "space-between" }]}>
-          <ActionIconButton icon={Eye} onPress={() => handleComingSoon("View")} />
           <ActionIconButton
             icon={PencilLine}
-            onPress={() => handleComingSoon("Edit")}
+            onPress={() => handleEditInvoice(item)}
             color="#fbbf24"
           />
-          <ActionIconButton icon={Copy} onPress={() => handleComingSoon("Copy")} />
+          <ActionIconButton icon={Copy} onPress={() => handleCopyInvoice(item)} />
           <ActionIconButton
-            icon={MessageSquare}
-            onPress={() => handleComingSoon("Chat")}
-            color="#34D399"
-          />
-          <ActionIconButton
-            icon={Download}
-            onPress={() => handleComingSoon("Download")}
+            icon={Wallet}
+            onPress={() => handleOpenPayment(item)}
+            color="#c084fc"
           />
           <ActionIconButton
             icon={Send}
-            onPress={() => handleComingSoon("Send")}
+            onPress={() => handleShareInvoice(item)}
             color="#7dd3fc"
           />
           <ActionIconButton
@@ -743,6 +866,110 @@ export default function QuotationsScreen() {
           )
         }
       />
+
+      {/* Add Payment Modal */}
+      <Modal
+        visible={paymentModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPaymentModalOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View
+            style={[
+              styles.modalCard,
+              { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Record Payment</Text>
+                {selectedInvoiceForPayment && (
+                  <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
+                    Invoice {selectedInvoiceForPayment.invoiceNumber}
+                  </Text>
+                )}
+              </View>
+              <TouchableOpacity onPress={() => setPaymentModalOpen(false)}>
+                <X size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {paymentError && (
+              <View style={[styles.modalErrorBanner, { backgroundColor: colors.error + "20", borderColor: colors.error + "40" }]}>
+                <Text style={{ color: colors.error, fontSize: 13 }}>{paymentError}</Text>
+              </View>
+            )}
+
+            <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Amount</Text>
+            <TextInput
+              value={paymentAmount}
+              onChangeText={setPaymentAmount}
+              keyboardType="decimal-pad"
+              placeholder="0.00"
+              placeholderTextColor={colors.textSecondary + "80"}
+              style={[
+                styles.modalInput,
+                { backgroundColor: colors.surfaceVariant + "80", borderColor: colors.border, color: colors.text },
+              ]}
+            />
+
+            {selectedInvoiceForPayment && (
+              <Text style={[styles.modalHint, { color: colors.textSecondary }]}>
+                Due: {formatCurrency(selectedInvoiceForPayment.amountDue)} · Remaining after this payment:{" "}
+                {formatCurrency(
+                  Math.max(selectedInvoiceForPayment.amountDue - (parseFloat(paymentAmount) || 0), 0)
+                )}
+              </Text>
+            )}
+
+            <Text style={[styles.modalLabel, { color: colors.textSecondary, marginTop: 16 }]}>
+              Payment Method
+            </Text>
+            <View style={styles.modalMethodRow}>
+              {(["CASH", "BANK_TRANSFER", "CHEQUE", "CREDIT_CARD", "UPI", "OTHER"] as const).map((method) => (
+                <TouchableOpacity
+                  key={method}
+                  onPress={() => setPaymentMethod(method)}
+                  style={[
+                    styles.modalMethodChip,
+                    {
+                      backgroundColor:
+                        paymentMethod === method ? colors.primary + "20" : colors.surfaceVariant + "80",
+                      borderColor: paymentMethod === method ? colors.primary : colors.border,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontWeight: "600",
+                      color: paymentMethod === method ? colors.primary : colors.textSecondary,
+                    }}
+                  >
+                    {method.replace("_", " ")}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              onPress={handleSubmitPayment}
+              disabled={paymentSubmitting}
+              style={[
+                styles.modalSaveButton,
+                { backgroundColor: colors.primary + "20", borderColor: colors.primary + "40", opacity: paymentSubmitting ? 0.6 : 1 },
+              ]}
+            >
+              {paymentSubmitting ? (
+                <ActivityIndicator color={colors.primary} />
+              ) : (
+                <Text style={{ color: colors.primary, fontWeight: "700", fontSize: 15 }}>Save Payment</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -938,5 +1165,73 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     textAlign: "center",
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    justifyContent: "center",
+    padding: 20,
+  },
+  modalCard: {
+    borderRadius: 20,
+    padding: 20,
+    width: '100%',
+    maxWidth: 420,
+    alignSelf: 'center',
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  modalSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  modalErrorBanner: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 12,
+  },
+  modalLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginBottom: 6,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  modalHint: {
+    fontSize: 11,
+    marginTop: 6,
+  },
+  modalMethodRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  modalMethodChip: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  modalSaveButton: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 20,
   },
 });
