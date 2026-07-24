@@ -2,20 +2,22 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AlertMessage } from '../../../components/AlertMessage';
 
 export default function SignupPage() {
   const router = useRouter();
 
-  const [signupFullName, setSignupFullName] = useState<string>('');
   const [signupEmail, setSignupEmail] = useState<string>('');
   const [signupMobileNumber, setSignupMobileNumber] = useState<string>('');
   const [signupPassword, setSignupPassword] = useState<string>('');
+  const [signupConfirmPassword, setSignupConfirmPassword] = useState<string>('');
   const [showSignupPassword, setShowSignupPassword] = useState<boolean>(false);
+  const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState<boolean>(false);
   const [signupErrors, setSignupErrors] = useState<{
-    fullName?: string;
     email?: string;
     mobileNumber?: string;
     password?: string;
+    confirmPassword?: string;
   }>({});
   const [signupLoading, setSignupLoading] = useState<boolean>(false);
   const [signupSuccess, setSignupSuccess] = useState<boolean>(false);
@@ -23,10 +25,6 @@ export default function SignupPage() {
   const handleSignupSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: typeof signupErrors = {};
-
-    if (signupFullName.trim().length < 3) {
-      newErrors.fullName = 'Full Name must be at least 3 characters.';
-    }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(signupEmail)) {
@@ -40,6 +38,10 @@ export default function SignupPage() {
 
     if (signupPassword.length < 6) {
       newErrors.password = 'Password must be at least 6 characters.';
+    }
+
+    if (signupPassword !== signupConfirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match.';
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -81,33 +83,7 @@ export default function SignupPage() {
             <p className="text-on-surface-variant text-base">Join the Indux portal to manage your business</p>
           </div>
 
-          <form onSubmit={handleSignupSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-primary uppercase tracking-wider ml-1" htmlFor="signup-name">Full Name</label>
-              <div className="flex items-center input-container rounded-full overflow-hidden input-glow px-4 py-1.5">
-                <span className="material-symbols-outlined text-on-surface-variant mr-3 text-xl select-none">person</span>
-                <input
-                  id="signup-name"
-                  type="text"
-                  required
-                  disabled={signupLoading}
-                  value={signupFullName}
-                  onChange={(e) => {
-                    setSignupErrors(prev => ({ ...prev, fullName: undefined }));
-                    setSignupFullName(e.target.value);
-                  }}
-                  placeholder="Jane Doe"
-                  className="w-full bg-transparent border-none text-on-surface placeholder-on-surface-variant/40 focus:ring-0 focus:outline-none py-2 text-sm disabled:opacity-50"
-                />
-              </div>
-              {signupErrors.fullName && (
-                <p className="text-error text-xs font-medium flex items-center gap-1 mt-1 ml-2">
-                  <span className="material-symbols-outlined text-sm">error</span>
-                  {signupErrors.fullName}
-                </p>
-              )}
-            </div>
-
+          <form onSubmit={handleSignupSubmit} className="space-y-4" noValidate>
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-primary uppercase tracking-wider ml-1" htmlFor="signup-email">Email Address</label>
               <div className="flex items-center input-container rounded-full overflow-hidden input-glow px-4 py-1.5">
@@ -126,12 +102,7 @@ export default function SignupPage() {
                   className="w-full bg-transparent border-none text-on-surface placeholder-on-surface-variant/40 focus:ring-0 focus:outline-none py-2 text-sm disabled:opacity-50"
                 />
               </div>
-              {signupErrors.email && (
-                <p className="text-error text-xs font-medium flex items-center gap-1 mt-1 ml-2">
-                  <span className="material-symbols-outlined text-sm">error</span>
-                  {signupErrors.email}
-                </p>
-              )}
+              <AlertMessage message={signupErrors.email} />
             </div>
 
             <div className="space-y-1.5">
@@ -153,12 +124,7 @@ export default function SignupPage() {
                   className="w-full bg-transparent border-none text-on-surface placeholder-on-surface-variant/40 focus:ring-0 focus:outline-none py-2 pl-3 text-sm disabled:opacity-50"
                 />
               </div>
-              {signupErrors.mobileNumber && (
-                <p className="text-error text-xs font-medium flex items-center gap-1 mt-1 ml-2">
-                  <span className="material-symbols-outlined text-sm">error</span>
-                  {signupErrors.mobileNumber}
-                </p>
-              )}
+              <AlertMessage message={signupErrors.mobileNumber} />
             </div>
 
             <div className="space-y-1.5">
@@ -188,12 +154,37 @@ export default function SignupPage() {
                   </span>
                 </button>
               </div>
-              {signupErrors.password && (
-                <p className="text-error text-xs font-medium flex items-center gap-1 mt-1 ml-2">
-                  <span className="material-symbols-outlined text-sm">error</span>
-                  {signupErrors.password}
-                </p>
-              )}
+              <AlertMessage message={signupErrors.password} />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-primary uppercase tracking-wider ml-1" htmlFor="signup-confirm-pass">Confirm Password</label>
+              <div className="flex items-center input-container rounded-full overflow-hidden input-glow px-4 py-1.5 relative">
+                <span className="material-symbols-outlined text-on-surface-variant mr-3 text-xl select-none">lock</span>
+                <input
+                  id="signup-confirm-pass"
+                  type={showSignupConfirmPassword ? "text" : "password"}
+                  required
+                  disabled={signupLoading}
+                  value={signupConfirmPassword}
+                  onChange={(e) => {
+                    setSignupErrors(prev => ({ ...prev, confirmPassword: undefined }));
+                    setSignupConfirmPassword(e.target.value);
+                  }}
+                  placeholder="••••••••"
+                  className="w-full bg-transparent border-none text-on-surface placeholder-on-surface-variant/40 focus:ring-0 focus:outline-none py-2 pr-10 text-sm disabled:opacity-50"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowSignupConfirmPassword(!showSignupConfirmPassword)}
+                  className="absolute right-4 text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center cursor-pointer select-none"
+                >
+                  <span className="material-symbols-outlined text-xl">
+                    {showSignupConfirmPassword ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
+              </div>
+              <AlertMessage message={signupErrors.confirmPassword} />
             </div>
 
             <button
