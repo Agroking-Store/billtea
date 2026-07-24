@@ -48,22 +48,22 @@ export default function ProductsPage() {
     skuNumber: '',
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
-const fetchProducts = async () => {
-  try {
-    const res = await apiFetch(`/products`);
-    if (res.ok) {
-      const data = await res.json();
-      setProducts(data.products || data || []);
+  const fetchProducts = async () => {
+    try {
+      const res = await apiFetch(`/products`);
+      if (res.ok) {
+        const data = await res.json();
+        setProducts(data.products || data || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch products:", err);
+      setProducts([]);
     }
-  } catch (err) {
-    console.error("Failed to fetch products:", err);
-    setProducts([]);
-  }
-};
+  };
 
-useEffect(() => {
-  fetchProducts();
-}, []);
+  useEffect(() => {
+    fetchProducts();
+  }, []);
 
   // ---- Table controls: search, sorting, pagination ----
   const [searchQuery, setSearchQuery] = useState('');
@@ -181,13 +181,13 @@ useEffect(() => {
       } else {
         payload.append('branchId', selectedBranchId);
       }
-      
+
       payload.append('name', formData.name);
       if (formData.description) payload.append('description', formData.description);
       payload.append('price', formData.price);
       if (formData.hsnNumber) payload.append('hsnNumber', formData.hsnNumber);
       if (formData.skuNumber) payload.append('skuNumber', formData.skuNumber);
-      
+
       if (imageFile) {
         payload.append('image', imageFile);
       }
@@ -313,32 +313,32 @@ useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredProducts, sortConfig]);
 
-// ---- Pagination ----
-const totalCount = sortedProducts.length;
-const totalPages = Math.max(1, Math.ceil(totalCount / entriesPerPage));
+  // ---- Pagination ----
+  const totalCount = sortedProducts.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / entriesPerPage));
 
-// Clamp currentPage safely without looping
-useEffect(() => {
-  if (currentPage > totalPages) {
-    setCurrentPage(totalPages);
-  }
-}, [totalPages]); // only run when totalPages changes
+  // Clamp currentPage safely without looping
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages]); // only run when totalPages changes
 
-// Reset page when filters/search change
-useEffect(() => {
-  if (currentPage !== 1) {
-    setCurrentPage(1);
-  }
-}, [searchQuery, statusFilter, hsnFilter, minPrice, maxPrice]);
+  // Reset page when filters/search change
+  useEffect(() => {
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }, [searchQuery, statusFilter, hsnFilter, minPrice, maxPrice]);
 
-// Use safePage for calculations
-const safePage = Math.min(currentPage, totalPages);
-const startIndex = totalCount === 0 ? 0 : (safePage - 1) * entriesPerPage + 1;
-const endIndex = Math.min(safePage * entriesPerPage, totalCount);
+  // Use safePage for calculations
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = totalCount === 0 ? 0 : (safePage - 1) * entriesPerPage + 1;
+  const endIndex = Math.min(safePage * entriesPerPage, totalCount);
 
-const paginatedProducts = useMemo(() => {
-  return sortedProducts.slice((safePage - 1) * entriesPerPage, safePage * entriesPerPage);
-}, [sortedProducts, safePage, entriesPerPage]);
+  const paginatedProducts = useMemo(() => {
+    return sortedProducts.slice((safePage - 1) * entriesPerPage, safePage * entriesPerPage);
+  }, [sortedProducts, safePage, entriesPerPage]);
 
 
   const handleEntriesPerPageChange = (n: number) => {
@@ -387,7 +387,8 @@ const paginatedProducts = useMemo(() => {
       className="flex-1 overflow-y-auto p-4 md:p-8 z-0 relative overflow-x-hidden selection:bg-primary/30 [&::-webkit-scrollbar]:hidden"
       style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
     >
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @keyframes fadeSlideUp {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
@@ -399,8 +400,8 @@ const paginatedProducts = useMemo(() => {
       `}} />
 
       {activeDropdown && (
-        <div 
-          className="fixed inset-0 z-40 bg-transparent" 
+        <div
+          className="fixed inset-0 z-40 bg-transparent"
           onClick={closeDropdowns}
         />
       )}
@@ -649,7 +650,7 @@ const paginatedProducts = useMemo(() => {
         <div className="glass-panel rounded-3xl overflow-hidden relative z-10 animate-fade-slide-up shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]" style={{ animationDelay: '0.3s' }}>
           {/* Glow Accent */}
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
-          
+
           {/* Table Controls */}
           <div className="p-6 border-b border-outline-variant/20 flex flex-col sm:flex-row justify-between items-center gap-4 bg-surface-container-lowest">
             <div className="flex items-center gap-3 text-sm font-medium text-on-surface-variant">
@@ -684,10 +685,10 @@ const paginatedProducts = useMemo(() => {
             </div>
             <div className="relative w-full sm:w-auto">
               <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
-              <input 
-                className="w-full sm:w-80 bg-surface-container border border-outline-variant/30 pl-11 pr-4 py-2.5 rounded-xl text-sm font-medium text-on-surface placeholder-on-surface-variant/60 focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all" 
-                placeholder="Search products..." 
-                type="text" 
+              <input
+                className="w-full sm:w-80 bg-surface-container border border-outline-variant/30 pl-11 pr-4 py-2.5 rounded-xl text-sm font-medium text-on-surface placeholder-on-surface-variant/60 focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all"
+                placeholder="Search products..."
+                type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -816,7 +817,7 @@ const paginatedProducts = useMemo(() => {
         <footer className="relative z-10 w-full opacity-40 text-center flex items-center justify-center gap-4 mt-8">
           <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-on-surface-variant to-transparent"></div>
           <p className="text-xs font-bold tracking-[0.2em] text-on-surface-variant uppercase">
-            BillTea Dashboard • Products
+            BillTea • Products
           </p>
           <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-on-surface-variant to-transparent"></div>
         </footer>
@@ -828,7 +829,7 @@ const paginatedProducts = useMemo(() => {
           <div className="bg-surface w-full max-w-md rounded-[2rem] p-8 shadow-2xl shadow-error/10 border border-outline-variant/20 relative overflow-hidden">
             {/* Glow effect */}
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-error/50 to-transparent"></div>
-            
+
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-full bg-error/10 flex items-center justify-center shrink-0 border border-error/20">
                 <span className="material-symbols-outlined text-error text-[24px]">warning</span>
@@ -839,14 +840,14 @@ const paginatedProducts = useMemo(() => {
                   Are you sure you want to delete this product? This will permanently remove the item from your branch inventory. This action cannot be undone.
                 </p>
                 <div className="flex items-center justify-end gap-3 mt-6">
-                  <button 
+                  <button
                     onClick={() => setProductToDelete(null)}
                     disabled={isDeleting}
                     className="px-4 py-2 rounded-lg text-sm font-semibold text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors disabled:opacity-50"
                   >
                     Cancel
                   </button>
-                  <button 
+                  <button
                     onClick={handleDeleteProduct}
                     disabled={isDeleting}
                     className="px-4 py-2 rounded-lg text-sm font-semibold bg-red-500 hover:bg-red-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.3)] transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -881,7 +882,7 @@ const paginatedProducts = useMemo(() => {
                 <span className="material-symbols-outlined text-[20px] group-hover:rotate-90 transition-transform">close</span>
               </button>
             </div>
-            
+
             <div className="p-4 sm:p-6 sm:px-8 overflow-y-auto custom-scrollbar relative z-10 bg-surface">
               {error && (
                 <div className="mb-6 p-4 bg-error/10 border border-error/20 text-error rounded-xl text-sm flex items-start gap-3 animate-in slide-in-from-top-2">
@@ -889,7 +890,7 @@ const paginatedProducts = useMemo(() => {
                   <p>{error}</p>
                 </div>
               )}
-              
+
               <form id="productForm" onSubmit={handleSaveProduct} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2 md:col-span-2">
@@ -898,7 +899,7 @@ const paginatedProducts = useMemo(() => {
                     </label>
                     <input required name="name" value={formData.name} onChange={handleInputChange} className="w-full bg-surface-container border border-outline-variant/30 px-4 py-3 rounded-xl text-sm font-medium text-on-surface placeholder-on-surface-variant/60 focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all" placeholder="e.g. Premium Widget" />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-[16px]">payments</span> Selling Price *
@@ -924,7 +925,7 @@ const paginatedProducts = useMemo(() => {
                     )}
                     <input type="file" accept="image/*" onChange={handleFileChange} className="w-full text-sm text-on-surface-variant file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-all file:cursor-pointer cursor-pointer border border-outline-variant/30 rounded-xl bg-surface-container" />
                   </div>
-                  
+
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-[16px]">qr_code_2</span> SKU Number
@@ -948,7 +949,7 @@ const paginatedProducts = useMemo(() => {
                 </div>
               </form>
             </div>
-            
+
             <div className="p-4 sm:p-6 sm:px-8 border-t border-outline-variant/20 bg-surface-container-lowest flex flex-col sm:flex-row justify-end gap-3 relative z-10">
               <button type="button" onClick={() => setIsModalOpen(false)} className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-surface-container text-sm font-semibold text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer border border-outline-variant/30 text-center">
                 Cancel

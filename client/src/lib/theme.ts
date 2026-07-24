@@ -46,6 +46,13 @@ export const DEFAULT_LIGHT_THEME: Record<string, string> = {
   '--inverse-primary': '#38bdf8',
   '--on-secondary-container': '#0c4a6e',
   '--tertiary-container': '#e0e7ff',
+  '--quo-bg': '#FFFFFF',
+  '--quo-surface': '#1B1C1D',
+  '--quo-surface-alt': '#F9F7F5',
+  '--quo-primary': '#9D7E6C',
+  '--quo-border': '#e2e2e2',
+  '--quo-text': '#1a1c1c',
+  '--quo-text-muted': '#74777c',
 };
 
 export const DEFAULT_DARK_THEME: Record<string, string> = {
@@ -96,6 +103,13 @@ export const DEFAULT_DARK_THEME: Record<string, string> = {
   '--inverse-primary': '#0a4c6e',
   '--on-secondary-container': '#c0d8e8',
   '--tertiary-container': '#3d2060',
+  '--quo-bg': '#FFFFFF',
+  '--quo-surface': '#1B1C1D',
+  '--quo-surface-alt': '#F9F7F5',
+  '--quo-primary': '#9D7E6C',
+  '--quo-border': '#e2e2e2',
+  '--quo-text': '#1a1c1c',
+  '--quo-text-muted': '#74777c',
 };
 
 export const THEME_SECTIONS = [
@@ -167,6 +181,31 @@ export const THEME_SECTIONS = [
       { name: 'On Error', key: '--on-error', desc: 'Text color used on top of the error color' },
       { name: 'Error Container', key: '--error-container', desc: 'A softer background fill for error messages or alerts' },
       { name: 'On Error Container', key: '--on-error-container', desc: 'Text color used inside an error container' },
+    ],
+  },
+];
+
+export const QUOTATION_THEME_SECTIONS = [
+  {
+    title: 'Backgrounds & Surfaces',
+    keys: [
+      { name: 'Document Background', key: '--quo-bg', desc: 'Main background of the PDF' },
+      { name: 'Header/Footer Surface', key: '--quo-surface', desc: 'Dark background used in headers, footers, and table headings' },
+      { name: 'Table Row Background', key: '--quo-surface-alt', desc: 'Background color of the items table rows' },
+    ],
+  },
+  {
+    title: 'Brand & Accents',
+    keys: [
+      { name: 'Primary Accent', key: '--quo-primary', desc: 'Accent color for taglines, bullet points, and highlights' },
+      { name: 'Borders & Dividers', key: '--quo-border', desc: 'Color of table borders and section dividers' },
+    ],
+  },
+  {
+    title: 'Typography',
+    keys: [
+      { name: 'Main Text', key: '--quo-text', desc: 'Primary text color for titles, item names, and important details' },
+      { name: 'Muted Text', key: '--quo-text-muted', desc: 'Secondary text color for descriptions and subtle information' },
     ],
   },
 ];
