@@ -20,9 +20,13 @@ export class CreateBranchDto {
   @IsOptional() @IsString() @ApiPropertyOptional({ example: 'sample_value' }) signatureValue?: string;
 
   @IsOptional()
-  @ApiPropertyOptional({ example: [{ label: 'GST', value: 18 }] })
-  taxes?: any;
+  @IsInt()
+  @Min(0, { message: 'Tax cannot be less than 0' })
+  @Max(100, { message: 'Tax cannot be more than 100' })
+    @ApiPropertyOptional({ example: 100 })
+  tax?: number;
 
+  @IsOptional() @IsString() @ApiPropertyOptional({ example: 'GST' }) taxLabel?: string;
   @IsOptional() @IsBoolean() @ApiPropertyOptional({ example: false }) isMainBranch?: boolean;
   @IsOptional() @IsBoolean() @ApiPropertyOptional({ example: true }) isActive?: boolean;
 }

@@ -141,10 +141,6 @@
   --on-surface-variant: #475569;
   --outline: #94a3b8;
   --outline-variant: #cbd5e1;
-  --error: #dc2626;
-  --on-error: #ffffff;
-  --error-container: #fee2e2;
-  --on-error-container: #991b1b;
 }
 
 .dark {

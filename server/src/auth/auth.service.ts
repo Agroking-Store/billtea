@@ -1,204 +1,83 @@
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '../prisma/prisma.service';
+import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
-import { processAndSaveImage } from '../common/utils/image.util';
 
 @Injectable()
 export class AuthService {
-  private readonly logger = new Logger(AuthService.name);
-
-  // Simple in-memory cache for mock OTPs
-  private otpCache = new Map<string, string>();
-
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
     private config: ConfigService,
   ) {}
 
-  async checkDuplicate(email: string, phoneNumber: string) {
+  /**
+   * Register a new owner user (no company yet).
+   */
+  async register(dto: RegisterDto) {
+    // Check for existing user by phone or email
     const existing = await this.prisma.user.findFirst({
       where: {
         OR: [
-          { phoneNumber },
-          { email: email?.toLowerCase().trim() },
+          { phoneNumber: dto.phoneNumber },
+          { email: dto.email.toLowerCase().trim() },
         ],
       },
     });
 
     if (existing) {
-      const field = existing.phoneNumber === phoneNumber ? 'phone number' : 'email';
+      const field = existing.phoneNumber === dto.phoneNumber ? 'phone number' : 'email';
       throw new ConflictException(`An account with this ${field} already exists.`);
     }
 
-    return { success: true, message: 'No duplicates found.' };
-  }
-
-  async sendOtp(email: string, phoneNumber: string) {
-    const emailOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    const mobileOtp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    this.logger.log(`\n=========================================\n🚨 MOCK OTP GENERATED 🚨\nEmail (${email}): ${emailOtp}\nPhone (${phoneNumber}): ${mobileOtp}\n=========================================`);
-
-    // Store in cache for verification
-    this.otpCache.set(email, emailOtp);
-    this.otpCache.set(phoneNumber, mobileOtp);
-
-    return { success: true, message: 'OTPs sent successfully.' };
-  }
-
-  async verifyOtp(emailOtp: string, mobileOtp: string) {
-    // In a real app we'd check against the specific email/phone key.
-    // For this mock, we just check if the OTP exists in the cache values.
-    const validOtps = Array.from(this.otpCache.values());
-    if (!validOtps.includes(emailOtp)) {
-      throw new BadRequestException('Invalid email OTP.');
-    }
-    if (!validOtps.includes(mobileOtp)) {
-      throw new BadRequestException('Invalid mobile OTP.');
-    }
-
-    return { success: true, message: 'OTPs verified successfully.' };
-  }
-
-  async registerFull(dto: any, files: { profilePicture?: Express.Multer.File[], companyLogo?: Express.Multer.File[] }) {
-    const phone = dto.phoneNumber || dto.mobileNumber;
-    await this.checkDuplicate(dto.email, phone);
-
-    // Process files if present
-    let profilePictureUrl = '';
-    if (files?.profilePicture?.[0]) {
-      profilePictureUrl = await processAndSaveImage(files.profilePicture[0], 'profiles');
-    }
-
-    let companyLogoUrl = '';
-    if (files?.companyLogo?.[0]) {
-      companyLogoUrl = await processAndSaveImage(files.companyLogo[0], 'logos');
-    }
-
+    // Hash password
     const hashedPassword = await bcrypt.hash(dto.password, 12);
 
-    let parsedTaxes = [];
-    try {
-      if (dto.taxes) {
-        parsedTaxes = typeof dto.taxes === 'string' ? JSON.parse(dto.taxes) : dto.taxes;
-      }
-    } catch (e) {
-      this.logger.error('Failed to parse taxes', e);
-    }
-    
-    let parsedIdentifiers: any[] = [];
-    try {
-        if(dto.businessIdName && dto.businessIdNumber) {
-            parsedIdentifiers = [{ name: dto.businessIdName, value: dto.businessIdNumber }];
-        }
-    } catch (e) {
-    }
-
-    // Prisma Transaction to create User, Company, and Branch
-    const result = await this.prisma.$transaction(async (tx) => {
-      // 1. Create Company
-      const company = await tx.company.create({
-        data: {
-          name: dto.companyName,
-          logo: companyLogoUrl,
-          tagline: dto.tagline || '',
-          identifiers: parsedIdentifiers,
-        },
-      });
-
-      // 2. Create User linked to Company
-      const user = await tx.user.create({
-        data: {
-          fullName: dto.fullName,
-          email: dto.email.toLowerCase().trim(),
-          phoneNumber: phone,
-          password: hashedPassword,
-          profilePicture: profilePictureUrl,
-          role: 'OWNER',
-          companyId: company.id,
-        },
-      });
-
-      // 3. Create Branch
-      const branch = await tx.branch.create({
-        data: {
-          companyId: company.id,
-          name: dto.branchName,
-          isMainBranch: true,
-          address: dto.address || '',
-          city: dto.city || '',
-          state: dto.state || '',
-          pincode: dto.pincode || '',
-          phone: dto.branchPhone || '',
-          email: dto.branchEmail || '',
-          bankName: dto.bankName || '',
-          accountName: dto.accountName || '',
-          accountNumber: dto.accountNumber || '',
-          ifscCode: dto.ifscCode || '',
-          upiId: dto.upiId || '',
-          signatureValue: dto.signatureText || '',
-          taxes: parsedTaxes,
-        },
-      });
-
-      // 4. Create default Company Usage tracking
-      await tx.companyUsage.create({
-        data: { companyId: company.id },
-      });
-
-      // 5. Assign Trial Subscription Plan if available
-      const trialPlan = await tx.subscriptionPlan.findFirst({
-        where: { rank: 'TRIAL', isActive: true },
-      });
-
-      if (trialPlan) {
-        const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + 14); // 14-day trial
-
-        await tx.companySubscription.create({
-          data: {
-            companyId: company.id,
-            planId: trialPlan.id,
-            status: 'TRIAL',
-            startDate: new Date(),
-            expiryDate: expiryDate,
-          },
-        });
-      }
-
-      return { user, company, branch };
+    // Create owner user
+    const user = await this.prisma.user.create({
+      data: {
+        fullName: dto.fullName,
+        phoneNumber: dto.phoneNumber,
+        email: dto.email.toLowerCase().trim(),
+        password: hashedPassword,
+        role: 'OWNER',
+        companyId: null,
+      },
     });
 
-    const tokens = await this.generateTokens(result.user.id, result.user.role, result.company.id, [result.branch.id]);
+    // Generate tokens
+    const tokens = await this.generateTokens(user.id, user.role, null, []);
 
     return {
       success: true,
-      message: 'Registration successful.',
+      message: 'Registration successful. Please set up your company.',
       ...tokens,
       user: {
-        id: result.user.id,
-        fullName: result.user.fullName,
-        email: result.user.email,
-        phoneNumber: result.user.phoneNumber,
-        profilePicture: result.user.profilePicture,
-        role: result.user.role,
-        companyId: result.company.id,
-        branches: [result.branch.id],
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        profilePicture: user.profilePicture,
+        role: user.role,
+        companyId: null,
       },
     };
   }
 
+  /**
+   * Login with phone/email + password.
+   */
   async login(dto: LoginDto) {
     if (!dto.phoneNumber && !dto.email) {
       throw new BadRequestException('Phone number or email is required.');
     }
 
+    // Find user
     const user = await this.prisma.user.findFirst({
       where: dto.email
         ? { email: dto.email.toLowerCase().trim() }
@@ -214,11 +93,13 @@ export class AuthService {
       throw new ForbiddenException('Your account has been deactivated. Contact your administrator.');
     }
 
+    // Compare password
     const isMatch = await bcrypt.compare(dto.password, user.password);
     if (!isMatch) {
       throw new UnauthorizedException('Incorrect password. Please try again.');
     }
 
+    // Update last login
     await this.prisma.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
@@ -244,6 +125,9 @@ export class AuthService {
     };
   }
 
+  /**
+   * Refresh access token using a valid refresh token.
+   */
   async refresh(dto: RefreshDto) {
     const stored = await this.prisma.refreshToken.findUnique({
       where: { token: dto.refreshToken },
@@ -253,6 +137,7 @@ export class AuthService {
     });
 
     if (!stored || stored.expiresAt < new Date()) {
+      // Clean up expired token if it exists
       if (stored) {
         await this.prisma.refreshToken.deleteMany({ where: { id: stored.id } });
       }
@@ -263,6 +148,7 @@ export class AuthService {
       throw new ForbiddenException('Your account has been deactivated.');
     }
 
+    // Delete old refresh token (rotate)
     await this.prisma.refreshToken.deleteMany({ where: { id: stored.id } });
 
     const branchIds = stored.user.branches.map((b) => b.id);
@@ -280,26 +166,60 @@ export class AuthService {
     };
   }
 
-  private async generateTokens(userId: string, role: string, companyId: string | null, branches: string[]) {
-    const payload = { sub: userId, role, companyId, branches };
+  /**
+   * Generate access + refresh token pair.
+   */
+  private async generateTokens(
+    userId: string,
+    role: string,
+    companyId: string | null,
+    branches: string[],
+  ) {
+    const payload = {
+      sub: userId,
+      role,
+      companyId,
+      branches,
+    };
+
     const accessToken = this.jwtService.sign(payload);
+
+    // Create refresh token
     const refreshTokenValue = uuidv4();
     const refreshExpiresIn = this.config.get<string>('JWT_REFRESH_EXPIRES_IN', '30d');
     const expiresAt = this.calculateExpiry(refreshExpiresIn);
 
     await this.prisma.refreshToken.create({
-      data: { token: refreshTokenValue, userId, expiresAt },
+      data: {
+        token: refreshTokenValue,
+        userId,
+        expiresAt,
+      },
     });
 
-    return { accessToken, refreshToken: refreshTokenValue };
+    return {
+      accessToken,
+      refreshToken: refreshTokenValue,
+    };
   }
 
+  /**
+   * Parse duration string (e.g. "30d", "7d") into a Date.
+   */
   private calculateExpiry(duration: string): Date {
     const match = duration.match(/^(\d+)([dhms])$/);
-    if (!match) return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    if (!match) {
+      // Default to 30 days
+      return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    }
     const value = parseInt(match[1], 10);
     const unit = match[2];
-    const ms = { d: 24 * 60 * 60 * 1000, h: 60 * 60 * 1000, m: 60 * 1000, s: 1000 }[unit]!;
+    const ms = {
+      d: 24 * 60 * 60 * 1000,
+      h: 60 * 60 * 1000,
+      m: 60 * 1000,
+      s: 1000,
+    }[unit]!;
     return new Date(Date.now() + value * ms);
   }
 }

@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Home, Search, Filter, X } from 'lucide-react-native';
+import { Home, Search, Filter } from 'lucide-react-native';
 import { useTheme } from '../../hooks/useTheme';
 
 const HEADER_CONTENT_HEIGHT = 56;
@@ -36,12 +36,6 @@ interface AppHeaderProps {
   searchPlaceholder?: string;
   /** Called when the search input loses focus */
   onSearchBlur?: () => void;
-  /** When true, shows Close (X) icon instead of filter icon */
-  showCloseButton?: boolean;
-  /** Called when Close (X) icon is pressed */
-  onClosePress?: () => void;
-  /** Expanded content inside header (e.g. Filter Expansion) */
-  children?: React.ReactNode;
 }
 
 export function AppHeader({
@@ -56,9 +50,6 @@ export function AppHeader({
   onSearchTextChange,
   searchPlaceholder = 'Search...',
   onSearchBlur,
-  showCloseButton = false,
-  onClosePress,
-  children,
 }: AppHeaderProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -115,57 +106,42 @@ export function AppHeader({
           )}
         </View>
 
-        {/* Right: Filter + Search icons OR Close X button */}
-        {showCloseButton ? (
-          <Pressable
-            onPress={onClosePress || onFilterPress}
-            style={({ pressed }) => [
-              styles.iconButton,
-              pressed && styles.iconButtonPressed,
-            ]}
-          >
-            <X size={22} color={colors.textSecondary} strokeWidth={2.2} />
-          </Pressable>
-        ) : (
-          showRightActions && (
-            <View style={styles.rightActions}>
-              {onFilterPress && (
-                <Pressable
-                  onPress={onFilterPress}
-                  style={({ pressed }) => [
-                    styles.iconButton,
-                    pressed && styles.iconButtonPressed,
-                  ]}
-                >
-                  <Filter
-                    size={22}
-                    color={filterActive ? colors.primary : colors.textSecondary}
-                    strokeWidth={2.2}
-                  />
-                </Pressable>
-              )}
-              {onSearchPress && (
-                <Pressable
-                  onPress={onSearchPress}
-                  style={({ pressed }) => [
-                    styles.iconButton,
-                    pressed && styles.iconButtonPressed,
-                  ]}
-                >
-                  <Search
-                    size={22}
-                    color={searchActive ? colors.primary : colors.textSecondary}
-                    strokeWidth={2.2}
-                  />
-                </Pressable>
-              )}
-            </View>
-          )
+        {/* Right: Filter + Search icons (only shown when callbacks are provided) */}
+        {showRightActions && (
+          <View style={styles.rightActions}>
+            {onFilterPress && (
+              <Pressable
+                onPress={onFilterPress}
+                style={({ pressed }) => [
+                  styles.iconButton,
+                  pressed && styles.iconButtonPressed,
+                ]}
+              >
+                <Filter
+                  size={22}
+                  color={filterActive ? colors.primary : colors.textSecondary}
+                  strokeWidth={2.2}
+                />
+              </Pressable>
+            )}
+            {onSearchPress && (
+              <Pressable
+                onPress={onSearchPress}
+                style={({ pressed }) => [
+                  styles.iconButton,
+                  pressed && styles.iconButtonPressed,
+                ]}
+              >
+                <Search
+                  size={22}
+                  color={searchActive ? colors.primary : colors.textSecondary}
+                  strokeWidth={2.2}
+                />
+              </Pressable>
+            )}
+          </View>
         )}
       </View>
-
-      {/* Render Header Extension / Children (Filter Panel Expansion) */}
-      {children}
     </View>
   );
 }

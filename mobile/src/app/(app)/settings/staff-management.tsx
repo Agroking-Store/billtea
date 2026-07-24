@@ -14,7 +14,8 @@ import {
   Platform,
   Pressable,
 } from 'react-native';
-import { Stack, router } from 'expo-router';
+import { Stack, router, useFocusEffect } from 'expo-router';
+import { BackHandler } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../../hooks/useTheme';
 import {
@@ -184,20 +185,79 @@ export default function UserManagementScreen() {
   };
   // ── End added state/handlers ──
 
+  // Single source of truth for "back" so the on-screen button and the
+  // phone's hardware/gesture back button always land in the same place.
+  const goBack = useCallback(() => {
+    router.push('/settings');
+  }, []);
+
+  // Intercept the Android hardware/gesture back button while this screen
+  // is focused, since it otherwise pops the native stack (which may skip
+  // straight past /settings to the dashboard) instead of using our route.
+  useFocusEffect(
+    useCallback(() => {
+      const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+        goBack();
+        return true; // prevent default behavior (going to dashboard)
+      });
+      return () => subscription.remove();
+    }, [goBack])
+  );
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Decorative gradient overlay */}
+      {/* Background Gradient */}
       <LinearGradient
-        colors={isDark ? ['#030712', '#0f172a', '#030712'] : ['#f8fafc', '#f1f5f9', '#e2e8f0']}
+        colors={isDark ? ['#081326', '#111b2f'] : [colors.background, colors.surface]}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
 
-      {/* Global Header */}
-      <AppHeader title="Staff Management" />
+      {/* Ambient Glows */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <View style={styles.glowCircle1}>
+          <LinearGradient
+            colors={[colors.primary + '14', 'transparent']}
+            style={StyleSheet.absoluteFill}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          />
+        </View>
+        <View style={styles.glowCircle2}>
+          <LinearGradient
+            colors={[colors.tertiary + '14', 'transparent']}
+            style={StyleSheet.absoluteFill}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          />
+        </View>
+      </View>
+
+      {/* Custom Header */}
+      <View style={[styles.header, { paddingTop: insets.top, borderBottomColor: colors.glassBorder }]}>
+        <BlurView intensity={70} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.glassBackground }]} />
+
+        <View style={styles.headerContent}>
+          <TouchableOpacity
+            onPress={goBack}
+            style={[
+              styles.backButton,
+              {
+                backgroundColor: colors.primary + '1A',
+                borderColor: colors.primary + '33',
+              },
+            ]}
+            activeOpacity={0.7}
+          >
+            <ArrowLeft color={colors.primary} size={18} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Staff Management</Text>
+        </View>
+      </View>
 
       {/* Content */}
       <ScrollView
