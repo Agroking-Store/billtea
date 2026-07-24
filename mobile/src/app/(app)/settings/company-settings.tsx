@@ -26,6 +26,8 @@ import { GlassPanel } from '../../../components/ui/GlassPanel';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 
+const HEADER_HEIGHT = 56;
+
 export default function CompanySettingsScreen() {
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
@@ -80,18 +82,16 @@ export default function CompanySettingsScreen() {
       </View>
 
       {/* Content ScrollView */}
-   const HEADER_HEIGHT = 56;
-
-<ScrollView
-  contentContainerStyle={[
-    styles.scrollContent,
-    {
-      paddingTop: insets.top + HEADER_HEIGHT,
-      paddingBottom: insets.bottom + 140,
-    },
-  ]}
-  showsVerticalScrollIndicator={false}
->
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop: insets.top + HEADER_HEIGHT,
+            paddingBottom: insets.bottom + 140,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
 
         
         {/* Company Profile Section */}
