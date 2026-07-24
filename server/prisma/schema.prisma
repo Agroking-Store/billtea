@@ -91,6 +91,7 @@ model Company {
   usage                CompanyUsage?
   subscriptionPayments SubscriptionPayment[]
   notifications        Notification[]
+  themeSettings        ThemeSettings?
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
 
@@ -642,4 +643,18 @@ model WhatsappSettings {
   isLinked          Boolean @default(true)
 
   @@map("whatsapp_settings")
+}
+
+model ThemeSettings {
+  id        String   @id @default(uuid())
+  companyId String   @unique
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  lightTheme Json    @default("{}")
+  darkTheme  Json    @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("theme_settings")
 }
