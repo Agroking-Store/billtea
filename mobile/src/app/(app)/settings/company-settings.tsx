@@ -27,10 +27,6 @@ import { GlassPanel } from '../../../components/ui/GlassPanel';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 
-// FIX: moved out of the JSX tree. A `const` statement can't live directly
-// inside a component's returned markup — it needs to sit in the function body.
-const HEADER_HEIGHT = 56;
-
 export default function CompanySettingsScreen() {
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
@@ -110,16 +106,19 @@ export default function CompanySettingsScreen() {
       </View>
 
       {/* Content ScrollView */}
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          {
-            paddingTop: insets.top + HEADER_HEIGHT,
-            paddingBottom: insets.bottom + 140,
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
+   const HEADER_HEIGHT = 56;
+
+<ScrollView
+  contentContainerStyle={[
+    styles.scrollContent,
+    {
+      paddingTop: insets.top + HEADER_HEIGHT,
+      paddingBottom: insets.bottom + 140,
+    },
+  ]}
+  showsVerticalScrollIndicator={false}
+>
+
         
         {/* Company Profile Section */}
         <GlassPanel style={styles.profileCard}>

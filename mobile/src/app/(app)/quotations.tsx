@@ -32,6 +32,8 @@ import {
   Check,
   ChevronDown,
   Calendar,
+  ArrowUpDown,
+  Search,
 } from "lucide-react-native";
 
 import { AppHeader } from "../../components/ui/AppHeader";
@@ -161,10 +163,10 @@ export default function QuotationsScreen() {
   const [searchText, setSearchText] = useState("");
 
   // ---- Inline Filter States (Matching reference code) ----
-  const [customerFilter, setCustomerFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [oldCustomerFilter, oldSetCustomerFilter] = useState("");
+  const [oldStatusFilter, oldSetStatusFilter] = useState("");
+  const [oldFromDate, oldSetFromDate] = useState("");
+  const [oldToDate, oldSetToDate] = useState("");
 
   // Dropdown States for Filters
   const [activeDropdown, setActiveDropdown] = useState<"customer" | "status" | null>(null);
@@ -225,7 +227,7 @@ export default function QuotationsScreen() {
   }, [activeTab, fetchedTabs]);
 
   // Unique customer list for Customer filter dropdown
-  const uniqueCustomers = useMemo(() => {
+  const oldUniqueCustomers = useMemo(() => {
     const names = new Set<string>();
     const sourceList = activeTab === "Quotations" ? quotations : activeTab === "Invoices" ? invoices : [];
     sourceList.forEach((item: any) => {
@@ -242,32 +244,32 @@ export default function QuotationsScreen() {
   }, [activeTab]);
 
   // Check if any filter is active
-  const hasActiveFilters = Boolean(customerFilter || statusFilter || fromDate || toDate || searchText);
+  const oldHasActiveFilters = Boolean(oldCustomerFilter || oldStatusFilter || oldFromDate || oldToDate || searchText);
 
   // Clear all filters
-  const handleClearFilters = () => {
-    setCustomerFilter("");
-    setStatusFilter("");
-    setFromDate("");
-    setToDate("");
+  const oldHandleClearFilters = () => {
+    oldSetCustomerFilter("");
+    oldSetStatusFilter("");
+    oldSetFromDate("");
+    oldSetToDate("");
     setSearchText("");
     setActiveDropdown(null);
   };
 
   // Helper date checker
   const isDateInRange = (itemDateStr: string) => {
-    if (!fromDate && !toDate) return true;
+    if (!oldFromDate && !oldToDate) return true;
     const itemDate = new Date(itemDateStr);
     if (isNaN(itemDate.getTime())) return true;
 
-    if (fromDate) {
-      const from = new Date(fromDate);
+    if (oldFromDate) {
+      const from = new Date(oldFromDate);
       from.setHours(0, 0, 0, 0);
       if (itemDate < from) return false;
     }
 
-    if (toDate) {
-      const to = new Date(toDate);
+    if (oldToDate) {
+      const to = new Date(oldToDate);
       to.setHours(23, 59, 59, 999);
       if (itemDate > to) return false;
     }
@@ -276,7 +278,7 @@ export default function QuotationsScreen() {
   };
 
   // Client-side search & inline filters
-  const filteredQuotations = useMemo(() => {
+  const oldFilteredQuotations = useMemo(() => {
     const query = searchText.trim().toLowerCase();
     return quotations.filter((q) => {
       const qNum = (q.quotationNumber ?? "").toLowerCase();
@@ -285,15 +287,15 @@ export default function QuotationsScreen() {
       const matchesSearch =
         !query || qNum.includes(query) || customerName.includes(query) || companyName.includes(query);
 
-      const matchesCustomer = !customerFilter || q.customer?.customerName === customerFilter;
-      const matchesStatus = !statusFilter || q.status === statusFilter;
+      const matchesCustomer = !oldCustomerFilter || q.customer?.customerName === oldCustomerFilter;
+      const matchesStatus = !oldStatusFilter || q.status === oldStatusFilter;
       const matchesDate = isDateInRange(q.quotationDate);
 
       return matchesSearch && matchesCustomer && matchesStatus && matchesDate;
     });
-  }, [quotations, searchText, customerFilter, statusFilter, fromDate, toDate]);
+  }, [quotations, searchText, oldCustomerFilter, oldStatusFilter, oldFromDate, oldToDate]);
 
-  const filteredInvoices = useMemo(() => {
+  const oldFilteredInvoices = useMemo(() => {
     const query = searchText.trim().toLowerCase();
     return invoices.filter((i) => {
       const iNum = (i.invoiceNumber ?? "").toLowerCase();
@@ -302,27 +304,223 @@ export default function QuotationsScreen() {
       const matchesSearch =
         !query || iNum.includes(query) || customerName.includes(query) || companyName.includes(query);
 
-      const matchesCustomer = !customerFilter || i.customer?.customerName === customerFilter;
-      const matchesStatus = !statusFilter || i.status === statusFilter;
+      const matchesCustomer = !oldCustomerFilter || i.customer?.customerName === oldCustomerFilter;
+      const matchesStatus = !oldStatusFilter || i.status === oldStatusFilter;
       const matchesDate = isDateInRange(i.invoiceDate);
 
       return matchesSearch && matchesCustomer && matchesStatus && matchesDate;
     });
-  }, [invoices, searchText, customerFilter, statusFilter, fromDate, toDate]);
+  }, [invoices, searchText, oldCustomerFilter, oldStatusFilter, oldFromDate, oldToDate]);
+  // --- Filter & Sorting state for Quotations ---
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [customerFilter, setCustomerFilter] = useState("");
+  const [companyFilter, setCompanyFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [fromDateFilter, setFromDateFilter] = useState("");
+  const [toDateFilter, setToDateFilter] = useState("");
+  const [sortBy, setSortBy] = useState<"quotationNumber" | "customer" | "quotationDate" | "grandTotal">("quotationDate");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  // Pickers state for selection modals
+  const [showCustomerPicker, setShowCustomerPicker] = useState(false);
+  const [showCompanyPicker, setShowCompanyPicker] = useState(false);
+  const [showStatusPicker, setShowStatusPicker] = useState(false);
+  const [showInvoiceStatusPicker, setShowInvoiceStatusPicker] = useState(false);
+  const [showSortPicker, setShowSortPicker] = useState(false);
+  const [showOrderPicker, setShowOrderPicker] = useState(false);
+
+  const uniqueCustomers = useMemo(() => {
+    const names = new Set<string>();
+    quotations.forEach((q) => {
+      if (q.customer?.customerName) names.add(q.customer.customerName);
+    });
+    invoices.forEach((i) => {
+      if (i.customer?.customerName) names.add(i.customer.customerName);
+    });
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [quotations, invoices]);
+
+  const uniqueCompanies = useMemo(() => {
+    const names = new Set<string>();
+    quotations.forEach((q) => {
+      if (q.customer?.companyName) names.add(q.customer.companyName);
+    });
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [quotations]);
+
+  const hasActiveFilters = Boolean(
+    customerFilter ||
+      companyFilter ||
+      statusFilter ||
+      fromDateFilter ||
+      toDateFilter ||
+      sortBy !== "quotationDate" ||
+      sortOrder !== "desc"
+  );
+
+  const handleResetFilters = () => {
+    setCustomerFilter("");
+    setCompanyFilter("");
+    setStatusFilter("");
+    setFromDateFilter("");
+    setToDateFilter("");
+    setSortBy("quotationDate");
+    setSortOrder("desc");
+  };
+
+  const filteredQuotations = useMemo(() => {
+    const query = searchText.trim().toLowerCase();
+
+    let list = quotations.filter((q) => {
+      // Text Search Query
+      if (query) {
+        const qNum = (q.quotationNumber ?? "").toLowerCase();
+        const customerName = (q.customer?.customerName ?? "").toLowerCase();
+        const companyName = (q.customer?.companyName ?? "").toLowerCase();
+        const amountStr = (q.totals?.grandTotal ?? 0).toString();
+        const matchesSearch =
+          qNum.includes(query) ||
+          customerName.includes(query) ||
+          companyName.includes(query) ||
+          amountStr.includes(query);
+        if (!matchesSearch) return false;
+      }
+
+      // Customer Filter
+      if (customerFilter && q.customer?.customerName !== customerFilter) {
+        return false;
+      }
+
+      // Company Filter
+      if (companyFilter && q.customer?.companyName !== companyFilter) {
+        return false;
+      }
+
+      // Status Filter
+      if (statusFilter && q.status !== statusFilter) {
+        return false;
+      }
+
+      // Date Range Filter
+      if (fromDateFilter || toDateFilter) {
+        const qDate = new Date(q.quotationDate);
+        if (fromDateFilter) {
+          const from = new Date(fromDateFilter);
+          from.setHours(0, 0, 0, 0);
+          if (qDate < from) return false;
+        }
+        if (toDateFilter) {
+          const to = new Date(toDateFilter);
+          to.setHours(23, 59, 59, 999);
+          if (qDate > to) return false;
+        }
+      }
+
+      return true;
+    });
+
+    // Column Sorting
+    return [...list].sort((a, b) => {
+      let comparison = 0;
+      if (sortBy === "quotationNumber") {
+        comparison = (a.quotationNumber || "").localeCompare(b.quotationNumber || "");
+      } else if (sortBy === "customer") {
+        const nameA = a.customer?.customerName || "";
+        const nameB = b.customer?.customerName || "";
+        comparison = nameA.localeCompare(nameB);
+      } else if (sortBy === "quotationDate") {
+        comparison = new Date(a.quotationDate).getTime() - new Date(b.quotationDate).getTime();
+      } else if (sortBy === "grandTotal") {
+        comparison = (a.totals?.grandTotal || 0) - (b.totals?.grandTotal || 0);
+      }
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+  }, [quotations, searchText, customerFilter, companyFilter, statusFilter, fromDateFilter, toDateFilter, sortBy, sortOrder]);
+
+  const filteredInvoices = useMemo(() => {
+    const query = searchText.trim().toLowerCase();
+
+    return invoices.filter((i) => {
+      // Text Search Query
+      if (query) {
+        const iNum = (i.invoiceNumber ?? "").toLowerCase();
+        const customerName = (i.customer?.customerName ?? "").toLowerCase();
+        const companyName = (i.customer?.companyName ?? "").toLowerCase();
+        const amountStr = (i.totals?.grandTotal ?? 0).toString();
+        const matchesSearch =
+          iNum.includes(query) ||
+          customerName.includes(query) ||
+          companyName.includes(query) ||
+          amountStr.includes(query);
+        if (!matchesSearch) return false;
+      }
+
+      // Customer Filter
+      if (customerFilter && i.customer?.customerName !== customerFilter) {
+        return false;
+      }
+
+      // Payment Status Filter
+      if (statusFilter && i.status !== statusFilter) {
+        return false;
+      }
+
+      // Date Range Filter
+      if (fromDateFilter || toDateFilter) {
+        const iDate = new Date(i.invoiceDate);
+        if (fromDateFilter) {
+          const from = new Date(fromDateFilter);
+          from.setHours(0, 0, 0, 0);
+          if (iDate < from) return false;
+        }
+        if (toDateFilter) {
+          const to = new Date(toDateFilter);
+          to.setHours(23, 59, 59, 999);
+          if (iDate > to) return false;
+        }
+      }
+
+      return true;
+    });
+  }, [invoices, searchText, customerFilter, statusFilter, fromDateFilter, toDateFilter]);
 
   const filteredExpenses = useMemo(() => {
     const query = searchText.trim().toLowerCase();
+
     return expenses.filter((e) => {
-      const categoryName = (e.category?.name ?? "").toLowerCase();
-      const noteText = (e.note ?? "").toLowerCase();
-      const matchesSearch = !query || categoryName.includes(query) || noteText.includes(query);
+      // Text Search Query
+      if (query) {
+        const categoryName = (e.category?.name ?? "").toLowerCase();
+        const noteText = (e.note ?? "").toLowerCase();
+        const amountStr = (e.amount ?? 0).toString();
+        if (!categoryName.includes(query) && !noteText.includes(query) && !amountStr.includes(query)) {
+          return false;
+        }
+      }
 
-      const matchesCustomer = !customerFilter || categoryName.includes(customerFilter.toLowerCase());
-      const matchesDate = isDateInRange(e.date);
+      // Customer Filter mapping to Category for expenses
+      if (oldCustomerFilter && e.category?.name && !e.category.name.toLowerCase().includes(oldCustomerFilter.toLowerCase())) {
+        return false;
+      }
 
-      return matchesSearch && matchesCustomer && matchesDate;
+      // Date Range Filter
+      if (fromDateFilter || toDateFilter) {
+        const eDate = new Date(e.date);
+        if (fromDateFilter) {
+          const from = new Date(fromDateFilter);
+          from.setHours(0, 0, 0, 0);
+          if (eDate < from) return false;
+        }
+        if (toDateFilter) {
+          const to = new Date(toDateFilter);
+          to.setHours(23, 59, 59, 999);
+          if (eDate > to) return false;
+        }
+      }
+
+      return true;
     });
-  }, [expenses, searchText, customerFilter, fromDate, toDate]);
+  }, [expenses, searchText, oldCustomerFilter, fromDateFilter, toDateFilter]);
 
   // Stats Row calculations
   const currentStats = useMemo(() => {
@@ -331,10 +529,14 @@ export default function QuotationsScreen() {
         (sum, item) => sum + (item.totals?.grandTotal ?? 0),
         0
       );
-      const pendingCount = quotations.filter((q) => q.status === "SENT").length;
+      const acceptedCount = quotations.filter((q) => q.status === "ACCEPTED").length;
+      const expiredCount = quotations.filter((q) => q.status === "EXPIRED").length;
+      const sentCount = quotations.filter((q) => q.status === "SENT").length;
       return [
-        { label: "Total Volume", value: formatAbbreviatedCurrency(totalVolume), color: colors.primary },
-        { label: "Pending Sent", value: String(pendingCount), color: colors.tertiary },
+        { label: "VOLUME", value: formatAbbreviatedCurrency(totalVolume), color: "#38bdf8" },
+        { label: "ACCEPTED", value: String(acceptedCount), color: "#34d399" },
+        { label: "EXPIRED", value: String(expiredCount), color: "#f87171" },
+        { label: "SENT", value: String(sentCount), color: "#c084fc" },
       ];
     }
     if (activeTab === "Invoices") {
@@ -615,41 +817,33 @@ export default function QuotationsScreen() {
     const statusColors = {
       DRAFT: "#fbbf24",
       SENT: "#34d399",
-      ACCEPTED: "#60a5fa",
+      ACCEPTED: "#38bdf8",
       EXPIRED: "#fb7185",
     };
     const statusColor = statusColors[item.status] ?? colors.textSecondary;
-    const customerName =
-      item.customer?.companyName ??
-      item.customer?.customerName ??
-      "Unknown Customer";
+    const companyName = item.customer?.companyName || item.customer?.customerName || "Customer";
+    const customerPerson =
+      item.customer?.companyName && item.customer?.customerName !== item.customer?.companyName
+        ? item.customer.customerName
+        : "";
 
     return (
       <GlassPanel style={styles.card}>
-        {/* Row 1: ID & Amount */}
-        <View style={styles.cardRow}>
-          <Text style={[styles.invoiceNumberText, { color: statusColor }]}>
-            {item.quotationNumber}
-          </Text>
+        {/* Row 1: Quotation Number Badge (Left) & Grand Total Price (Right) */}
+        <View style={styles.cardHeaderRow}>
+          <View style={[styles.numberPillBadge, { borderColor: "#38bdf8" + "40", backgroundColor: "#38bdf8" + "15" }]}>
+            <Text style={styles.numberPillText}>#{item.quotationNumber}</Text>
+          </View>
+
           <Text style={[styles.priceValueText, { color: colors.text }]}>
             {formatCurrency(item.totals?.grandTotal ?? 0)}
           </Text>
         </View>
 
-        {/* Row 2: Customer Name & Expiry */}
-        <View style={[styles.cardRow, { marginTop: 6 }]}>
-          <Text style={[styles.cardTitleText, { color: colors.text }]} numberOfLines={1}>
-            {customerName}
-          </Text>
-          <Text style={[styles.balanceLabelText, { color: colors.textSecondary }]}>
-            EXPIRY: {formatDate(item.expiryDate)}
-          </Text>
-        </View>
-
-        {/* Row 3: Date & Status */}
+        {/* Row 2: Company Name (Left) & Status Badge (Right) */}
         <View style={[styles.cardRow, { marginTop: 8, alignItems: "center" }]}>
-          <Text style={[styles.cardSubtitleText, { color: colors.textSecondary }]}>
-            {formatDate(item.quotationDate)}
+          <Text style={[styles.cardTitleText, { color: colors.text, flex: 1, marginRight: 8 }]} numberOfLines={1}>
+            {companyName}
           </Text>
 
           <View
@@ -661,16 +855,25 @@ export default function QuotationsScreen() {
               },
             ]}
           >
+            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
             <Text style={[styles.statusText, { color: statusColor }]}>
-              {item.status}
+              {item.status === "ACCEPTED" ? "Approved" : item.status === "EXPIRED" ? "Rejected" : item.status}
             </Text>
           </View>
+        </View>
+
+        {/* Row 3: Customer Contact Person & Quotation Date */}
+        <View style={[styles.cardRow, { marginTop: 4, alignItems: "center" }]}>
+          <Text style={[styles.cardSubtitleText, { color: colors.textSecondary, flex: 1 }]} numberOfLines={1}>
+            {customerPerson ? `${customerPerson}  •  ` : ""}{formatDate(item.quotationDate)}
+          </Text>
         </View>
 
         <View style={[styles.innerDivider, { backgroundColor: colors.border }]} />
 
         {/* Actions Row */}
         <View style={[styles.actionsRow, { justifyContent: "space-between" }]}>
+          <ActionIconButton icon={Eye} onPress={() => handleComingSoon("View")} />
           <ActionIconButton
             icon={PencilLine}
             onPress={() =>
@@ -896,6 +1099,11 @@ export default function QuotationsScreen() {
     return renderExpenseCard;
   }, [activeTab]);
 
+  const [filterActive, setFilterActive] = useState(false);
+  const handleFilterPress = () => {
+    setFilterActive((prev) => !prev);
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style={isDark ? "light" : "dark"} />
@@ -909,14 +1117,325 @@ export default function QuotationsScreen() {
       <AppHeader
         title={activeTab}
         onSearchPress={handleSearchIconPress}
+        onFilterPress={() => setShowFilterPanel((prev) => !prev)}
+        showCloseButton={showFilterPanel}
+        onClosePress={() => setShowFilterPanel(false)}
         searchActive={searchActive}
+        filterActive={hasActiveFilters || showFilterPanel}
         showSearchInput={searchActive}
         searchInputRef={searchInputRef}
         searchText={searchText}
         onSearchTextChange={setSearchText}
         searchPlaceholder={`Search ${activeTab.toLowerCase()}...`}
         onSearchBlur={() => setSearchActive(false)}
-      />
+      >
+        {/* Header Expansion Filter Panel (Embedded in AppHeader) */}
+        {showFilterPanel && activeTab === "Quotations" && (
+          <View style={styles.headerFilterExpansion}>
+            {/* 1. Search Box Input */}
+            <View style={[styles.filterSearchInputBox, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}>
+              <Search size={18} color={colors.textSecondary} style={{ marginRight: 8 }} />
+              <TextInput
+                value={searchText}
+                onChangeText={setSearchText}
+                placeholder="Search quotations, customers..."
+                placeholderTextColor={colors.textSecondary + "70"}
+                style={[styles.filterSearchInputText, { color: colors.text }]}
+              />
+              {searchText ? (
+                <TouchableOpacity onPress={() => setSearchText("")}>
+                  <X size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            {/* 2. Customer Name & Company Name Dropdowns */}
+            <View style={styles.filterGridRow}>
+              <View style={styles.filterFieldContainer}>
+                <TouchableOpacity
+                  onPress={() => setShowCustomerPicker(true)}
+                  style={[styles.filterSelectBtn, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}
+                >
+                  <Text style={[styles.filterSelectText, { color: customerFilter ? colors.text : colors.textSecondary }]} numberOfLines={1}>
+                    {customerFilter || "Customer Name"}
+                  </Text>
+                  <ChevronDown size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.filterFieldContainer}>
+                <TouchableOpacity
+                  onPress={() => setShowCompanyPicker(true)}
+                  style={[styles.filterSelectBtn, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}
+                >
+                  <Text style={[styles.filterSelectText, { color: companyFilter ? colors.text : colors.textSecondary }]} numberOfLines={1}>
+                    {companyFilter || "Company Name"}
+                  </Text>
+                  <ChevronDown size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* 3. FROM & TO Date Inputs */}
+            <View style={styles.filterGridRow}>
+              <View style={styles.filterFieldContainer}>
+                <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>FROM</Text>
+                <View style={[styles.dateInputWrapper, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}>
+                  <TextInput
+                    value={fromDateFilter}
+                    onChangeText={setFromDateFilter}
+                    placeholder="dd/mm/yyyy"
+                    placeholderTextColor={colors.textSecondary + "70"}
+                    style={[styles.filterDateInput, { color: colors.text }]}
+                  />
+                  <Calendar size={16} color={colors.textSecondary} />
+                </View>
+              </View>
+
+              <View style={styles.filterFieldContainer}>
+                <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>TO</Text>
+                <View style={[styles.dateInputWrapper, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}>
+                  <TextInput
+                    value={toDateFilter}
+                    onChangeText={setToDateFilter}
+                    placeholder="dd/mm/yyyy"
+                    placeholderTextColor={colors.textSecondary + "70"}
+                    style={[styles.filterDateInput, { color: colors.text }]}
+                  />
+                  <Calendar size={16} color={colors.textSecondary} />
+                </View>
+              </View>
+            </View>
+
+            {/* 4. STATUS Pill Chips */}
+            <View style={{ marginBottom: 14 }}>
+              <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>STATUS</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                {[
+                  { label: "All", value: "" },
+                  { label: "Sent", value: "SENT" },
+                  { label: "Draft", value: "DRAFT" },
+                  { label: "Approved", value: "ACCEPTED" },
+                  { label: "Rejected", value: "EXPIRED" },
+                ].map((chip) => {
+                  const isSelected = statusFilter === chip.value;
+                  return (
+                    <TouchableOpacity
+                      key={chip.label}
+                      onPress={() => setStatusFilter(chip.value)}
+                      style={[
+                        styles.statusChipBtn,
+                        isSelected
+                          ? { backgroundColor: colors.primary + "25", borderColor: colors.primary }
+                          : { backgroundColor: colors.surfaceVariant, borderColor: colors.border },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.statusChipText,
+                          { color: isSelected ? colors.primary : colors.textSecondary },
+                        ]}
+                      >
+                        {chip.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            {/* 5. Sort By & Order Dropdowns */}
+            <View style={styles.filterGridRow}>
+              <View style={styles.filterFieldContainer}>
+                <TouchableOpacity
+                  onPress={() => setShowSortPicker(true)}
+                  style={[styles.filterSelectBtn, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}
+                >
+                  <Text style={[styles.filterSelectText, { color: colors.text }]} numberOfLines={1}>
+                    {sortBy === "quotationNumber"
+                      ? "Sort By: Number"
+                      : sortBy === "customer"
+                      ? "Sort By: Customer"
+                      : sortBy === "quotationDate"
+                      ? "Sort By: Date"
+                      : "Sort By: Amount"}
+                  </Text>
+                  <ChevronDown size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.filterFieldContainer}>
+                <TouchableOpacity
+                  onPress={() => setShowOrderPicker(true)}
+                  style={[styles.filterSelectBtn, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}
+                >
+                  <Text style={[styles.filterSelectText, { color: colors.text }]} numberOfLines={1}>
+                    {sortOrder === "asc" ? "Ascending" : "Descending"}
+                  </Text>
+                  <ChevronDown size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* 6. Action Buttons: Reset & Apply Filters */}
+            <View style={styles.filterActionButtonsRow}>
+              <TouchableOpacity
+                onPress={handleResetFilters}
+                style={[styles.resetOutlineBtn, { borderColor: colors.border }]}
+              >
+                <Text style={[styles.resetOutlineText, { color: colors.text }]}>Reset</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setShowFilterPanel(false)}
+                style={[styles.applyFiltersBtn, { backgroundColor: "#7dd3fc" }]}
+              >
+                <Text style={styles.applyFiltersText}>Apply Filters</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Header Expansion Filter Panel for Invoices (Matching Web Screenshot) */}
+        {showFilterPanel && activeTab === "Invoices" && (
+          <View style={styles.headerFilterExpansion}>
+            {/* Row 1: FROM DATE & TO DATE */}
+            <View style={styles.filterGridRow}>
+              <View style={styles.filterFieldContainer}>
+                <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>FROM DATE</Text>
+                <View style={[styles.dateInputWrapper, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}>
+                  <TextInput
+                    value={fromDateFilter}
+                    onChangeText={setFromDateFilter}
+                    placeholder="dd-mm-yyyy"
+                    placeholderTextColor={colors.textSecondary + "70"}
+                    style={[styles.filterDateInput, { color: colors.text }]}
+                  />
+                  <Calendar size={16} color={colors.textSecondary} />
+                </View>
+              </View>
+
+              <View style={styles.filterFieldContainer}>
+                <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>TO DATE</Text>
+                <View style={[styles.dateInputWrapper, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}>
+                  <TextInput
+                    value={toDateFilter}
+                    onChangeText={setToDateFilter}
+                    placeholder="dd-mm-yyyy"
+                    placeholderTextColor={colors.textSecondary + "70"}
+                    style={[styles.filterDateInput, { color: colors.text }]}
+                  />
+                  <Calendar size={16} color={colors.textSecondary} />
+                </View>
+              </View>
+            </View>
+
+            {/* Row 2: CUSTOMER & PAYMENT STATUS */}
+            <View style={styles.filterGridRow}>
+              <View style={styles.filterFieldContainer}>
+                <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>CUSTOMER</Text>
+                <TouchableOpacity
+                  onPress={() => setShowCustomerPicker(true)}
+                  style={[styles.filterSelectBtn, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}
+                >
+                  <Text style={[styles.filterSelectText, { color: customerFilter ? colors.text : colors.textSecondary }]} numberOfLines={1}>
+                    {customerFilter || "All Customers"}
+                  </Text>
+                  <ChevronDown size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.filterFieldContainer}>
+                <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>PAYMENT STATUS</Text>
+                <TouchableOpacity
+                  onPress={() => setShowInvoiceStatusPicker(true)}
+                  style={[styles.filterSelectBtn, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}
+                >
+                  <Text style={[styles.filterSelectText, { color: statusFilter ? colors.text : colors.textSecondary }]} numberOfLines={1}>
+                    {statusFilter === "" && "All Status"}
+                    {statusFilter === "PAID" && "Paid"}
+                    {statusFilter === "UNPAID" && "Unpaid"}
+                    {statusFilter === "PARTIAL" && "Partial"}
+                    {statusFilter === "OVERDUE" && "Overdue"}
+                    {statusFilter === "CANCELLED" && "Cancelled"}
+                  </Text>
+                  <ChevronDown size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Row 3: Action Buttons */}
+            <View style={styles.filterActionButtonsRow}>
+              <TouchableOpacity
+                onPress={handleResetFilters}
+                style={[styles.resetOutlineBtn, { borderColor: colors.border }]}
+              >
+                <Text style={[styles.resetOutlineText, { color: colors.text }]}>Reset Filters</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setShowFilterPanel(false)}
+                style={[styles.applyFiltersBtn, { backgroundColor: "#7dd3fc" }]}
+              >
+                <Text style={styles.applyFiltersText}>Apply Filters</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Header Expansion Filter Panel for Expenses */}
+        {showFilterPanel && activeTab === "Expenses" && (
+          <View style={styles.headerFilterExpansion}>
+            {/* Row 1: FROM DATE & TO DATE */}
+            <View style={styles.filterGridRow}>
+              <View style={styles.filterFieldContainer}>
+                <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>FROM DATE</Text>
+                <View style={[styles.dateInputWrapper, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}>
+                  <TextInput
+                    value={fromDateFilter}
+                    onChangeText={setFromDateFilter}
+                    placeholder="dd-mm-yyyy"
+                    placeholderTextColor={colors.textSecondary + "70"}
+                    style={[styles.filterDateInput, { color: colors.text }]}
+                  />
+                  <Calendar size={16} color={colors.textSecondary} />
+                </View>
+              </View>
+
+              <View style={styles.filterFieldContainer}>
+                <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>TO DATE</Text>
+                <View style={[styles.dateInputWrapper, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}>
+                  <TextInput
+                    value={toDateFilter}
+                    onChangeText={setToDateFilter}
+                    placeholder="dd-mm-yyyy"
+                    placeholderTextColor={colors.textSecondary + "70"}
+                    style={[styles.filterDateInput, { color: colors.text }]}
+                  />
+                  <Calendar size={16} color={colors.textSecondary} />
+                </View>
+              </View>
+            </View>
+
+            {/* Row 2: Action Buttons */}
+            <View style={styles.filterActionButtonsRow}>
+              <TouchableOpacity
+                onPress={handleResetFilters}
+                style={[styles.resetOutlineBtn, { borderColor: colors.border }]}
+              >
+                <Text style={[styles.resetOutlineText, { color: colors.text }]}>Reset Filters</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setShowFilterPanel(false)}
+                style={[styles.applyFiltersBtn, { backgroundColor: "#7dd3fc" }]}
+              >
+                <Text style={styles.applyFiltersText}>Apply Filters</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </AppHeader>
 
       <FlatList
         data={loading ? [] : (activeDataList as any[])}
@@ -933,7 +1452,7 @@ export default function QuotationsScreen() {
               activeOption={activeTab}
               onOptionChange={(opt) => {
                 setActiveTab(opt as Tab);
-                handleClearFilters();
+                oldHandleClearFilters();
               }}
               style={{ marginBottom: 16 }}
             />
@@ -972,7 +1491,7 @@ export default function QuotationsScreen() {
                   <Text style={[styles.filterHeaderText, { color: colors.text }]}>Filters</Text>
                 </View>
 
-                {hasActiveFilters && (
+                {oldHasActiveFilters && (
                   <View style={[styles.activeBadge, { backgroundColor: colors.primary + "1A", borderColor: colors.primary + "30" }]}>
                     <Check size={12} color={colors.primary} />
                     <Text style={[styles.activeBadgeText, { color: colors.primary }]}>Active</Text>
@@ -989,8 +1508,8 @@ export default function QuotationsScreen() {
                   </Text>
                   {activeTab === "Expenses" ? (
                     <TextInput
-                      value={customerFilter}
-                      onChangeText={setCustomerFilter}
+                      value={oldCustomerFilter}
+                      onChangeText={oldSetCustomerFilter}
                       placeholder="Filter category..."
                       placeholderTextColor={colors.textSecondary + "70"}
                       style={[
@@ -1007,8 +1526,8 @@ export default function QuotationsScreen() {
                         ]}
                         onPress={() => toggleDropdown("customer")}
                       >
-                        <Text style={[styles.dropdownButtonText, { color: customerFilter ? colors.text : colors.textSecondary }]} numberOfLines={1}>
-                          {customerFilter || "All Customers"}
+                        <Text style={[styles.dropdownButtonText, { color: oldCustomerFilter ? colors.text : colors.textSecondary }]} numberOfLines={1}>
+                          {oldCustomerFilter || "All Customers"}
                         </Text>
                         <ChevronDown size={16} color={colors.textSecondary} />
                       </TouchableOpacity>
@@ -1019,31 +1538,31 @@ export default function QuotationsScreen() {
                             <TouchableOpacity
                               style={[
                                 styles.dropdownOption,
-                                customerFilter === "" && { backgroundColor: colors.primary + "20" },
+                                oldCustomerFilter === "" && { backgroundColor: colors.primary + "20" },
                               ]}
                               onPress={() => {
-                                setCustomerFilter("");
+                                oldSetCustomerFilter("");
                                 setActiveDropdown(null);
                               }}
                             >
-                              <Text style={[styles.dropdownOptionText, { color: customerFilter === "" ? colors.primary : colors.text }]}>
+                              <Text style={[styles.dropdownOptionText, { color: oldCustomerFilter === "" ? colors.primary : colors.text }]}>
                                 All Customers
                               </Text>
                             </TouchableOpacity>
 
-                            {uniqueCustomers.map((name) => (
+                            {oldUniqueCustomers.map((name) => (
                               <TouchableOpacity
                                 key={name}
                                 style={[
                                   styles.dropdownOption,
-                                  customerFilter === name && { backgroundColor: colors.primary + "20" },
+                                  oldCustomerFilter === name && { backgroundColor: colors.primary + "20" },
                                 ]}
                                 onPress={() => {
-                                  setCustomerFilter(name);
+                                  oldSetCustomerFilter(name);
                                   setActiveDropdown(null);
                                 }}
                               >
-                                <Text style={[styles.dropdownOptionText, { color: customerFilter === name ? colors.primary : colors.text }]}>
+                                <Text style={[styles.dropdownOptionText, { color: oldCustomerFilter === name ? colors.primary : colors.text }]}>
                                   {name}
                                 </Text>
                               </TouchableOpacity>
@@ -1067,8 +1586,8 @@ export default function QuotationsScreen() {
                         ]}
                         onPress={() => toggleDropdown("status")}
                       >
-                        <Text style={[styles.dropdownButtonText, { color: statusFilter ? colors.text : colors.textSecondary }]}>
-                          {statusFilter || "All Status"}
+                        <Text style={[styles.dropdownButtonText, { color: oldStatusFilter ? colors.text : colors.textSecondary }]}>
+                          {oldStatusFilter || "All Status"}
                         </Text>
                         <ChevronDown size={16} color={colors.textSecondary} />
                       </TouchableOpacity>
@@ -1079,14 +1598,14 @@ export default function QuotationsScreen() {
                             <TouchableOpacity
                               style={[
                                 styles.dropdownOption,
-                                statusFilter === "" && { backgroundColor: colors.primary + "20" },
+                                oldStatusFilter === "" && { backgroundColor: colors.primary + "20" },
                               ]}
                               onPress={() => {
-                                setStatusFilter("");
+                                oldSetStatusFilter("");
                                 setActiveDropdown(null);
                               }}
                             >
-                              <Text style={[styles.dropdownOptionText, { color: statusFilter === "" ? colors.primary : colors.text }]}>
+                              <Text style={[styles.dropdownOptionText, { color: oldStatusFilter === "" ? colors.primary : colors.text }]}>
                                 All Status
                               </Text>
                             </TouchableOpacity>
@@ -1096,14 +1615,14 @@ export default function QuotationsScreen() {
                                 key={st}
                                 style={[
                                   styles.dropdownOption,
-                                  statusFilter === st && { backgroundColor: colors.primary + "20" },
+                                  oldStatusFilter === st && { backgroundColor: colors.primary + "20" },
                                 ]}
                                 onPress={() => {
-                                  setStatusFilter(st);
+                                  oldSetStatusFilter(st);
                                   setActiveDropdown(null);
                                 }}
                               >
-                                <Text style={[styles.dropdownOptionText, { color: statusFilter === st ? colors.primary : colors.text }]}>
+                                <Text style={[styles.dropdownOptionText, { color: oldStatusFilter === st ? colors.primary : colors.text }]}>
                                   {st}
                                 </Text>
                               </TouchableOpacity>
@@ -1120,8 +1639,8 @@ export default function QuotationsScreen() {
                   <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>From Date</Text>
                   <View style={styles.inputWithIcon}>
                     <TextInput
-                      value={fromDate}
-                      onChangeText={setFromDate}
+                      value={oldFromDate}
+                      onChangeText={oldSetFromDate}
                       placeholder="YYYY-MM-DD"
                       placeholderTextColor={colors.textSecondary + "70"}
                       style={[
@@ -1138,8 +1657,8 @@ export default function QuotationsScreen() {
                   <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>To Date</Text>
                   <View style={styles.inputWithIcon}>
                     <TextInput
-                      value={toDate}
-                      onChangeText={setToDate}
+                      value={oldToDate}
+                      onChangeText={oldSetToDate}
                       placeholder="YYYY-MM-DD"
                       placeholderTextColor={colors.textSecondary + "70"}
                       style={[
@@ -1155,12 +1674,12 @@ export default function QuotationsScreen() {
               {/* Reset Action */}
               <View style={styles.resetActionRow}>
                 <TouchableOpacity
-                  disabled={!hasActiveFilters}
-                  onPress={handleClearFilters}
+                  disabled={!oldHasActiveFilters}
+                  onPress={oldHandleClearFilters}
                   style={[
                     styles.resetInlineBtn,
                     { borderColor: colors.border },
-                    !hasActiveFilters && { opacity: 0.4 },
+                    !oldHasActiveFilters && { opacity: 0.4 },
                   ]}
                 >
                   <RotateCcw size={14} color={colors.textSecondary} />
@@ -1276,6 +1795,243 @@ export default function QuotationsScreen() {
             </View>
           </View>
         </View>
+      </Modal>
+
+      {/* Customer Selection Modal */}
+      <Modal
+        visible={showCustomerPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCustomerPicker(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          style={styles.modalOverlay}
+          onPress={() => setShowCustomerPicker(false)}
+        >
+          <View style={[styles.modalContent, { backgroundColor: isDark ? "#0f172a" : colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Customer</Text>
+              <TouchableOpacity onPress={() => setShowCustomerPicker(false)} style={styles.closeBtn}>
+                <X size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 300 }}>
+              <TouchableOpacity
+                style={[styles.pickerOptionItem, customerFilter === "" && { backgroundColor: colors.primary + "15" }]}
+                onPress={() => { setCustomerFilter(""); setShowCustomerPicker(false); }}
+              >
+                <Text style={[styles.pickerOptionText, { color: customerFilter === "" ? colors.primary : colors.text }]}>All Customers</Text>
+                {customerFilter === "" && <Check size={18} color={colors.primary} />}
+              </TouchableOpacity>
+              {uniqueCustomers.map((name) => (
+                <TouchableOpacity
+                  key={name}
+                  style={[styles.pickerOptionItem, customerFilter === name && { backgroundColor: colors.primary + "15" }]}
+                  onPress={() => { setCustomerFilter(name); setShowCustomerPicker(false); }}
+                >
+                  <Text style={[styles.pickerOptionText, { color: customerFilter === name ? colors.primary : colors.text }]}>{name}</Text>
+                  {customerFilter === name && <Check size={18} color={colors.primary} />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Status Selection Modal */}
+      <Modal
+        visible={showStatusPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowStatusPicker(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          style={styles.modalOverlay}
+          onPress={() => setShowStatusPicker(false)}
+        >
+          <View style={[styles.modalContent, { backgroundColor: isDark ? "#0f172a" : colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Status</Text>
+              <TouchableOpacity onPress={() => setShowStatusPicker(false)} style={styles.closeBtn}>
+                <X size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            {[
+              { label: "All Status", value: "" },
+              { label: "Draft", value: "DRAFT" },
+              { label: "Sent", value: "SENT" },
+              { label: "Accepted", value: "ACCEPTED" },
+              { label: "Expired", value: "EXPIRED" },
+            ].map((item) => (
+              <TouchableOpacity
+                key={item.value}
+                style={[styles.pickerOptionItem, statusFilter === item.value && { backgroundColor: colors.primary + "15" }]}
+                onPress={() => { setStatusFilter(item.value); setShowStatusPicker(false); }}
+              >
+                <Text style={[styles.pickerOptionText, { color: statusFilter === item.value ? colors.primary : colors.text }]}>{item.label}</Text>
+                {statusFilter === item.value && <Check size={18} color={colors.primary} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Invoice Payment Status Selection Modal */}
+      <Modal
+        visible={showInvoiceStatusPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowInvoiceStatusPicker(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          style={styles.modalOverlay}
+          onPress={() => setShowInvoiceStatusPicker(false)}
+        >
+          <View style={[styles.modalContent, { backgroundColor: isDark ? "#0f172a" : colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Payment Status</Text>
+              <TouchableOpacity onPress={() => setShowInvoiceStatusPicker(false)} style={styles.closeBtn}>
+                <X size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            {[
+              { label: "All Status", value: "" },
+              { label: "Paid", value: "PAID" },
+              { label: "Unpaid", value: "UNPAID" },
+              { label: "Partial", value: "PARTIAL" },
+              { label: "Overdue", value: "OVERDUE" },
+              { label: "Cancelled", value: "CANCELLED" },
+            ].map((item) => (
+              <TouchableOpacity
+                key={item.value}
+                style={[styles.pickerOptionItem, statusFilter === item.value && { backgroundColor: colors.primary + "15" }]}
+                onPress={() => { setStatusFilter(item.value); setShowInvoiceStatusPicker(false); }}
+              >
+                <Text style={[styles.pickerOptionText, { color: statusFilter === item.value ? colors.primary : colors.text }]}>{item.label}</Text>
+                {statusFilter === item.value && <Check size={18} color={colors.primary} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Sort Column Selection Modal */}
+      <Modal
+        visible={showSortPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSortPicker(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          style={styles.modalOverlay}
+          onPress={() => setShowSortPicker(false)}
+        >
+          <View style={[styles.modalContent, { backgroundColor: isDark ? "#0f172a" : colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Sort By Column</Text>
+              <TouchableOpacity onPress={() => setShowSortPicker(false)} style={styles.closeBtn}>
+                <X size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            {[
+              { label: "Quotation Number", value: "quotationNumber" },
+              { label: "Customer", value: "customer" },
+              { label: "Date & Status", value: "quotationDate" },
+              { label: "Total Amount", value: "grandTotal" },
+            ].map((item) => (
+              <TouchableOpacity
+                key={item.value}
+                style={[styles.pickerOptionItem, sortBy === item.value && { backgroundColor: colors.primary + "15" }]}
+                onPress={() => { setSortBy(item.value as any); setShowSortPicker(false); }}
+              >
+                <Text style={[styles.pickerOptionText, { color: sortBy === item.value ? colors.primary : colors.text }]}>{item.label}</Text>
+                {sortBy === item.value && <Check size={18} color={colors.primary} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Company Selection Modal */}
+      <Modal
+        visible={showCompanyPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCompanyPicker(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          style={styles.modalOverlay}
+          onPress={() => setShowCompanyPicker(false)}
+        >
+          <View style={[styles.modalContent, { backgroundColor: isDark ? "#0f172a" : colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Company</Text>
+              <TouchableOpacity onPress={() => setShowCompanyPicker(false)} style={styles.closeBtn}>
+                <X size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 300 }}>
+              <TouchableOpacity
+                style={[styles.pickerOptionItem, companyFilter === "" && { backgroundColor: colors.primary + "15" }]}
+                onPress={() => { setCompanyFilter(""); setShowCompanyPicker(false); }}
+              >
+                <Text style={[styles.pickerOptionText, { color: companyFilter === "" ? colors.primary : colors.text }]}>Company Name (All)</Text>
+                {companyFilter === "" && <Check size={18} color={colors.primary} />}
+              </TouchableOpacity>
+              {uniqueCompanies.map((name) => (
+                <TouchableOpacity
+                  key={name}
+                  style={[styles.pickerOptionItem, companyFilter === name && { backgroundColor: colors.primary + "15" }]}
+                  onPress={() => { setCompanyFilter(name); setShowCompanyPicker(false); }}
+                >
+                  <Text style={[styles.pickerOptionText, { color: companyFilter === name ? colors.primary : colors.text }]}>{name}</Text>
+                  {companyFilter === name && <Check size={18} color={colors.primary} />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Sort Order Selection Modal */}
+      <Modal
+        visible={showOrderPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowOrderPicker(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          style={styles.modalOverlay}
+          onPress={() => setShowOrderPicker(false)}
+        >
+          <View style={[styles.modalContent, { backgroundColor: isDark ? "#0f172a" : colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Order</Text>
+              <TouchableOpacity onPress={() => setShowOrderPicker(false)} style={styles.closeBtn}>
+                <X size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            {[
+              { label: "Descending", value: "desc" },
+              { label: "Ascending", value: "asc" },
+            ].map((item) => (
+              <TouchableOpacity
+                key={item.value}
+                style={[styles.pickerOptionItem, sortOrder === item.value && { backgroundColor: colors.primary + "15" }]}
+                onPress={() => { setSortOrder(item.value as any); setShowOrderPicker(false); }}
+              >
+                <Text style={[styles.pickerOptionText, { color: sortOrder === item.value ? colors.primary : colors.text }]}>{item.label}</Text>
+                {sortOrder === item.value && <Check size={18} color={colors.primary} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
@@ -1676,5 +2432,187 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 14,
     fontWeight: "700",
+  },
+  filterSection: {
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(125, 211, 252, 0.15)",
+  },
+
+  filterTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  resetBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: "rgba(125, 211, 252, 0.1)",
+  },
+  resetBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  filterGridRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 12,
+  },
+  filterFieldContainer: {
+    flex: 1,
+  },
+  filterFieldLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    marginBottom: 6,
+    textTransform: "uppercase",
+  },
+  filterSelectBtn: {
+    height: 42,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  filterSelectText: {
+    fontSize: 13,
+    fontWeight: "500",
+    flex: 1,
+  },
+  filterDateInput: {
+    flex: 1,
+    height: "100%",
+    fontSize: 13,
+    padding: 0,
+    margin: 0,
+  },
+  sortOrderToggleBtn: {
+    height: 42,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  sortOrderToggleText: {
+    fontSize: 12,
+    fontWeight: "600",
+    flex: 1,
+  },
+  pickerOptionItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 4,
+  },
+  pickerOptionText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  filterSearchInputBox: {
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  filterSearchInputText: {
+    flex: 1,
+    fontSize: 14,
+  },
+  dateInputWrapper: {
+    height: 42,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  statusChipBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  statusChipText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  filterActionButtonsRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 6,
+  },
+  resetOutlineBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  resetOutlineText: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  applyFiltersBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  applyFiltersText: {
+    color: "#0f172a",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  cardHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  numberPillBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  numberPillText: {
+    color: "#38bdf8",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  cardTimeText: {
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 6,
+  },
+  customerSubtext: {
+    fontSize: 13,
+    fontWeight: "500",
+    marginTop: 2,
+  },
+  headerFilterExpansion: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    paddingTop: 4,
   },
 });

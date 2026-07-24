@@ -215,7 +215,7 @@ export default function LoginPage() {
           {/* Step 1: Mobile or Email Input View */}
           {loginStep === 1 && (
             <div className={`transition-all duration-300 ${loginTransitioning ? 'opacity-0 translate-x-[-20px]' : 'opacity-100 translate-x-0'}`}>
-              <form onSubmit={handleLoginMobileSubmit} className="space-y-6">
+              <form onSubmit={handleLoginMobileSubmit} className="space-y-6" noValidate>
                 {loginMethod === 'otp' ? (
                   <div className="space-y-3">
                     <label className="block text-sm font-medium text-on-surface" htmlFor="login-mobile">Mobile Number</label>
@@ -336,7 +336,7 @@ export default function LoginPage() {
                 </div>
               )}
 
-              <form onSubmit={handleLoginOtpSubmit} className="space-y-6">
+              <form onSubmit={handleLoginOtpSubmit} className="space-y-6" noValidate>
                 <div className="space-y-3">
                   {loginMethod === 'otp' ? (
                     <div className="flex justify-between gap-2">
