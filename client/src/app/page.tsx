@@ -40,12 +40,11 @@ export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [currentSlide, setCurrentSlide] = useState<number>(0);
   const [formSubmitted, setFormSubmitted] = useState<boolean>(false);
+  const [isUserLoggedIn, setIsUserLoggedIn] = useState<boolean>(false);
 
   useEffect(() => {
-    if (isLoggedIn()) {
-      router.push('/home');
-    }
-  }, [router]);
+    setIsUserLoggedIn(isLoggedIn());
+  }, []);
 
   // Testimonial auto-slider
   useEffect(() => {
@@ -97,18 +96,29 @@ export default function LandingPage() {
               </span>
             </button>
 
-            <button 
-              onClick={() => router.push('/login')}
-              className="hidden md:block text-on-surface-variant hover:text-primary transition-colors font-semibold active:scale-95 cursor-pointer"
-            >
-              Login
-            </button>
-            <button 
-              onClick={() => router.push('/signup')}
-              className="hidden md:block bg-primary hover:bg-primary/90 text-on-primary px-5 py-2 rounded-lg font-semibold transition-all duration-300 active:scale-95 shadow-md shadow-primary/20 cursor-pointer"
-            >
-              Get Started
-            </button>
+            {isUserLoggedIn ? (
+              <button 
+                onClick={() => router.push('/home')}
+                className="hidden md:block bg-primary hover:bg-primary/90 text-on-primary px-5 py-2 rounded-lg font-semibold transition-all duration-300 active:scale-95 shadow-md shadow-primary/20 cursor-pointer"
+              >
+                Dashboard
+              </button>
+            ) : (
+              <>
+                <button 
+                  onClick={() => router.push('/login')}
+                  className="hidden md:block text-on-surface-variant hover:text-primary transition-colors font-semibold active:scale-95 cursor-pointer"
+                >
+                  Login
+                </button>
+                <button 
+                  onClick={() => router.push('/signup')}
+                  className="hidden md:block bg-primary hover:bg-primary/90 text-on-primary px-5 py-2 rounded-lg font-semibold transition-all duration-300 active:scale-95 shadow-md shadow-primary/20 cursor-pointer"
+                >
+                  Get Started
+                </button>
+              </>
+            )}
 
             {/* Mobile Menu Button */}
             <button 
@@ -131,18 +141,29 @@ export default function LandingPage() {
             <a href="#availability" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium text-on-surface hover:text-primary">Availability</a>
             <a href="#testimonials" onClick={() => setMobileMenuOpen(false)} className="text-lg font-medium text-on-surface hover:text-primary">Reviews</a>
             <hr className="border-primary/10 my-2" />
-            <button 
-              onClick={() => { setMobileMenuOpen(false); router.push('/login'); }}
-              className="text-center text-on-surface font-semibold py-2 rounded-lg hover:bg-primary/5 cursor-pointer w-full"
-            >
-              Login
-            </button>
-            <button 
-              onClick={() => { setMobileMenuOpen(false); router.push('/signup'); }}
-              className="text-center bg-primary text-on-primary font-semibold py-3 rounded-lg shadow-md cursor-pointer w-full"
-            >
-              Get Started
-            </button>
+            {isUserLoggedIn ? (
+              <button 
+                onClick={() => { setMobileMenuOpen(false); router.push('/home'); }}
+                className="text-center bg-primary text-on-primary font-semibold py-3 rounded-lg shadow-md cursor-pointer w-full"
+              >
+                Dashboard
+              </button>
+            ) : (
+              <>
+                <button 
+                  onClick={() => { setMobileMenuOpen(false); router.push('/login'); }}
+                  className="text-center text-on-surface font-semibold py-2 rounded-lg hover:bg-primary/5 cursor-pointer w-full"
+                >
+                  Login
+                </button>
+                <button 
+                  onClick={() => { setMobileMenuOpen(false); router.push('/signup'); }}
+                  className="text-center bg-primary text-on-primary font-semibold py-3 rounded-lg shadow-md cursor-pointer w-full"
+                >
+                  Get Started
+                </button>
+              </>
+            )}
           </div>
         )}
       </header>
