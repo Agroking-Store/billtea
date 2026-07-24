@@ -40,6 +40,7 @@ import {
 
 import { AppHeader } from "../../components/ui/AppHeader";
 import { useTheme } from "../../hooks/useTheme";
+import { useBranch, Branch } from "../../components/BranchProvider";
 
 import { ENV } from "@/config/env";
 import { apiClient } from "@/api/client";
@@ -49,11 +50,6 @@ import { create } from "zustand";
 type Section = "customers" | "products";
 type FilterMode = "all" | "active" | "inactive";
 
-type Branch = {
-  id: string;
-  name: string;
-  isMainBranch: boolean;
-};
 
 type CustomerRecord = {
   id: string;
@@ -512,9 +508,7 @@ export default function ProductsScreen() {
   const [activeSection, setActiveSection] = useState<Section>("customers");
   const [customers, setCustomers] = useState<CustomerRecord[]>([]);
   const [products, setProducts] = useState<ProductRecord[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
-  const [loadingBranches, setLoadingBranches] = useState(true);
+  const { selectedBranchId, branches, isLoadingBranches: loadingBranches } = useBranch();
   const [loadingRecords, setLoadingRecords] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -584,35 +578,6 @@ export default function ProductsScreen() {
     [activeSection],
   );
 
-  useEffect(() => {
-    async function loadBranches() {
-      try {
-        const res = await apiClient.get("/branches");
-        if (res.status === 200 && res.data?.success) {
-          const loadedBranches = Array.isArray(res.data.branches)
-            ? res.data.branches
-            : [];
-          setBranches(loadedBranches);
-          const mainBranch = loadedBranches.find(
-            (branch: Branch) => branch.isMainBranch,
-          );
-          setSelectedBranchId(mainBranch?.id ?? loadedBranches[0]?.id ?? null);
-        } else {
-          setBranches([]);
-          setSelectedBranchId(null);
-        }
-      } catch (err: any) {
-        console.error("Failed to load branches:", err);
-        setBranches([]);
-        setSelectedBranchId(null);
-        setError(err?.message || "Failed to load branches.");
-      } finally {
-        setLoadingBranches(false);
-      }
-    }
-
-    loadBranches();
-  }, []);
 
   useEffect(() => {
     if (!selectedBranchId) {

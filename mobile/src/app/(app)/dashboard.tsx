@@ -108,41 +108,17 @@ export default function DashboardScreen() {
   const [activeTab, setActiveTab] = useState<'Summary' | 'Trends'>('Summary');
   const { colors, isDark } = useTheme();
 
-  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load branch first (same pattern used across the app)
+  // Load dashboard stats for all branches
   useEffect(() => {
-    async function loadBranches() {
-      try {
-        const res = await apiClient.get('/branches');
-        if (res.status === 200 && res.data?.success) {
-          const loaded: Branch[] = Array.isArray(res.data.branches) ? res.data.branches : [];
-          const mainBranch = loaded.find((b) => b.isMainBranch);
-          setSelectedBranchId(mainBranch?.id ?? loaded[0]?.id ?? null);
-        }
-      } catch (err) {
-        console.error('Failed to load branches:', err);
-        setError('Could not load branch info.');
-        setLoading(false);
-      }
-    }
-    loadBranches();
-  }, []);
-
-  // Load dashboard stats once we know the branch
-  useEffect(() => {
-    if (!selectedBranchId) return;
-
     async function loadStats() {
       setLoading(true);
       setError(null);
       try {
-        const res = await apiClient.get('/dashboard/stats', {
-          params: { branchId: selectedBranchId },
-        });
+        const res = await apiClient.get('/dashboard/stats');
         setStats(res.data);
       } catch (err) {
         console.error('Failed to load dashboard stats:', err);
@@ -152,7 +128,7 @@ export default function DashboardScreen() {
       }
     }
     loadStats();
-  }, [selectedBranchId]);
+  }, []);
 
   const reminders = useMemo(() => (stats ? mergeReminders(stats) : []), [stats]);
 

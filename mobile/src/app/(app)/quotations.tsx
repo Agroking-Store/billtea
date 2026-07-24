@@ -41,6 +41,7 @@ import { GlassPanel } from "../../components/ui/GlassPanel";
 import { ActionIconButton } from "../../components/billing/ActionIconButton";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { useTheme } from "../../hooks/useTheme";
+import { useBranch } from "../../components/BranchProvider";
 import { apiClient } from "@/api/client";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
@@ -143,6 +144,11 @@ export default function QuotationsScreen() {
   const searchInputRef = useRef<TextInput>(null);
   const [activeTab, setActiveTab] = useState<Tab>("Quotations");
   const { colors, isDark } = useTheme();
+  const { selectedBranchId } = useBranch();
+
+  useEffect(() => {
+    setFetchedTabs({ Quotations: false, Invoices: false, Expenses: false });
+  }, [selectedBranchId]);
 
   // Record list states
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -187,7 +193,7 @@ export default function QuotationsScreen() {
       setError(null);
       try {
         const endpoint = `/${activeTab.toLowerCase()}`;
-        const res = await apiClient.get(endpoint);
+        const res = await apiClient.get(endpoint, { params: { branchId: selectedBranchId } });
         if (!mounted) return;
 
         if (res.status === 200 && (res.data?.success || Array.isArray(res.data))) {

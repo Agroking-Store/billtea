@@ -29,6 +29,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { GlassPanel } from '../../components/ui/GlassPanel';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
+import { useBranch } from "../../components/BranchProvider";
 import { apiClient } from '@/api/client';
 
 const { width } = Dimensions.get('window');
@@ -53,8 +54,7 @@ export default function CreateQuotationScreen() {
   const [isLoadingQuotation, setIsLoadingQuotation] = useState(false);
   
   // Backend Active State
-  const [branches, setBranches] = useState<any[]>([]);
-  const [selectedBranchId, setSelectedBranchId] = useState<string>('');
+  const { selectedBranchId } = useBranch();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Section 1: Customer Details & Search
@@ -109,26 +109,6 @@ export default function CreateQuotationScreen() {
   const [notes, setNotes] = useState("");
   const [terms, setTerms] = useState("Payment is due within 30 days. Standard warranty applies to all hardware items.");
 
-  // --- API / MOUNT EFFECTS ---
-  
-  // Load Branches
-  useEffect(() => {
-    async function loadBranches() {
-      try {
-        const res = await apiClient.get('/branches');
-        if (res.status === 200 && Array.isArray(res.data)) {
-          setBranches(res.data);
-          const mainBranch = res.data.find(b => b.isMain) || res.data[0];
-          if (mainBranch) {
-            setSelectedBranchId(mainBranch.id);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to load branches:', err);
-      }
-    }
-    loadBranches();
-  }, []);
 
   // Fetch Quotation details for Edit Mode or Copy Mode
   useEffect(() => {
@@ -141,10 +121,9 @@ export default function CreateQuotationScreen() {
         if (res.status === 200 && res.data) {
           const q = res.data;
           
-          // Prefill branch
-          if (q.branchId) {
-            setSelectedBranchId(q.branchId);
-          }
+          // Note: When editing, the original branch is saved on the quotation itself.
+          // The API will reject if we edit a quotation that belongs to another branch,
+          // but we still pass the currently selected Branch.
 
           // Prefill customer details
           if (q.customer) {
@@ -219,7 +198,7 @@ export default function CreateQuotationScreen() {
     setSelectedClient(text);
     setIsSearchingCustomers(true);
     try {
-      const res = await apiClient.get(`/quotations/customers/search?q=${encodeURIComponent(text)}`);
+      const res = await apiClient.get(`/quotations/customers/search?q=${encodeURIComponent(text)}`, { params: { branchId: selectedBranchId } });
       if (res.status === 200 && Array.isArray(res.data)) {
         setCustomers(res.data);
       }
@@ -257,7 +236,7 @@ export default function CreateQuotationScreen() {
     setActiveProductSearchIdx(index);
     
     try {
-      const res = await apiClient.get(`/quotations/products/search?q=${encodeURIComponent(text)}`);
+      const res = await apiClient.get(`/quotations/products/search?q=${encodeURIComponent(text)}`, { params: { branchId: selectedBranchId } });
       if (res.status === 200 && Array.isArray(res.data)) {
         setProductList(res.data);
       }
