@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiFetch, initAuthStore, subscribeAuth } from '../lib/auth';
+import { initAuthStore, subscribeAuth } from '../lib/auth';
 import { useAuthStore } from '../store/authStore';
+import { apiClient } from '../api/client';
 
 export interface Branch {
   id: string | number;
@@ -52,19 +53,17 @@ export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
 
       if (!token) {
-        console.warn('BranchProvider: No active session found.');
+        console.log('BranchProvider: No token found. Branches empty.');
         setBranches([]);
         setSelectedBranchIdState(null);
         setIsLoadingBranches(false);
         return;
       }
 
-      // 2. Fetch branches with explicit token header fallback
-      const response = await apiFetch('/branches', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      console.log('BranchProvider: Fetching with token:', token.slice(0, 10) + '...');
+      // 2. Fetch branches using the global axios client
+      const response = await apiClient.get('/branches');
+      console.log('BranchProvider: Response Status:', response.status);
 
       if (response.status === 401) {
         console.warn('BranchProvider: Unauthorized response from /branches');
@@ -74,11 +73,11 @@ export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return;
       }
 
-      if (!response.ok) {
+      if (response.status !== 200) {
         throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
       }
 
-      const resData = await response.json();
+      const resData = response.data;
       console.log('Branch Response Received:', resData);
 
       // Robust extraction matching all standard backend response formats

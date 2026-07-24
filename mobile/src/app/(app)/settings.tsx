@@ -170,7 +170,8 @@ export default function SettingsScreen() {
         >
           {/* Profile Header */}
           <ProfileHeader
-            name="Sarang Wagh"
+            name="Laxman Jadhav"
+            role="Admin"
             avatarUri="https://lh3.googleusercontent.com/aida-public/AB6AXuCikZgFX6gEoglH2uQdLP1N5dN8spNucZQ_rb9lPo4yRYB6WWoo1e2d18EGDcdRpyk6rMoyi3kSH0WCvs2TRXMqJzVku5feWeHdAxhHqGZpK1ZVLRIZglACbHPBuVsWGRfoxvgFzav1frnHXFUiZX_jwyC2lsXhGDxVqlqecU4XtdOVVrXugOj6i6D0xaoAkMXIR3mpch0JEZTF_HpJyFioRw8zMBCpEflfUo0cOjDvK-RuLwAtxUsr"
             planName="Premium Plan"
             onEditPress={handleEditProfile}
