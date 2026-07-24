@@ -1,6 +1,6 @@
 {
 
- "extends": "expo/tsconfig.react-native",
+ "extends": "expo/tsconfig.base",
   
 
 
@@ -13,7 +13,7 @@
     "jsxImportSource": "react",
     "allowJs": true,
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "skipLibCheck": true,
      "resolveJsonModule": true,
     "isolatedModules": true,

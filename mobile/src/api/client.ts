@@ -68,6 +68,10 @@ apiClient.interceptors.response.use(
       }
     }
 
+    if (!error.response) {
+      console.error(`Network Error attempting to reach ${ENV.API_URL}${error.config?.url || ''}:`, error.message);
+    }
+
     return Promise.reject(error);
   }
 );

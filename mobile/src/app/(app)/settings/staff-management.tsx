@@ -15,6 +15,7 @@ import {
   Pressable,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../../hooks/useTheme';
 import {
@@ -180,20 +181,29 @@ export default function UserManagementScreen() {
   };
   // ── End added state/handlers ──
 
-  return (
-    <View style={styles.container}>
-      <Stack.Screen options={{ headerShown: false }} />
+  const [filterActive, setFilterActive] = useState(false);
+  const handleFilterPress = () => {
+    setFilterActive((prev) => !prev);
+  };
 
-      {/* Background Gradient */}
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={isDark ? "light" : "dark"} />
+
+      {/* Decorative gradient overlay */}
       <LinearGradient
-        colors={isDark ? ['#081326', '#111b2f'] : [colors.background, colors.surface]}
+        colors={isDark ? ['#030712', '#0f172a', '#030712'] : ['#f8fafc', '#f1f5f9', '#e2e8f0']}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
 
       {/* Global Header */}
-      <AppHeader title="Staff Management" />
+      <AppHeader
+        title="Staff Management"
+        onFilterPress={handleFilterPress}
+        filterActive={filterActive}
+      />
 
       {/* Content */}
       <ScrollView

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, ActivityIndicator, TouchableOpacity, TextInput } from 'react-native';
 import { GlassPanel } from '../../components/ui/GlassPanel';
 import { GlassPanelElevated } from '../../components/ui/GlassPanelElevated';
 import { TrendChart } from '../../components/ui/TrendChart';
@@ -178,6 +178,19 @@ export default function DashboardScreen() {
     return labels;
   }, [stats]);
 
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [fromDateFilter, setFromDateFilter] = useState("");
+  const [toDateFilter, setToDateFilter] = useState("");
+  const [dateRangeType, setDateRangeType] = useState("30_days");
+
+  const hasActiveFilters = Boolean(fromDateFilter || toDateFilter || dateRangeType !== "30_days");
+
+  const handleResetFilters = () => {
+    setFromDateFilter("");
+    setToDateFilter("");
+    setDateRangeType("30_days");
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Decorative Background Effects */}
@@ -187,7 +200,104 @@ export default function DashboardScreen() {
       </View>
 
       {/* Header */}
-      <AppHeader title="Dashboard" />
+      <AppHeader
+        title="Dashboard"
+        onFilterPress={() => setShowFilterPanel((prev) => !prev)}
+        showCloseButton={showFilterPanel}
+        onClosePress={() => setShowFilterPanel(false)}
+        filterActive={hasActiveFilters || showFilterPanel}
+      >
+        {/* Header Expansion Filter Panel */}
+        {showFilterPanel && (
+          <View style={styles.headerFilterExpansion}>
+            {/* 1. Date Range Type Chips */}
+            <View style={{ marginBottom: 12 }}>
+              <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>DATE RANGE</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                {[
+                  { label: "30 Days", value: "30_days" },
+                  { label: "This Month", value: "this_month" },
+                  { label: "This Year", value: "this_year" },
+                  { label: "Custom Range", value: "custom" },
+                ].map((chip) => {
+                  const isSelected = dateRangeType === chip.value;
+                  return (
+                    <TouchableOpacity
+                      key={chip.value}
+                      onPress={() => setDateRangeType(chip.value)}
+                      style={[
+                        styles.statusChipBtn,
+                        isSelected
+                          ? { backgroundColor: colors.primary + "25", borderColor: colors.primary }
+                          : { backgroundColor: colors.surfaceVariant, borderColor: colors.border },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.statusChipText,
+                          { color: isSelected ? colors.primary : colors.textSecondary },
+                        ]}
+                      >
+                        {chip.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            {/* 2. Custom Date Inputs */}
+            {dateRangeType === "custom" && (
+              <View style={styles.filterGridRow}>
+                <View style={styles.filterFieldContainer}>
+                  <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>FROM DATE</Text>
+                  <View style={[styles.dateInputWrapper, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}>
+                    <TextInput
+                      value={fromDateFilter}
+                      onChangeText={setFromDateFilter}
+                      placeholder="dd-mm-yyyy"
+                      placeholderTextColor={colors.textSecondary + "70"}
+                      style={[styles.filterDateInput, { color: colors.text }]}
+                    />
+                    <Calendar size={16} color={colors.textSecondary} />
+                  </View>
+                </View>
+
+                <View style={styles.filterFieldContainer}>
+                  <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>TO DATE</Text>
+                  <View style={[styles.dateInputWrapper, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}>
+                    <TextInput
+                      value={toDateFilter}
+                      onChangeText={setToDateFilter}
+                      placeholder="dd-mm-yyyy"
+                      placeholderTextColor={colors.textSecondary + "70"}
+                      style={[styles.filterDateInput, { color: colors.text }]}
+                    />
+                    <Calendar size={16} color={colors.textSecondary} />
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* 3. Action Buttons */}
+            <View style={styles.filterActionButtonsRow}>
+              <TouchableOpacity
+                onPress={handleResetFilters}
+                style={[styles.resetOutlineBtn, { borderColor: colors.border }]}
+              >
+                <Text style={[styles.resetOutlineText, { color: colors.text }]}>Reset Filters</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setShowFilterPanel(false)}
+                style={[styles.applyFiltersBtn, { backgroundColor: "#7dd3fc" }]}
+              >
+                <Text style={styles.applyFiltersText}>Apply Filters</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </AppHeader>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -576,5 +686,79 @@ const styles = StyleSheet.create({
   reminderPriority: {
     fontSize: 12,
     fontWeight: '500',
+  },
+  headerFilterExpansion: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    paddingTop: 4,
+  },
+  filterGridRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 12,
+  },
+  filterFieldContainer: {
+    flex: 1,
+  },
+  filterFieldLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
+  dateInputWrapper: {
+    height: 42,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  filterDateInput: {
+    flex: 1,
+    height: "100%",
+    fontSize: 13,
+    padding: 0,
+    margin: 0,
+  },
+  statusChipBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  statusChipText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  filterActionButtonsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 4,
+  },
+  resetOutlineBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  resetOutlineText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  applyFiltersBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  applyFiltersText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0f172a",
   },
 });
