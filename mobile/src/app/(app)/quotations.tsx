@@ -32,10 +32,7 @@ import {
   Check,
   ChevronDown,
   Calendar,
-  ChevronDown,
   ArrowUpDown,
-  Check,
-  Calendar,
   Search,
 } from "lucide-react-native";
 
@@ -166,10 +163,10 @@ export default function QuotationsScreen() {
   const [searchText, setSearchText] = useState("");
 
   // ---- Inline Filter States (Matching reference code) ----
-  const [customerFilter, setCustomerFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [oldCustomerFilter, oldSetCustomerFilter] = useState("");
+  const [oldStatusFilter, oldSetStatusFilter] = useState("");
+  const [oldFromDate, oldSetFromDate] = useState("");
+  const [oldToDate, oldSetToDate] = useState("");
 
   // Dropdown States for Filters
   const [activeDropdown, setActiveDropdown] = useState<"customer" | "status" | null>(null);
@@ -230,7 +227,7 @@ export default function QuotationsScreen() {
   }, [activeTab, fetchedTabs]);
 
   // Unique customer list for Customer filter dropdown
-  const uniqueCustomers = useMemo(() => {
+  const oldUniqueCustomers = useMemo(() => {
     const names = new Set<string>();
     const sourceList = activeTab === "Quotations" ? quotations : activeTab === "Invoices" ? invoices : [];
     sourceList.forEach((item: any) => {
@@ -247,32 +244,32 @@ export default function QuotationsScreen() {
   }, [activeTab]);
 
   // Check if any filter is active
-  const hasActiveFilters = Boolean(customerFilter || statusFilter || fromDate || toDate || searchText);
+  const oldHasActiveFilters = Boolean(oldCustomerFilter || oldStatusFilter || oldFromDate || oldToDate || searchText);
 
   // Clear all filters
-  const handleClearFilters = () => {
-    setCustomerFilter("");
-    setStatusFilter("");
-    setFromDate("");
-    setToDate("");
+  const oldHandleClearFilters = () => {
+    oldSetCustomerFilter("");
+    oldSetStatusFilter("");
+    oldSetFromDate("");
+    oldSetToDate("");
     setSearchText("");
     setActiveDropdown(null);
   };
 
   // Helper date checker
   const isDateInRange = (itemDateStr: string) => {
-    if (!fromDate && !toDate) return true;
+    if (!oldFromDate && !oldToDate) return true;
     const itemDate = new Date(itemDateStr);
     if (isNaN(itemDate.getTime())) return true;
 
-    if (fromDate) {
-      const from = new Date(fromDate);
+    if (oldFromDate) {
+      const from = new Date(oldFromDate);
       from.setHours(0, 0, 0, 0);
       if (itemDate < from) return false;
     }
 
-    if (toDate) {
-      const to = new Date(toDate);
+    if (oldToDate) {
+      const to = new Date(oldToDate);
       to.setHours(23, 59, 59, 999);
       if (itemDate > to) return false;
     }
@@ -281,7 +278,7 @@ export default function QuotationsScreen() {
   };
 
   // Client-side search & inline filters
-  const filteredQuotations = useMemo(() => {
+  const oldFilteredQuotations = useMemo(() => {
     const query = searchText.trim().toLowerCase();
     return quotations.filter((q) => {
       const qNum = (q.quotationNumber ?? "").toLowerCase();
@@ -290,15 +287,15 @@ export default function QuotationsScreen() {
       const matchesSearch =
         !query || qNum.includes(query) || customerName.includes(query) || companyName.includes(query);
 
-      const matchesCustomer = !customerFilter || q.customer?.customerName === customerFilter;
-      const matchesStatus = !statusFilter || q.status === statusFilter;
+      const matchesCustomer = !oldCustomerFilter || q.customer?.customerName === oldCustomerFilter;
+      const matchesStatus = !oldStatusFilter || q.status === oldStatusFilter;
       const matchesDate = isDateInRange(q.quotationDate);
 
       return matchesSearch && matchesCustomer && matchesStatus && matchesDate;
     });
-  }, [quotations, searchText, customerFilter, statusFilter, fromDate, toDate]);
+  }, [quotations, searchText, oldCustomerFilter, oldStatusFilter, oldFromDate, oldToDate]);
 
-  const filteredInvoices = useMemo(() => {
+  const oldFilteredInvoices = useMemo(() => {
     const query = searchText.trim().toLowerCase();
     return invoices.filter((i) => {
       const iNum = (i.invoiceNumber ?? "").toLowerCase();
@@ -307,13 +304,13 @@ export default function QuotationsScreen() {
       const matchesSearch =
         !query || iNum.includes(query) || customerName.includes(query) || companyName.includes(query);
 
-      const matchesCustomer = !customerFilter || i.customer?.customerName === customerFilter;
-      const matchesStatus = !statusFilter || i.status === statusFilter;
+      const matchesCustomer = !oldCustomerFilter || i.customer?.customerName === oldCustomerFilter;
+      const matchesStatus = !oldStatusFilter || i.status === oldStatusFilter;
       const matchesDate = isDateInRange(i.invoiceDate);
 
       return matchesSearch && matchesCustomer && matchesStatus && matchesDate;
     });
-  }, [invoices, searchText, customerFilter, statusFilter, fromDate, toDate]);
+  }, [invoices, searchText, oldCustomerFilter, oldStatusFilter, oldFromDate, oldToDate]);
   // --- Filter & Sorting state for Quotations ---
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [customerFilter, setCustomerFilter] = useState("");
@@ -489,17 +486,9 @@ export default function QuotationsScreen() {
 
   const filteredExpenses = useMemo(() => {
     const query = searchText.trim().toLowerCase();
+
     return expenses.filter((e) => {
-      const categoryName = (e.category?.name ?? "").toLowerCase();
-      const noteText = (e.note ?? "").toLowerCase();
-      const matchesSearch = !query || categoryName.includes(query) || noteText.includes(query);
-
-      const matchesCustomer = !customerFilter || categoryName.includes(customerFilter.toLowerCase());
-      const matchesDate = isDateInRange(e.date);
-
-      return matchesSearch && matchesCustomer && matchesDate;
-    });
-  }, [expenses, searchText, customerFilter, fromDate, toDate]);
+      // Text Search Query
       if (query) {
         const categoryName = (e.category?.name ?? "").toLowerCase();
         const noteText = (e.note ?? "").toLowerCase();
@@ -507,6 +496,11 @@ export default function QuotationsScreen() {
         if (!categoryName.includes(query) && !noteText.includes(query) && !amountStr.includes(query)) {
           return false;
         }
+      }
+
+      // Customer Filter mapping to Category for expenses
+      if (oldCustomerFilter && e.category?.name && !e.category.name.toLowerCase().includes(oldCustomerFilter.toLowerCase())) {
+        return false;
       }
 
       // Date Range Filter
@@ -526,7 +520,7 @@ export default function QuotationsScreen() {
 
       return true;
     });
-  }, [expenses, searchText, fromDateFilter, toDateFilter]);
+  }, [expenses, searchText, oldCustomerFilter, fromDateFilter, toDateFilter]);
 
   // Stats Row calculations
   const currentStats = useMemo(() => {
@@ -1458,7 +1452,7 @@ export default function QuotationsScreen() {
               activeOption={activeTab}
               onOptionChange={(opt) => {
                 setActiveTab(opt as Tab);
-                handleClearFilters();
+                oldHandleClearFilters();
               }}
               style={{ marginBottom: 16 }}
             />
@@ -1497,7 +1491,7 @@ export default function QuotationsScreen() {
                   <Text style={[styles.filterHeaderText, { color: colors.text }]}>Filters</Text>
                 </View>
 
-                {hasActiveFilters && (
+                {oldHasActiveFilters && (
                   <View style={[styles.activeBadge, { backgroundColor: colors.primary + "1A", borderColor: colors.primary + "30" }]}>
                     <Check size={12} color={colors.primary} />
                     <Text style={[styles.activeBadgeText, { color: colors.primary }]}>Active</Text>
@@ -1514,8 +1508,8 @@ export default function QuotationsScreen() {
                   </Text>
                   {activeTab === "Expenses" ? (
                     <TextInput
-                      value={customerFilter}
-                      onChangeText={setCustomerFilter}
+                      value={oldCustomerFilter}
+                      onChangeText={oldSetCustomerFilter}
                       placeholder="Filter category..."
                       placeholderTextColor={colors.textSecondary + "70"}
                       style={[
@@ -1532,8 +1526,8 @@ export default function QuotationsScreen() {
                         ]}
                         onPress={() => toggleDropdown("customer")}
                       >
-                        <Text style={[styles.dropdownButtonText, { color: customerFilter ? colors.text : colors.textSecondary }]} numberOfLines={1}>
-                          {customerFilter || "All Customers"}
+                        <Text style={[styles.dropdownButtonText, { color: oldCustomerFilter ? colors.text : colors.textSecondary }]} numberOfLines={1}>
+                          {oldCustomerFilter || "All Customers"}
                         </Text>
                         <ChevronDown size={16} color={colors.textSecondary} />
                       </TouchableOpacity>
@@ -1544,31 +1538,31 @@ export default function QuotationsScreen() {
                             <TouchableOpacity
                               style={[
                                 styles.dropdownOption,
-                                customerFilter === "" && { backgroundColor: colors.primary + "20" },
+                                oldCustomerFilter === "" && { backgroundColor: colors.primary + "20" },
                               ]}
                               onPress={() => {
-                                setCustomerFilter("");
+                                oldSetCustomerFilter("");
                                 setActiveDropdown(null);
                               }}
                             >
-                              <Text style={[styles.dropdownOptionText, { color: customerFilter === "" ? colors.primary : colors.text }]}>
+                              <Text style={[styles.dropdownOptionText, { color: oldCustomerFilter === "" ? colors.primary : colors.text }]}>
                                 All Customers
                               </Text>
                             </TouchableOpacity>
 
-                            {uniqueCustomers.map((name) => (
+                            {oldUniqueCustomers.map((name) => (
                               <TouchableOpacity
                                 key={name}
                                 style={[
                                   styles.dropdownOption,
-                                  customerFilter === name && { backgroundColor: colors.primary + "20" },
+                                  oldCustomerFilter === name && { backgroundColor: colors.primary + "20" },
                                 ]}
                                 onPress={() => {
-                                  setCustomerFilter(name);
+                                  oldSetCustomerFilter(name);
                                   setActiveDropdown(null);
                                 }}
                               >
-                                <Text style={[styles.dropdownOptionText, { color: customerFilter === name ? colors.primary : colors.text }]}>
+                                <Text style={[styles.dropdownOptionText, { color: oldCustomerFilter === name ? colors.primary : colors.text }]}>
                                   {name}
                                 </Text>
                               </TouchableOpacity>
@@ -1592,8 +1586,8 @@ export default function QuotationsScreen() {
                         ]}
                         onPress={() => toggleDropdown("status")}
                       >
-                        <Text style={[styles.dropdownButtonText, { color: statusFilter ? colors.text : colors.textSecondary }]}>
-                          {statusFilter || "All Status"}
+                        <Text style={[styles.dropdownButtonText, { color: oldStatusFilter ? colors.text : colors.textSecondary }]}>
+                          {oldStatusFilter || "All Status"}
                         </Text>
                         <ChevronDown size={16} color={colors.textSecondary} />
                       </TouchableOpacity>
@@ -1604,14 +1598,14 @@ export default function QuotationsScreen() {
                             <TouchableOpacity
                               style={[
                                 styles.dropdownOption,
-                                statusFilter === "" && { backgroundColor: colors.primary + "20" },
+                                oldStatusFilter === "" && { backgroundColor: colors.primary + "20" },
                               ]}
                               onPress={() => {
-                                setStatusFilter("");
+                                oldSetStatusFilter("");
                                 setActiveDropdown(null);
                               }}
                             >
-                              <Text style={[styles.dropdownOptionText, { color: statusFilter === "" ? colors.primary : colors.text }]}>
+                              <Text style={[styles.dropdownOptionText, { color: oldStatusFilter === "" ? colors.primary : colors.text }]}>
                                 All Status
                               </Text>
                             </TouchableOpacity>
@@ -1621,14 +1615,14 @@ export default function QuotationsScreen() {
                                 key={st}
                                 style={[
                                   styles.dropdownOption,
-                                  statusFilter === st && { backgroundColor: colors.primary + "20" },
+                                  oldStatusFilter === st && { backgroundColor: colors.primary + "20" },
                                 ]}
                                 onPress={() => {
-                                  setStatusFilter(st);
+                                  oldSetStatusFilter(st);
                                   setActiveDropdown(null);
                                 }}
                               >
-                                <Text style={[styles.dropdownOptionText, { color: statusFilter === st ? colors.primary : colors.text }]}>
+                                <Text style={[styles.dropdownOptionText, { color: oldStatusFilter === st ? colors.primary : colors.text }]}>
                                   {st}
                                 </Text>
                               </TouchableOpacity>
@@ -1645,8 +1639,8 @@ export default function QuotationsScreen() {
                   <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>From Date</Text>
                   <View style={styles.inputWithIcon}>
                     <TextInput
-                      value={fromDate}
-                      onChangeText={setFromDate}
+                      value={oldFromDate}
+                      onChangeText={oldSetFromDate}
                       placeholder="YYYY-MM-DD"
                       placeholderTextColor={colors.textSecondary + "70"}
                       style={[
@@ -1663,8 +1657,8 @@ export default function QuotationsScreen() {
                   <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>To Date</Text>
                   <View style={styles.inputWithIcon}>
                     <TextInput
-                      value={toDate}
-                      onChangeText={setToDate}
+                      value={oldToDate}
+                      onChangeText={oldSetToDate}
                       placeholder="YYYY-MM-DD"
                       placeholderTextColor={colors.textSecondary + "70"}
                       style={[
@@ -1680,12 +1674,12 @@ export default function QuotationsScreen() {
               {/* Reset Action */}
               <View style={styles.resetActionRow}>
                 <TouchableOpacity
-                  disabled={!hasActiveFilters}
-                  onPress={handleClearFilters}
+                  disabled={!oldHasActiveFilters}
+                  onPress={oldHandleClearFilters}
                   style={[
                     styles.resetInlineBtn,
                     { borderColor: colors.border },
-                    !hasActiveFilters && { opacity: 0.4 },
+                    !oldHasActiveFilters && { opacity: 0.4 },
                   ]}
                 >
                   <RotateCcw size={14} color={colors.textSecondary} />
@@ -2446,12 +2440,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(125, 211, 252, 0.15)",
   },
-  filterHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 14,
-  },
+
   filterTitle: {
     fontSize: 16,
     fontWeight: "700",

@@ -74,6 +74,7 @@ model Company {
   id                   String                @id @default(uuid())
   name                 String
   logo                 String                @default("")
+  tagline              String                @default("")
   identifiers          Json                  @default("[]")
   isActive             Boolean               @default(true)
   createdById          String?
@@ -141,12 +142,12 @@ model Branch {
   phone             String            @default("")
   email             String            @default("")
   bankName          String            @default("")
+  accountName       String            @default("")
   accountNumber     String            @default("")
   ifscCode          String            @default("")
   upiId             String            @default("")
   signatureValue    String            @default("")
-  tax               Int               @default(0)
-  taxLabel          String            @default("")
+  taxes             Json              @default("[]")
   quotationTheme    String            @default("INDUX_MODERN")
   themeColor        String            @default("#0ea5e9")
   isActive          Boolean           @default(true)

@@ -39,8 +39,7 @@ export class BranchesService {
           ifscCode: dto.ifscCode || '',
           upiId: dto.upiId || '',
           signatureValue: dto.signatureValue || '',
-          tax: dto.tax !== undefined ? dto.tax : 0,
-          taxLabel: dto.taxLabel || '',
+          taxes: dto.taxes || [],
           isActive: dto.isActive !== undefined ? dto.isActive : true,
         },
       });
@@ -112,8 +111,7 @@ export class BranchesService {
     if (dto.ifscCode !== undefined) updateData.ifscCode = dto.ifscCode;
     if (dto.upiId !== undefined) updateData.upiId = dto.upiId;
     if (dto.signatureValue !== undefined) updateData.signatureValue = dto.signatureValue;
-    if (dto.tax !== undefined) updateData.tax = dto.tax;
-    if (dto.taxLabel !== undefined) updateData.taxLabel = dto.taxLabel;
+    if (dto.taxes !== undefined) updateData.taxes = dto.taxes;
     if (dto.isActive !== undefined) updateData.isActive = dto.isActive;
     if (dto.isMainBranch !== undefined) updateData.isMainBranch = dto.isMainBranch;
 

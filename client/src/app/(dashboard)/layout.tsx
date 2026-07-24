@@ -6,7 +6,7 @@ import { useTheme } from '../../components/ThemeProvider';
 import { BranchProvider, useBranch } from '../../components/BranchProvider';
 import { SubscriptionProvider, useSubscription } from '../../components/SubscriptionProvider';
 import Link from 'next/link';
-import { isLoggedIn, logout } from '../../lib/auth';
+import { isLoggedIn, logout, API_BASE } from '../../lib/auth';
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const { isDark, toggleTheme } = useTheme();
@@ -16,7 +16,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const { isExpired, daysRemaining, isLoading: isLoadingSub } = useSubscription();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [user, setUser] = useState<{ fullName: string; email: string; role?: string }>({
+  const [user, setUser] = useState<{ fullName: string; email: string; role?: string; profilePicture?: string }>({
     fullName: 'Sarang Wagh',
     email: 'admin@indux.com',
     role: 'owner',
@@ -197,8 +197,12 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             </button>
 
             <Link href="/settings/profile" className="p-1 md:p-1.5 glass-panel rounded-xl md:pl-2 md:pr-4 border border-outline-variant/30 hover:border-primary/45 hover:bg-surface-container-highest/20 transition-all cursor-pointer flex items-center gap-3 shadow-sm hover:shadow-[0_0_15px_rgba(125,211,252,0.15)] group">
-              <div className="size-8 md:size-11 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0 overflow-hidden shadow-[0_0_10px_rgba(125,211,252,0.1)] group-hover:bg-primary/20 transition-colors">
-                <span className="material-symbols-outlined text-primary text-[20px] md:text-[28px] select-none">account_circle</span>
+              <div className="size-8 md:size-11 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0 overflow-hidden shadow-[0_0_10px_rgba(125,211,252,0.1)] group-hover:bg-primary/20 transition-colors">
+                {user.profilePicture ? (
+                  <img src={`${API_BASE.replace('/api/v1', '')}${user.profilePicture}`} alt={user.fullName} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="material-symbols-outlined text-primary text-[20px] md:text-[28px] select-none">account_circle</span>
+                )}
               </div>
               <div className="hidden md:flex flex-col">
                 <span className="text-sm font-bold text-on-surface leading-tight group-hover:text-primary transition-colors">{user.fullName}</span>
