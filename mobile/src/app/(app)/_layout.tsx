@@ -1,8 +1,9 @@
 import { Tabs } from 'expo-router';
 import { CustomTabBar } from '../../components/ui/CustomTabBar';
-
+import { BranchProvider } from '@/components/BranchProvider';
 export default function AppLayout() {
   return (
+    <BranchProvider>
     <Tabs 
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{ headerShown: false }}
@@ -17,5 +18,6 @@ export default function AppLayout() {
       <Tabs.Screen name="create-invoice" options={{ href: null } as any} />
       <Tabs.Screen name="create-expense" options={{ href: null } as any} />
     </Tabs>
+    </BranchProvider>
   );
 }

@@ -28,6 +28,10 @@ import {
   FileText,
   X,
   Filter,
+  RotateCcw,
+  Check,
+  ChevronDown,
+  Calendar,
   ChevronDown,
   ArrowUpDown,
   Check,
@@ -161,6 +165,20 @@ export default function QuotationsScreen() {
   const [searchActive, setSearchActive] = useState(false);
   const [searchText, setSearchText] = useState("");
 
+  // ---- Inline Filter States (Matching reference code) ----
+  const [customerFilter, setCustomerFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+
+  // Dropdown States for Filters
+  const [activeDropdown, setActiveDropdown] = useState<"customer" | "status" | null>(null);
+
+  // Toggle Dropdowns
+  const toggleDropdown = (dropdown: "customer" | "status") => {
+    setActiveDropdown((prev) => (prev === dropdown ? null : dropdown));
+  };
+
   // Fetch data lazily on tab switch
   useEffect(() => {
     if (fetchedTabs[activeTab]) return;
@@ -179,7 +197,9 @@ export default function QuotationsScreen() {
           const tabKey = activeTab.toLowerCase();
           const list = Array.isArray(res.data)
             ? res.data
-            : (Array.isArray(res.data[tabKey]) ? res.data[tabKey] : []);
+            : Array.isArray(res.data[tabKey])
+            ? res.data[tabKey]
+            : [];
           if (activeTab === "Quotations") {
             setQuotations(list);
           } else if (activeTab === "Invoices") {
@@ -209,6 +229,91 @@ export default function QuotationsScreen() {
     };
   }, [activeTab, fetchedTabs]);
 
+  // Unique customer list for Customer filter dropdown
+  const uniqueCustomers = useMemo(() => {
+    const names = new Set<string>();
+    const sourceList = activeTab === "Quotations" ? quotations : activeTab === "Invoices" ? invoices : [];
+    sourceList.forEach((item: any) => {
+      if (item.customer?.customerName) names.add(item.customer.customerName);
+    });
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [activeTab, quotations, invoices]);
+
+  // Dynamic Statuses based on Active Tab
+  const statusOptions = useMemo(() => {
+    if (activeTab === "Quotations") return ["DRAFT", "SENT", "ACCEPTED", "EXPIRED"];
+    if (activeTab === "Invoices") return ["DRAFT", "SENT", "UNPAID", "PARTIAL", "PAID", "OVERDUE", "CANCELLED"];
+    return [];
+  }, [activeTab]);
+
+  // Check if any filter is active
+  const hasActiveFilters = Boolean(customerFilter || statusFilter || fromDate || toDate || searchText);
+
+  // Clear all filters
+  const handleClearFilters = () => {
+    setCustomerFilter("");
+    setStatusFilter("");
+    setFromDate("");
+    setToDate("");
+    setSearchText("");
+    setActiveDropdown(null);
+  };
+
+  // Helper date checker
+  const isDateInRange = (itemDateStr: string) => {
+    if (!fromDate && !toDate) return true;
+    const itemDate = new Date(itemDateStr);
+    if (isNaN(itemDate.getTime())) return true;
+
+    if (fromDate) {
+      const from = new Date(fromDate);
+      from.setHours(0, 0, 0, 0);
+      if (itemDate < from) return false;
+    }
+
+    if (toDate) {
+      const to = new Date(toDate);
+      to.setHours(23, 59, 59, 999);
+      if (itemDate > to) return false;
+    }
+
+    return true;
+  };
+
+  // Client-side search & inline filters
+  const filteredQuotations = useMemo(() => {
+    const query = searchText.trim().toLowerCase();
+    return quotations.filter((q) => {
+      const qNum = (q.quotationNumber ?? "").toLowerCase();
+      const customerName = (q.customer?.customerName ?? "").toLowerCase();
+      const companyName = (q.customer?.companyName ?? "").toLowerCase();
+      const matchesSearch =
+        !query || qNum.includes(query) || customerName.includes(query) || companyName.includes(query);
+
+      const matchesCustomer = !customerFilter || q.customer?.customerName === customerFilter;
+      const matchesStatus = !statusFilter || q.status === statusFilter;
+      const matchesDate = isDateInRange(q.quotationDate);
+
+      return matchesSearch && matchesCustomer && matchesStatus && matchesDate;
+    });
+  }, [quotations, searchText, customerFilter, statusFilter, fromDate, toDate]);
+
+  const filteredInvoices = useMemo(() => {
+    const query = searchText.trim().toLowerCase();
+    return invoices.filter((i) => {
+      const iNum = (i.invoiceNumber ?? "").toLowerCase();
+      const customerName = (i.customer?.customerName ?? "").toLowerCase();
+      const companyName = (i.customer?.companyName ?? "").toLowerCase();
+      const matchesSearch =
+        !query || iNum.includes(query) || customerName.includes(query) || companyName.includes(query);
+
+      const matchesCustomer = !customerFilter || i.customer?.customerName === customerFilter;
+      const matchesStatus = !statusFilter || i.status === statusFilter;
+      const matchesDate = isDateInRange(i.invoiceDate);
+
+      return matchesSearch && matchesCustomer && matchesStatus && matchesDate;
+    });
+  }, [invoices, searchText, customerFilter, statusFilter, fromDate, toDate]);
   // --- Filter & Sorting state for Quotations ---
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [customerFilter, setCustomerFilter] = useState("");
@@ -385,6 +490,16 @@ export default function QuotationsScreen() {
   const filteredExpenses = useMemo(() => {
     const query = searchText.trim().toLowerCase();
     return expenses.filter((e) => {
+      const categoryName = (e.category?.name ?? "").toLowerCase();
+      const noteText = (e.note ?? "").toLowerCase();
+      const matchesSearch = !query || categoryName.includes(query) || noteText.includes(query);
+
+      const matchesCustomer = !customerFilter || categoryName.includes(customerFilter.toLowerCase());
+      const matchesDate = isDateInRange(e.date);
+
+      return matchesSearch && matchesCustomer && matchesDate;
+    });
+  }, [expenses, searchText, customerFilter, fromDate, toDate]);
       if (query) {
         const categoryName = (e.category?.name ?? "").toLowerCase();
         const noteText = (e.note ?? "").toLowerCase();
@@ -1341,7 +1456,10 @@ export default function QuotationsScreen() {
             <SegmentedControl
               options={["Quotations", "Invoices", "Expenses"]}
               activeOption={activeTab}
-              onOptionChange={(opt) => setActiveTab(opt as Tab)}
+              onOptionChange={(opt) => {
+                setActiveTab(opt as Tab);
+                handleClearFilters();
+              }}
               style={{ marginBottom: 16 }}
             />
 
@@ -1365,6 +1483,214 @@ export default function QuotationsScreen() {
                     </View>
                   </React.Fragment>
                 ))}
+              </View>
+            </GlassPanel>
+
+            {/* ---- INLINE FILTERS SECTION (Adapted from Reference Code) ---- */}
+            <GlassPanel style={styles.inlineFilterPanel}>
+              {/* Filter Section Header */}
+              <View style={styles.filterHeaderRow}>
+                <View style={styles.filterTitleGroup}>
+                  <View style={[styles.filterIconBadge, { backgroundColor: colors.primary + "1A" }]}>
+                    <Filter size={16} color={colors.primary} />
+                  </View>
+                  <Text style={[styles.filterHeaderText, { color: colors.text }]}>Filters</Text>
+                </View>
+
+                {hasActiveFilters && (
+                  <View style={[styles.activeBadge, { backgroundColor: colors.primary + "1A", borderColor: colors.primary + "30" }]}>
+                    <Check size={12} color={colors.primary} />
+                    <Text style={[styles.activeBadgeText, { color: colors.primary }]}>Active</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Filter Inputs Grid */}
+              <View style={styles.filterControlsGrid}>
+                {/* 1. Customer Filter Input */}
+                <View style={styles.filterField}>
+                  <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+                    {activeTab === "Expenses" ? "Category / Keyword" : "Customer"}
+                  </Text>
+                  {activeTab === "Expenses" ? (
+                    <TextInput
+                      value={customerFilter}
+                      onChangeText={setCustomerFilter}
+                      placeholder="Filter category..."
+                      placeholderTextColor={colors.textSecondary + "70"}
+                      style={[
+                        styles.dropdownButton,
+                        { color: colors.text, borderColor: colors.border, backgroundColor: colors.surfaceVariant },
+                      ]}
+                    />
+                  ) : (
+                    <View style={{ zIndex: activeDropdown === "customer" ? 50 : 1 }}>
+                      <TouchableOpacity
+                        style={[
+                          styles.dropdownButton,
+                          { borderColor: colors.border, backgroundColor: colors.surfaceVariant },
+                        ]}
+                        onPress={() => toggleDropdown("customer")}
+                      >
+                        <Text style={[styles.dropdownButtonText, { color: customerFilter ? colors.text : colors.textSecondary }]} numberOfLines={1}>
+                          {customerFilter || "All Customers"}
+                        </Text>
+                        <ChevronDown size={16} color={colors.textSecondary} />
+                      </TouchableOpacity>
+
+                      {activeDropdown === "customer" && (
+                        <View style={[styles.dropdownMenu, { backgroundColor: isDark ? "#0f172a" : colors.surface, borderColor: colors.border }]}>
+                          <ScrollView nestedScrollEnabled style={{ maxHeight: 180 }}>
+                            <TouchableOpacity
+                              style={[
+                                styles.dropdownOption,
+                                customerFilter === "" && { backgroundColor: colors.primary + "20" },
+                              ]}
+                              onPress={() => {
+                                setCustomerFilter("");
+                                setActiveDropdown(null);
+                              }}
+                            >
+                              <Text style={[styles.dropdownOptionText, { color: customerFilter === "" ? colors.primary : colors.text }]}>
+                                All Customers
+                              </Text>
+                            </TouchableOpacity>
+
+                            {uniqueCustomers.map((name) => (
+                              <TouchableOpacity
+                                key={name}
+                                style={[
+                                  styles.dropdownOption,
+                                  customerFilter === name && { backgroundColor: colors.primary + "20" },
+                                ]}
+                                onPress={() => {
+                                  setCustomerFilter(name);
+                                  setActiveDropdown(null);
+                                }}
+                              >
+                                <Text style={[styles.dropdownOptionText, { color: customerFilter === name ? colors.primary : colors.text }]}>
+                                  {name}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </ScrollView>
+                        </View>
+                      )}
+                    </View>
+                  )}
+                </View>
+
+                {/* 2. Status Filter Input */}
+                {activeTab !== "Expenses" && (
+                  <View style={styles.filterField}>
+                    <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Status</Text>
+                    <View style={{ zIndex: activeDropdown === "status" ? 50 : 1 }}>
+                      <TouchableOpacity
+                        style={[
+                          styles.dropdownButton,
+                          { borderColor: colors.border, backgroundColor: colors.surfaceVariant },
+                        ]}
+                        onPress={() => toggleDropdown("status")}
+                      >
+                        <Text style={[styles.dropdownButtonText, { color: statusFilter ? colors.text : colors.textSecondary }]}>
+                          {statusFilter || "All Status"}
+                        </Text>
+                        <ChevronDown size={16} color={colors.textSecondary} />
+                      </TouchableOpacity>
+
+                      {activeDropdown === "status" && (
+                        <View style={[styles.dropdownMenu, { backgroundColor: isDark ? "#0f172a" : colors.surface, borderColor: colors.border }]}>
+                          <ScrollView nestedScrollEnabled style={{ maxHeight: 180 }}>
+                            <TouchableOpacity
+                              style={[
+                                styles.dropdownOption,
+                                statusFilter === "" && { backgroundColor: colors.primary + "20" },
+                              ]}
+                              onPress={() => {
+                                setStatusFilter("");
+                                setActiveDropdown(null);
+                              }}
+                            >
+                              <Text style={[styles.dropdownOptionText, { color: statusFilter === "" ? colors.primary : colors.text }]}>
+                                All Status
+                              </Text>
+                            </TouchableOpacity>
+
+                            {statusOptions.map((st) => (
+                              <TouchableOpacity
+                                key={st}
+                                style={[
+                                  styles.dropdownOption,
+                                  statusFilter === st && { backgroundColor: colors.primary + "20" },
+                                ]}
+                                onPress={() => {
+                                  setStatusFilter(st);
+                                  setActiveDropdown(null);
+                                }}
+                              >
+                                <Text style={[styles.dropdownOptionText, { color: statusFilter === st ? colors.primary : colors.text }]}>
+                                  {st}
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </ScrollView>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                )}
+
+                {/* 3. From Date Input */}
+                <View style={styles.filterField}>
+                  <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>From Date</Text>
+                  <View style={styles.inputWithIcon}>
+                    <TextInput
+                      value={fromDate}
+                      onChangeText={setFromDate}
+                      placeholder="YYYY-MM-DD"
+                      placeholderTextColor={colors.textSecondary + "70"}
+                      style={[
+                        styles.dropdownButton,
+                        { color: colors.text, borderColor: colors.border, backgroundColor: colors.surfaceVariant },
+                      ]}
+                    />
+                    <Calendar size={14} color={colors.textSecondary} style={styles.fieldRightIcon} />
+                  </View>
+                </View>
+
+                {/* 4. To Date Input */}
+                <View style={styles.filterField}>
+                  <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>To Date</Text>
+                  <View style={styles.inputWithIcon}>
+                    <TextInput
+                      value={toDate}
+                      onChangeText={setToDate}
+                      placeholder="YYYY-MM-DD"
+                      placeholderTextColor={colors.textSecondary + "70"}
+                      style={[
+                        styles.dropdownButton,
+                        { color: colors.text, borderColor: colors.border, backgroundColor: colors.surfaceVariant },
+                      ]}
+                    />
+                    <Calendar size={14} color={colors.textSecondary} style={styles.fieldRightIcon} />
+                  </View>
+                </View>
+              </View>
+
+              {/* Reset Action */}
+              <View style={styles.resetActionRow}>
+                <TouchableOpacity
+                  disabled={!hasActiveFilters}
+                  onPress={handleClearFilters}
+                  style={[
+                    styles.resetInlineBtn,
+                    { borderColor: colors.border },
+                    !hasActiveFilters && { opacity: 0.4 },
+                  ]}
+                >
+                  <RotateCcw size={14} color={colors.textSecondary} />
+                  <Text style={[styles.resetInlineBtnText, { color: colors.textSecondary }]}>Reset Filters</Text>
+                </TouchableOpacity>
               </View>
             </GlassPanel>
           </>
@@ -1748,7 +2074,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   statsPanel: {
-    marginBottom: 20,
+    marginBottom: 16,
     borderRadius: 18,
     paddingVertical: 12,
   },
@@ -1777,6 +2103,122 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "800",
   },
+
+  // ---- Inline Filter Styles ----
+  inlineFilterPanel: {
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 16,
+  },
+  filterHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  filterTitleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  filterIconBadge: {
+    padding: 6,
+    borderRadius: 8,
+  },
+  filterHeaderText: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  activeBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  activeBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  filterControlsGrid: {
+    gap: 12,
+  },
+  filterField: {
+    width: "100%",
+  },
+  fieldLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: 4,
+    marginLeft: 2,
+  },
+  dropdownButton: {
+    height: 42,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    fontSize: 13,
+  },
+  dropdownButtonText: {
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  dropdownMenu: {
+    position: "absolute",
+    top: 46,
+    left: 0,
+    right: 0,
+    borderRadius: 10,
+    borderWidth: 1,
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    zIndex: 999,
+  },
+  dropdownOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  dropdownOptionText: {
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  inputWithIcon: {
+    position: "relative",
+    justifyContent: "center",
+  },
+  fieldRightIcon: {
+    position: "absolute",
+    right: 12,
+  },
+  resetActionRow: {
+    marginTop: 14,
+    flexDirection: "row",
+    justifyContent: "flex-start",
+  },
+  resetInlineBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  resetInlineBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
   card: {
     borderRadius: 18,
     padding: 16,
