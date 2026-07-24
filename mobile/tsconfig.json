@@ -28,7 +28,7 @@
   },
   "include": [
     "src",
-    "mobile/src"
+    "mobile/src",
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
