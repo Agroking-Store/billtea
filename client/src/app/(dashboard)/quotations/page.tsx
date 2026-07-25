@@ -48,6 +48,7 @@ export default function QuotationsPage() {
 
   // ---- Filters state (Customer / Date range) ----
   const [customerFilter, setCustomerFilter] = useState('');
+  const [companyFilter, setCompanyFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -59,9 +60,9 @@ export default function QuotationsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const [activeDropdown, setActiveDropdown] = useState<'customer' | 'status' | 'entries' | null>(null);
+  const [activeDropdown, setActiveDropdown] = useState<'customer' | 'company' | 'status' | 'entries' | null>(null);
 
-  const toggleDropdown = (name: 'customer' | 'status' | 'entries') => {
+  const toggleDropdown = (name: 'customer' | 'company' | 'status' | 'entries') => {
     setActiveDropdown(prev => prev === name ? null : name);
   };
 
@@ -252,6 +253,15 @@ export default function QuotationsPage() {
     return Array.from(names).sort((a, b) => a.localeCompare(b));
   }, [quotations]);
 
+  // ---- Unique company list for the filter dropdown ----
+  const uniqueCompanies = useMemo(() => {
+    const names = new Set<string>();
+    quotations.forEach((q) => {
+      if (q.customer?.companyName) names.add(q.customer.companyName);
+    });
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [quotations]);
+
   // ---- Search / filter (text search + customer + date range) ----
   const filteredQuotations = quotations.filter((q) => {
     if (searchQuery) {
@@ -271,6 +281,10 @@ export default function QuotationsPage() {
     }
 
     if (customerFilter && q.customer?.customerName !== customerFilter) {
+      return false;
+    }
+
+    if (companyFilter && q.customer?.companyName !== companyFilter) {
       return false;
     }
 
@@ -297,10 +311,11 @@ export default function QuotationsPage() {
     return true;
   });
   const hasActiveFilters = Boolean(
-    searchQuery || customerFilter || statusFilter || fromDate || toDate
+    searchQuery || customerFilter || companyFilter || statusFilter || fromDate || toDate
   );
   const handleClearFilters = () => {
     setCustomerFilter('');
+    setCompanyFilter('');
     setStatusFilter('');
     setFromDate('');
     setToDate('');
@@ -371,7 +386,7 @@ export default function QuotationsPage() {
   // Reset to page 1 whenever the search query or filters change.
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, customerFilter, fromDate, toDate]);
+  }, [searchQuery, customerFilter, companyFilter, fromDate, toDate]);
 
   const paginatedQuotations = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -548,26 +563,27 @@ export default function QuotationsPage() {
             </div>
 
             {/* Filter Controls */}
-            <div className="flex flex-wrap items-end gap-6 relative z-10">
-              <div className="dropdown-container flex-1 min-w-[220px] relative" style={{ zIndex: activeDropdown === 'customer' ? 50 : 10 }}>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-on-surface-variant mb-2 ml-1">
+            <div className="flex flex-wrap items-end gap-4 lg:gap-5 relative z-10 w-full">
+              
+              <div className="dropdown-container flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[160px] relative" style={{ zIndex: activeDropdown === 'customer' ? 50 : 10 }}>
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">
                   Customer
                 </label>
                 <div className="relative">
                   <button
                     type="button"
-                    className="w-full bg-surface-container border border-outline-variant/30 rounded-xl pl-4 pr-10 py-3 text-sm font-medium text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all text-left flex items-center justify-between min-h-[46px]"
+                    className="glass-input rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium cursor-pointer w-full focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface text-left flex items-center justify-between min-h-[42px]"
                     onClick={() => toggleDropdown('customer')}
                   >
-                    <span>{customerFilter || 'All Customers'}</span>
-                    <span className={`material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] transition-transform duration-200 ${activeDropdown === 'customer' ? 'rotate-180' : ''}`}>expand_more</span>
+                    <span className="truncate">{customerFilter || 'All Customers'}</span>
+                    <span className={`material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary text-[18px] transition-transform duration-200 ${activeDropdown === 'customer' ? 'rotate-180' : ''}`}>expand_more</span>
                   </button>
 
                   {activeDropdown === 'customer' && (
-                    <div className="absolute top-full left-0 right-0 mt-1 z-[60] bg-surface rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
+                    <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
                       <div
                         onMouseDown={() => { setCustomerFilter(''); setActiveDropdown(null); }}
-                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${customerFilter === '' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
+                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${customerFilter === '' ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
                       >
                         All Customers
                       </div>
@@ -575,7 +591,7 @@ export default function QuotationsPage() {
                         <div
                           key={name}
                           onMouseDown={() => { setCustomerFilter(name); setActiveDropdown(null); }}
-                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${customerFilter === name ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
+                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${customerFilter === name ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
                         >
                           {name}
                         </div>
@@ -585,31 +601,67 @@ export default function QuotationsPage() {
                 </div>
               </div>
 
-              <div className="dropdown-container flex-1 min-w-[200px] relative" style={{ zIndex: activeDropdown === 'status' ? 50 : 10 }}>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-on-surface-variant mb-2 ml-1">
+              <div className="dropdown-container flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[160px] relative" style={{ zIndex: activeDropdown === 'company' ? 50 : 10 }}>
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">
+                  Company
+                </label>
+                <div className="relative">
+                  <button
+                    type="button"
+                    className="glass-input rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium cursor-pointer w-full focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface text-left flex items-center justify-between min-h-[42px]"
+                    onClick={() => toggleDropdown('company')}
+                  >
+                    <span className="truncate">{companyFilter || 'All Companies'}</span>
+                    <span className={`material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary text-[18px] transition-transform duration-200 ${activeDropdown === 'company' ? 'rotate-180' : ''}`}>expand_more</span>
+                  </button>
+
+                  {activeDropdown === 'company' && (
+                    <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
+                      <div
+                        onMouseDown={() => { setCompanyFilter(''); setActiveDropdown(null); }}
+                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${companyFilter === '' ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
+                      >
+                        All Companies
+                      </div>
+                      {uniqueCompanies.map((name) => (
+                        <div
+                          key={name}
+                          onMouseDown={() => { setCompanyFilter(name); setActiveDropdown(null); }}
+                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${companyFilter === name ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
+                        >
+                          {name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="dropdown-container flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[140px] relative" style={{ zIndex: activeDropdown === 'status' ? 50 : 10 }}>
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">
                   Status
                 </label>
                 <div className="relative">
                   <button
                     type="button"
-                    className="w-full bg-surface-container border border-outline-variant/30 rounded-xl pl-4 pr-10 py-3 text-sm font-medium text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all text-left flex items-center justify-between min-h-[46px] cursor-pointer"
+                    className="glass-input rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium cursor-pointer w-full focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface text-left flex items-center justify-between min-h-[42px]"
                     onClick={() => toggleDropdown('status')}
                   >
-                    <span>
+                    <span className="truncate">
                       {statusFilter === '' && 'All Status'}
                       {statusFilter === 'DRAFT' && 'Draft'}
                       {statusFilter === 'SENT' && 'Sent'}
                       {statusFilter === 'ACCEPTED' && 'Accepted'}
                       {statusFilter === 'EXPIRED' && 'Expired'}
                     </span>
-                    <span className={`material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] transition-transform duration-200 ${activeDropdown === 'status' ? 'rotate-180' : ''}`}>expand_more</span>
+                    <span className={`material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary text-[18px] transition-transform duration-200 ${activeDropdown === 'status' ? 'rotate-180' : ''}`}>expand_more</span>
                   </button>
 
                   {activeDropdown === 'status' && (
-                    <div className="absolute top-full left-0 right-0 mt-1 z-[60] bg-surface rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
+                    <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
                       <div
                         onMouseDown={() => { setStatusFilter(''); setActiveDropdown(null); }}
-                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${statusFilter === '' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
+                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${statusFilter === '' ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
                       >
                         All Status
                       </div>
@@ -617,7 +669,7 @@ export default function QuotationsPage() {
                         <div
                           key={status}
                           onMouseDown={() => { setStatusFilter(status); setActiveDropdown(null); }}
-                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${statusFilter === status ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
+                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${statusFilter === status ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
                         >
                           {status === 'DRAFT' && 'Draft'}
                           {status === 'SENT' && 'Sent'}
@@ -629,39 +681,40 @@ export default function QuotationsPage() {
                   )}
                 </div>
               </div>
-
-              <div className="flex-1 min-w-[200px]">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-on-surface-variant mb-2 ml-1">
+              
+              <div className="flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[140px]">
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">
                   From Date
                 </label>
                 <input
-                  className="w-full glass-input rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                  className="glass-input rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface w-full min-h-[42px]"
                   type="date"
                   value={fromDate}
                   onChange={(e) => setFromDate(e.target.value)}
                 />
               </div>
 
-              <div className="flex-1 min-w-[200px]">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-on-surface-variant mb-2 ml-1">
+              <div className="flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[140px]">
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">
                   To Date
                 </label>
                 <input
-                  className="w-full glass-input rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                  className="glass-input rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface w-full min-h-[42px]"
                   type="date"
                   value={toDate}
                   onChange={(e) => setToDate(e.target.value)}
                 />
               </div>
 
-              <div className="mt-8 flex flex-wrap gap-4 relative z-10">
+              <div className="w-full lg:w-auto flex justify-end">
                 <button
                   disabled={!hasActiveFilters}
-                  className="px-6 py-2.5 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface hover:text-on-surface border border-outline-variant/20 hover:border-outline-variant/40 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-on-surface-variant disabled:hover:border-outline-variant/20"
+                  className="glass-button h-[42px] px-6 rounded-xl flex items-center justify-center gap-2 cursor-pointer hover:bg-surface-bright transition-all duration-300 text-sm font-bold text-on-surface hover:text-primary shadow-sm w-full lg:w-auto hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
                   onClick={handleClearFilters}
+                  title="Reset Filters"
                 >
                   <span className="material-symbols-outlined text-[18px]">undo</span>
-                  Reset Filters
+                  Reset
                 </button>
               </div>
             </div>
