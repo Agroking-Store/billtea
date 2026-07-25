@@ -74,6 +74,7 @@ model Company {
   id                   String                @id @default(uuid())
   name                 String
   logo                 String                @default("")
+  tagline              String                @default("")
   identifiers          Json                  @default("[]")
   isActive             Boolean               @default(true)
   createdById          String?
@@ -90,6 +91,7 @@ model Company {
   usage                CompanyUsage?
   subscriptionPayments SubscriptionPayment[]
   notifications        Notification[]
+  themeSettings        ThemeSettings?
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
 
@@ -141,12 +143,12 @@ model Branch {
   phone             String            @default("")
   email             String            @default("")
   bankName          String            @default("")
+  accountName       String            @default("")
   accountNumber     String            @default("")
   ifscCode          String            @default("")
   upiId             String            @default("")
   signatureValue    String            @default("")
-  tax               Int               @default(0)
-  taxLabel          String            @default("")
+  taxes             Json              @default("[]")
   quotationTheme    String            @default("INDUX_MODERN")
   themeColor        String            @default("#0ea5e9")
   isActive          Boolean           @default(true)
@@ -641,4 +643,18 @@ model WhatsappSettings {
   isLinked          Boolean @default(true)
 
   @@map("whatsapp_settings")
+}
+
+model ThemeSettings {
+  id        String   @id @default(uuid())
+  companyId String   @unique
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  lightTheme Json    @default("{}")
+  darkTheme  Json    @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("theme_settings")
 }

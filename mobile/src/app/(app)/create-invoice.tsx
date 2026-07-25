@@ -32,7 +32,8 @@ import {
   Upload,
   Info
 } from 'lucide-react-native';
-import { useTheme } from '../../hooks/useTheme';
+import { useTheme } from "../../hooks/useTheme";
+import { useBranch } from "../../components/BranchProvider";
 import { GlassPanel } from '../../components/ui/GlassPanel';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -54,12 +55,11 @@ interface LineItem {
 export default function CreateInvoiceScreen() {
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
+  const { selectedBranchId } = useBranch();
 
   // --- STATE DEFINITIONS ---
   
   // Backend Configuration
-  const [branches, setBranches] = useState<any[]>([]);
-  const [selectedBranchId, setSelectedBranchId] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Quotation Selection
@@ -135,18 +135,9 @@ export default function CreateInvoiceScreen() {
   useEffect(() => {
     async function loadInitialData() {
       try {
-        // Load Branches
-        const branchRes = await apiClient.get('/branches');
-        if (branchRes.status === 200 && Array.isArray(branchRes.data)) {
-          setBranches(branchRes.data);
-          const mainBranch = branchRes.data.find(b => b.isMain) || branchRes.data[0];
-          if (mainBranch) {
-            setSelectedBranchId(mainBranch.id);
-          }
-        }
 
         // Load Quotations
-        const quoRes = await apiClient.get('/quotations');
+        const quoRes = await apiClient.get('/quotations', { params: { branchId: selectedBranchId } });
         if (quoRes.status === 200 && Array.isArray(quoRes.data)) {
           setQuotations(quoRes.data);
         }
@@ -163,7 +154,7 @@ export default function CreateInvoiceScreen() {
     setSelectedClient(text);
     setIsSearchingCustomers(true);
     try {
-      const res = await apiClient.get(`/invoices/customers/search?q=${encodeURIComponent(text)}`);
+      const res = await apiClient.get(`/invoices/customers/search?q=${encodeURIComponent(text)}`, { params: { branchId: selectedBranchId } });
       if (res.status === 200 && Array.isArray(res.data)) {
         setCustomers(res.data);
       }
@@ -255,7 +246,7 @@ export default function CreateInvoiceScreen() {
     setActiveProductSearchIdx(index);
     
     try {
-      const res = await apiClient.get(`/invoices/products/search?q=${encodeURIComponent(text)}`);
+      const res = await apiClient.get(`/invoices/products/search?q=${encodeURIComponent(text)}`, { params: { branchId: selectedBranchId } });
       if (res.status === 200 && Array.isArray(res.data)) {
         setProductList(res.data);
       }

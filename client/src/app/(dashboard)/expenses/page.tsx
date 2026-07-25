@@ -98,14 +98,14 @@ export default function ExpensesPage() {
   };
 
   useEffect(() => {
-  if (selectedBranchId) {
-    fetchExpenses();
-    fetchCategories();
-  } else {
-    setExpenses([]);
-    setCategories([]);
-  }
-}, [selectedBranchId]); // dependencies only
+    if (selectedBranchId) {
+      fetchExpenses();
+      fetchCategories();
+    } else {
+      setExpenses([]);
+      setCategories([]);
+    }
+  }, [selectedBranchId]); // dependencies only
 
 
   useEffect(() => {
@@ -119,38 +119,38 @@ export default function ExpensesPage() {
   }, []);
 
   const fetchExpenses = async () => {
-  if (!selectedBranchId) {
-    setExpenses([]);
-    return;
-  }
-  try {
-    const res = await apiFetch(`/expenses?branch=${selectedBranchId}`);
-    if (res.ok) {
-      const data = await res.json();
-      setExpenses(data || []);
+    if (!selectedBranchId) {
+      setExpenses([]);
+      return;
     }
-  } catch (err) {
-    console.error("Failed to fetch expenses:", err);
-    setExpenses([]);
-  }
-};
+    try {
+      const res = await apiFetch(`/expenses?branch=${selectedBranchId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setExpenses(data || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch expenses:", err);
+      setExpenses([]);
+    }
+  };
 
-const fetchCategories = async () => {
-  if (!selectedBranchId) {
-    setCategories([]);
-    return;
-  }
-  try {
-    const res = await apiFetch(`/categories?branch=${selectedBranchId}`);
-    if (res.ok) {
-      const data = await res.json();
-      setCategories(data || []);
+  const fetchCategories = async () => {
+    if (!selectedBranchId) {
+      setCategories([]);
+      return;
     }
-  } catch (err) {
-    console.error("Failed to fetch categories:", err);
-    setCategories([]);
-  }
-};
+    try {
+      const res = await apiFetch(`/categories?branch=${selectedBranchId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch categories:", err);
+      setCategories([]);
+    }
+  };
 
 
   const openNewModal = () => {
@@ -433,18 +433,17 @@ const fetchCategories = async () => {
   };
 
   const sortHeaderClass = (key: SortKey) =>
-    `px-6 py-4 cursor-pointer hover:text-primary transition-colors group select-none ${
-      sortConfig?.key === key ? 'text-primary' : ''
+    `px-6 py-4 cursor-pointer hover:text-primary transition-colors group select-none ${sortConfig?.key === key ? 'text-primary' : ''
     }`;
 
   const sortIconClass = (key: SortKey) =>
-    `material-symbols-outlined text-[12px] transition-opacity ${
-      sortConfig?.key === key ? 'opacity-100 text-primary' : 'opacity-50 group-hover:opacity-100'
+    `material-symbols-outlined text-[12px] transition-opacity ${sortConfig?.key === key ? 'opacity-100 text-primary' : 'opacity-50 group-hover:opacity-100'
     }`;
 
   return (
     <div className="flex-1 flex flex-col h-[calc(100vh-theme(spacing.16))] bg-background overflow-hidden relative">
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @keyframes fadeSlideUp {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
@@ -495,314 +494,314 @@ const fetchCategories = async () => {
         className="flex-1 overflow-y-auto p-4 md:p-8 z-0 relative overflow-x-hidden selection:bg-primary/30 [&::-webkit-scrollbar]:hidden"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-      {activeDropdown && (
-        <div 
-          className="fixed inset-0 z-40 bg-transparent" 
-          onClick={closeDropdowns}
-        />
-      )}
-      {/* Premium Background */}
-      <div className="fixed inset-0 z-0 bg-surface pointer-events-none">
-        <div className="absolute top-[-10%] left-[-5%] w-[50%] h-[50%] rounded-full bg-primary/5 blur-[120px]"></div>
-        <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] rounded-full bg-tertiary/10 blur-[120px]"></div>
-        <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-secondary/5 blur-[100px]"></div>
-      </div>
-
-      <div className="relative z-10 max-w-7xl mx-auto flex flex-col gap-12 pb-16">
-
-      {/* Header Section */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 animate-fade-slide-up" style={{ animationDelay: '0.1s' }}>
-        <div className="max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold uppercase tracking-wider mb-4 shadow-[0_0_15px_rgba(125,211,252,0.15)]">
-            <span className="material-symbols-outlined text-[14px]">account_balance_wallet</span>
-            Financial Overview
-          </div>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tight font-display mb-4">
-            <span className="text-on-surface">Manage </span>
-            <span className="bg-gradient-to-br from-primary via-secondary to-tertiary bg-clip-text text-transparent">
-              Expenses
-            </span>
-          </h1>
-          <p className="text-on-surface-variant text-lg leading-relaxed">
-            Track and manage your branch expenditures.
-          </p>
-        </div>
-        <div className="w-full md:w-auto">
-          <button
-            onClick={openNewModal}
-            disabled={!selectedBranchId}
-            className="w-full md:w-auto group relative h-14 px-8 rounded-2xl bg-surface-container-highest border border-primary/20 text-primary font-bold flex items-center justify-center gap-3 overflow-hidden shadow-[0_0_15px_rgba(125,211,252,0.1)] hover:shadow-[0_0_25px_rgba(125,211,252,0.3)] transition-all hover:-translate-y-0.5 hover:border-primary/40 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <div className="absolute inset-0 w-full h-full bg-primary/5 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out" />
-            <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">add</span>
-            <span>Add Expense</span>
-          </button>
-        </div>
-      </header>
-
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-slide-up" style={{ animationDelay: '0.3s' }}>
-        <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group hover:border-primary/40 hover:shadow-[0_20px_40px_-15px_rgba(125,211,252,0.15)] hover:-translate-y-1 transition-all duration-300">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors duration-500"></div>
-          <div className="flex justify-between items-start mb-4 relative z-10">
-            <p className="text-on-surface-variant text-sm font-medium uppercase tracking-wider">Total Expenses</p>
-            <span className="material-symbols-outlined text-primary p-2 rounded-lg bg-primary/10">receipt_long</span>
-          </div>
-          <p className="text-3xl font-bold text-on-surface tracking-tight relative z-10">{stats.total}</p>
+        {activeDropdown && (
+          <div
+            className="fixed inset-0 z-40 bg-transparent"
+            onClick={closeDropdowns}
+          />
+        )}
+        {/* Premium Background */}
+        <div className="fixed inset-0 z-0 bg-surface pointer-events-none">
+          <div className="absolute top-[-10%] left-[-5%] w-[50%] h-[50%] rounded-full bg-primary/5 blur-[120px]"></div>
+          <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] rounded-full bg-tertiary/10 blur-[120px]"></div>
+          <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-secondary/5 blur-[100px]"></div>
         </div>
 
-        <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group hover:border-red-500/40 hover:shadow-[0_20px_40px_-15px_rgba(239,68,68,0.15)] hover:-translate-y-1 transition-all duration-300">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-red-500/5 rounded-full blur-2xl group-hover:bg-red-500/10 transition-colors duration-500"></div>
-          <div className="flex justify-between items-start mb-4 relative z-10">
-            <p className="text-on-surface-variant text-sm font-medium uppercase tracking-wider">Total Spent</p>
-            <span className="material-symbols-outlined text-red-500 p-2 rounded-lg bg-red-500/10">payments</span>
-          </div>
-          <p className="text-3xl font-bold text-red-500 tracking-tight relative z-10 whitespace-nowrap">
-            ₹ {stats.totalAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-          </p>
-        </div>
+        <div className="relative z-10 max-w-7xl mx-auto flex flex-col gap-12 pb-16">
 
-        <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group hover:border-blue-500/40 hover:shadow-[0_20px_40px_-15px_rgba(59,130,246,0.15)] hover:-translate-y-1 transition-all duration-300">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-colors duration-500"></div>
-          <div className="flex justify-between items-start mb-4 relative z-10">
-            <p className="text-on-surface-variant text-sm font-medium uppercase tracking-wider">This Month</p>
-            <span className="material-symbols-outlined text-blue-500 p-2 rounded-lg bg-blue-500/10">calendar_month</span>
-          </div>
-          <p className="text-3xl font-bold text-blue-500 tracking-tight relative z-10 whitespace-nowrap">
-            ₹ {stats.thisMonthAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-          </p>
-        </div>
-
-        <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group hover:border-tertiary/40 hover:shadow-[0_20px_40px_-15px_rgba(200,160,240,0.15)] hover:-translate-y-1 transition-all duration-300">
-          <div className="absolute -right-4 -top-4 w-24 h-24 bg-tertiary/5 rounded-full blur-2xl group-hover:bg-tertiary/10 transition-colors duration-500"></div>
-          <div className="flex justify-between items-start mb-4 relative z-10">
-            <p className="text-on-surface-variant text-sm font-medium uppercase tracking-wider">Top Category</p>
-            <span className="material-symbols-outlined text-tertiary p-2 rounded-lg bg-tertiary/10">category</span>
-          </div>
-          <p className="text-2xl font-bold text-tertiary tracking-tight relative z-10 truncate whitespace-nowrap">
-            {stats.topCategory ? stats.topCategory[0] : '—'}
-          </p>
-        </div>
-      </div>
-
-      {/* Filters Section */}
-      <section className="glass-panel p-6 md:p-8 rounded-3xl relative overflow-visible animate-fade-slide-up shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)] z-20" style={{ animationDelay: '0.2s' }}>
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
-        <div className="relative z-10">
-          <div className="flex items-center justify-between mb-5 flex-wrap">
-            <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-primary p-2 rounded-lg bg-primary/10 text-[20px]">filter_list</span>
-              <h2 className="text-xl font-bold text-on-surface">Filters</h2>
-              {activeFilterCount > 0 && (
-                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-on-primary text-[11px] font-bold">
-                  {activeFilterCount}
+          {/* Header Section */}
+          <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 animate-fade-slide-up" style={{ animationDelay: '0.1s' }}>
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold uppercase tracking-wider mb-4 shadow-[0_0_15px_rgba(125,211,252,0.15)]">
+                <span className="material-symbols-outlined text-[14px]">account_balance_wallet</span>
+                Financial Overview
+              </div>
+              <h1 className="text-4xl md:text-5xl font-black tracking-tight font-display mb-4">
+                <span className="text-on-surface">Manage </span>
+                <span className="bg-gradient-to-br from-primary via-secondary to-tertiary bg-clip-text text-transparent">
+                  Expenses
                 </span>
-              )}
+              </h1>
+              <p className="text-on-surface-variant text-lg leading-relaxed">
+                Track and manage your branch expenditures.
+              </p>
+            </div>
+            <div className="w-full md:w-auto">
+              <button
+                onClick={openNewModal}
+                disabled={!selectedBranchId}
+                className="w-full md:w-auto group relative h-14 px-8 rounded-2xl bg-surface-container-highest border border-primary/20 text-primary font-bold flex items-center justify-center gap-3 overflow-hidden shadow-[0_0_15px_rgba(125,211,252,0.1)] hover:shadow-[0_0_25px_rgba(125,211,252,0.3)] transition-all hover:-translate-y-0.5 hover:border-primary/40 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <div className="absolute inset-0 w-full h-full bg-primary/5 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out" />
+                <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">add</span>
+                <span>Add Expense</span>
+              </button>
+            </div>
+          </header>
+
+          {/* Metrics Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-slide-up" style={{ animationDelay: '0.3s' }}>
+            <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group hover:border-primary/40 hover:shadow-[0_20px_40px_-15px_rgba(125,211,252,0.15)] hover:-translate-y-1 transition-all duration-300">
+              <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors duration-500"></div>
+              <div className="flex justify-between items-start mb-4 relative z-10">
+                <p className="text-on-surface-variant text-sm font-medium uppercase tracking-wider">Total Expenses</p>
+                <span className="material-symbols-outlined text-primary p-2 rounded-lg bg-primary/10">receipt_long</span>
+              </div>
+              <p className="text-3xl font-bold text-on-surface tracking-tight relative z-10">{stats.total}</p>
+            </div>
+
+            <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group hover:border-red-500/40 hover:shadow-[0_20px_40px_-15px_rgba(239,68,68,0.15)] hover:-translate-y-1 transition-all duration-300">
+              <div className="absolute -right-4 -top-4 w-24 h-24 bg-red-500/5 rounded-full blur-2xl group-hover:bg-red-500/10 transition-colors duration-500"></div>
+              <div className="flex justify-between items-start mb-4 relative z-10">
+                <p className="text-on-surface-variant text-sm font-medium uppercase tracking-wider">Total Spent</p>
+                <span className="material-symbols-outlined text-red-500 p-2 rounded-lg bg-red-500/10">payments</span>
+              </div>
+              <p className="text-3xl font-bold text-red-500 tracking-tight relative z-10 whitespace-nowrap">
+                ₹ {stats.totalAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              </p>
+            </div>
+
+            <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group hover:border-blue-500/40 hover:shadow-[0_20px_40px_-15px_rgba(59,130,246,0.15)] hover:-translate-y-1 transition-all duration-300">
+              <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-colors duration-500"></div>
+              <div className="flex justify-between items-start mb-4 relative z-10">
+                <p className="text-on-surface-variant text-sm font-medium uppercase tracking-wider">This Month</p>
+                <span className="material-symbols-outlined text-blue-500 p-2 rounded-lg bg-blue-500/10">calendar_month</span>
+              </div>
+              <p className="text-3xl font-bold text-blue-500 tracking-tight relative z-10 whitespace-nowrap">
+                ₹ {stats.thisMonthAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+              </p>
+            </div>
+
+            <div className="glass-panel p-6 rounded-3xl relative overflow-hidden group hover:border-tertiary/40 hover:shadow-[0_20px_40px_-15px_rgba(200,160,240,0.15)] hover:-translate-y-1 transition-all duration-300">
+              <div className="absolute -right-4 -top-4 w-24 h-24 bg-tertiary/5 rounded-full blur-2xl group-hover:bg-tertiary/10 transition-colors duration-500"></div>
+              <div className="flex justify-between items-start mb-4 relative z-10">
+                <p className="text-on-surface-variant text-sm font-medium uppercase tracking-wider">Top Category</p>
+                <span className="material-symbols-outlined text-tertiary p-2 rounded-lg bg-tertiary/10">category</span>
+              </div>
+              <p className="text-2xl font-bold text-tertiary tracking-tight relative z-10 truncate whitespace-nowrap">
+                {stats.topCategory ? stats.topCategory[0] : '—'}
+              </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Category</label>
-              <div className={`relative ${activeDropdown === 'category' ? 'z-40' : 'z-30'}`}>
-                <button
-                  type="button"
-                  onClick={() => setActiveDropdown(activeDropdown === 'category' ? null : 'category')}
-                  className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all flex items-center justify-between font-medium cursor-pointer"
-                >
-                  <span>{filterCategory || 'All categories'}</span>
-                  <span className="material-symbols-outlined text-on-surface-variant text-[18px]">expand_more</span>
-                </button>
-                {activeDropdown === 'category' && (
-                  <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-surface-container-high border border-outline-variant/30 rounded-xl shadow-xl z-50 overflow-hidden py-1 max-h-60 overflow-y-auto animate-fade-slide-up" style={{ animationDuration: '0.2s' }}>
+          {/* Filters Section */}
+          <section className="glass-panel p-6 md:p-8 rounded-3xl relative overflow-visible animate-fade-slide-up shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)] z-20" style={{ animationDelay: '0.2s' }}>
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-5 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-primary p-2 rounded-lg bg-primary/10 text-[20px]">filter_list</span>
+                  <h2 className="text-xl font-bold text-on-surface">Filters</h2>
+                  {activeFilterCount > 0 && (
+                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-on-primary text-[11px] font-bold">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Category</label>
+                  <div className={`relative ${activeDropdown === 'category' ? 'z-40' : 'z-30'}`}>
                     <button
                       type="button"
-                      onClick={() => { setFilterCategory(''); setActiveDropdown(null); }}
-                      className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
+                      onClick={() => setActiveDropdown(activeDropdown === 'category' ? null : 'category')}
+                      className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all flex items-center justify-between font-medium cursor-pointer"
                     >
-                      All categories
+                      <span>{filterCategory || 'All categories'}</span>
+                      <span className="material-symbols-outlined text-on-surface-variant text-[18px]">expand_more</span>
                     </button>
-                    {categories.map((c) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => { setFilterCategory(c.name); setActiveDropdown(null); }}
-                        className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
-                      >
-                        {c.name}
-                      </button>
-                    ))}
+                    {activeDropdown === 'category' && (
+                      <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-surface-container-high border border-outline-variant/30 rounded-xl shadow-xl z-50 overflow-hidden py-1 max-h-60 overflow-y-auto animate-fade-slide-up" style={{ animationDuration: '0.2s' }}>
+                        <button
+                          type="button"
+                          onClick={() => { setFilterCategory(''); setActiveDropdown(null); }}
+                          className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
+                        >
+                          All categories
+                        </button>
+                        {categories.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => { setFilterCategory(c.name); setActiveDropdown(null); }}
+                            className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
+                          >
+                            {c.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
+                </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Payment Method</label>
-              <div className={`relative ${activeDropdown === 'method' ? 'z-40' : 'z-30'}`}>
-                <button
-                  type="button"
-                  onClick={() => setActiveDropdown(activeDropdown === 'method' ? null : 'method')}
-                  className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all flex items-center justify-between font-medium cursor-pointer"
-                >
-                  <span>{filterPaymentMethod || 'All methods'}</span>
-                  <span className="material-symbols-outlined text-on-surface-variant text-[18px]">expand_more</span>
-                </button>
-                {activeDropdown === 'method' && (
-                  <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-surface-container-high border border-outline-variant/30 rounded-xl shadow-xl z-50 overflow-hidden py-1 animate-fade-slide-up" style={{ animationDuration: '0.2s' }}>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Payment Method</label>
+                  <div className={`relative ${activeDropdown === 'method' ? 'z-40' : 'z-30'}`}>
                     <button
                       type="button"
-                      onClick={() => { setFilterPaymentMethod(''); setActiveDropdown(null); }}
-                      className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
+                      onClick={() => setActiveDropdown(activeDropdown === 'method' ? null : 'method')}
+                      className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all flex items-center justify-between font-medium cursor-pointer"
                     >
-                      All methods
+                      <span>{filterPaymentMethod || 'All methods'}</span>
+                      <span className="material-symbols-outlined text-on-surface-variant text-[18px]">expand_more</span>
                     </button>
-                    {['Cash', 'UPI', 'Bank Transfer', 'Cheque'].map((method) => (
-                      <button
-                        key={method}
-                        type="button"
-                        onClick={() => { setFilterPaymentMethod(method); setActiveDropdown(null); }}
-                        className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
-                      >
-                        {method}
-                      </button>
-                    ))}
+                    {activeDropdown === 'method' && (
+                      <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-surface-container-high border border-outline-variant/30 rounded-xl shadow-xl z-50 overflow-hidden py-1 animate-fade-slide-up" style={{ animationDuration: '0.2s' }}>
+                        <button
+                          type="button"
+                          onClick={() => { setFilterPaymentMethod(''); setActiveDropdown(null); }}
+                          className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
+                        >
+                          All methods
+                        </button>
+                        {['Cash', 'UPI', 'Bank Transfer', 'Cheque'].map((method) => (
+                          <button
+                            key={method}
+                            type="button"
+                            onClick={() => { setFilterPaymentMethod(method); setActiveDropdown(null); }}
+                            className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
+                          >
+                            {method}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
+
+                <div className="space-y-2 relative">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">From Date</label>
+                  <input
+                    type="date"
+                    value={filterDateFrom}
+                    onChange={(e) => setFilterDateFrom(e.target.value)}
+                    className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                  />
+                </div>
+
+                <div className="space-y-2 relative">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">To Date</label>
+                  <input
+                    type="date"
+                    value={filterDateTo}
+                    onChange={(e) => setFilterDateTo(e.target.value)}
+                    className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-2 relative">
-              <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">From Date</label>
-              <input
-                type="date"
-                value={filterDateFrom}
-                onChange={(e) => setFilterDateFrom(e.target.value)}
-                className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-              />
-            </div>
-
-            <div className="space-y-2 relative">
-              <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">To Date</label>
-              <input
-                type="date"
-                value={filterDateTo}
-                onChange={(e) => setFilterDateTo(e.target.value)}
-                className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-              />
-            </div>
-          </div>
-
-          <div className="mt-8 flex flex-wrap gap-4 relative z-10">
-            <button
-              disabled={activeFilterCount === 0}
-              onClick={clearFilters}
-              className="w-full sm:w-auto px-6 py-2.5 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface border border-outline-variant/20 hover:border-outline-variant/40 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-on-surface-variant disabled:hover:border-outline-variant/20"
-            >
-              <span className="material-symbols-outlined text-[18px]">undo</span>
-              Reset Filters
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* Glassmorphic Data Table Container */}
-      <div className="glass-panel rounded-3xl overflow-hidden relative z-10 animate-fade-slide-up shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]" style={{ animationDelay: '0.4s' }}>
-        {/* Glow Accent */}
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
-        
-        <div className="p-6 border-b border-outline-variant/20 flex flex-col sm:flex-row justify-between items-center gap-4 bg-surface-container-lowest">
-          <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
-            <div className="flex items-center gap-2 text-sm text-on-surface-variant">
-              <span>Show</span>
-              <div className={`relative ${activeDropdown === 'entries' ? 'z-40' : 'z-30'}`}>
+              <div className="mt-8 flex flex-wrap gap-4 relative z-10">
                 <button
-                  type="button"
-                  onClick={() => setActiveDropdown(activeDropdown === 'entries' ? null : 'entries')}
-                  className="bg-surface-container border border-outline-variant/30 rounded-xl py-2 px-4 pr-10 text-on-surface focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 text-sm cursor-pointer hover:bg-surface-container-high transition-all font-semibold flex items-center justify-between min-w-[70px]"
+                  disabled={activeFilterCount === 0}
+                  onClick={clearFilters}
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface border border-outline-variant/20 hover:border-outline-variant/40 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-on-surface-variant disabled:hover:border-outline-variant/20"
                 >
-                  <span>{entriesPerPage}</span>
-                  <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
-                    expand_more
-                  </span>
+                  <span className="material-symbols-outlined text-[18px]">undo</span>
+                  Reset Filters
                 </button>
-                {activeDropdown === 'entries' && (
-                  <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-surface-container-high border border-outline-variant/30 rounded-xl shadow-xl z-50 overflow-hidden py-1 animate-fade-slide-up" style={{ animationDuration: '0.2s' }}>
-                    {[10, 25, 50].map((n) => (
-                      <button
-                        key={n}
-                        type="button"
-                        onClick={() => { handleEntriesPerPageChange(n); setActiveDropdown(null); }}
-                        className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
-                      >
-                        {n}
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
-              <span>entries</span>
             </div>
-          </div>
-          <div className="relative w-full md:w-72 group">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50 text-[20px] group-focus-within:text-primary transition-colors">search</span>
-            <input
-              className="w-full h-10 pl-10 pr-4 rounded-xl border border-outline-variant/30 bg-surface-container text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-              placeholder="Search expenses..."
-              type="text"
-              value={tableSearchQuery}
-              onChange={(e) => setTableSearchQuery(e.target.value)}
-            />
-          </div>
-        </div>
+          </section>
+
+          {/* Glassmorphic Data Table Container */}
+          <div className="glass-panel rounded-3xl overflow-hidden relative z-10 animate-fade-slide-up shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]" style={{ animationDelay: '0.4s' }}>
+            {/* Glow Accent */}
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
+
+            <div className="p-6 border-b border-outline-variant/20 flex flex-col sm:flex-row justify-between items-center gap-4 bg-surface-container-lowest">
+              <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
+                <div className="flex items-center gap-2 text-sm text-on-surface-variant">
+                  <span>Show</span>
+                  <div className={`relative ${activeDropdown === 'entries' ? 'z-40' : 'z-30'}`}>
+                    <button
+                      type="button"
+                      onClick={() => setActiveDropdown(activeDropdown === 'entries' ? null : 'entries')}
+                      className="bg-surface-container border border-outline-variant/30 rounded-xl py-2 px-4 pr-10 text-on-surface focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 text-sm cursor-pointer hover:bg-surface-container-high transition-all font-semibold flex items-center justify-between min-w-[70px]"
+                    >
+                      <span>{entriesPerPage}</span>
+                      <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
+                        expand_more
+                      </span>
+                    </button>
+                    {activeDropdown === 'entries' && (
+                      <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-surface-container-high border border-outline-variant/30 rounded-xl shadow-xl z-50 overflow-hidden py-1 animate-fade-slide-up" style={{ animationDuration: '0.2s' }}>
+                        {[10, 25, 50].map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            onClick={() => { handleEntriesPerPageChange(n); setActiveDropdown(null); }}
+                            className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
+                          >
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <span>entries</span>
+                </div>
+              </div>
+              <div className="relative w-full md:w-72 group">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50 text-[20px] group-focus-within:text-primary transition-colors">search</span>
+                <input
+                  className="w-full h-10 pl-10 pr-4 rounded-xl border border-outline-variant/30 bg-surface-container text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                  placeholder="Search expenses..."
+                  type="text"
+                  value={tableSearchQuery}
+                  onChange={(e) => setTableSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
 
             {/* High-Fidelity Data Table */}
             <div className="overflow-x-auto w-full">
-  <table className="min-w-[700px] text-left border-separate border-spacing-0">
-    <thead>
-      <tr className="bg-surface-container-low/50 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider border-b border-primary/10">
-        <th
-          className={`${sortHeaderClass('date')} px-2 py-2 sm:px-4 sm:py-3 w-[120px] sm:w-1/6`}
-          onClick={() => handleSort('date')}
-        >
-          <div className="flex items-center gap-1">
-            Date <span className={sortIconClass('date')}>{getSortIcon('date')}</span>
-          </div>
-        </th>
-        <th
-          className={`${sortHeaderClass('amount')} px-2 py-2 sm:px-4 sm:py-3 w-[100px] sm:w-1/6`}
-          onClick={() => handleSort('amount')}
-        >
-          <div className="flex items-center gap-1">
-            Amount <span className={sortIconClass('amount')}>{getSortIcon('amount')}</span>
-          </div>
-        </th>
-        <th
-          className={`${sortHeaderClass('paymentMethod')} px-2 py-2 sm:px-4 sm:py-3 w-[140px] sm:w-1/6`}
-          onClick={() => handleSort('paymentMethod')}
-        >
-          <div className="flex items-center gap-1">
-            Payment Method <span className={sortIconClass('paymentMethod')}>{getSortIcon('paymentMethod')}</span>
-          </div>
-        </th>
-        <th
-          className={`${sortHeaderClass('category')} px-2 py-2 sm:px-4 sm:py-3 w-[200px] sm:w-[25%]`}
-          onClick={() => handleSort('category')}
-        >
-          <div className="flex items-center gap-1">
-            Category & Note <span className={sortIconClass('category')}>{getSortIcon('category')}</span>
-          </div>
-        </th>
-        <th className="px-2 py-2 sm:px-6 sm:py-4 text-center w-[100px] sm:w-1/6">Attachment</th>
-        <th className="px-2 py-2 sm:px-6 sm:py-4 text-right pr-4 sm:pr-8 w-[100px] sm:w-1/6">Actions</th>
-      </tr>
-    </thead>
+              <table className="min-w-[700px] text-left border-separate border-spacing-0">
+                <thead>
+                  <tr className="bg-surface-container-low/50 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider border-b border-primary/10">
+                    <th
+                      className={`${sortHeaderClass('date')} px-2 py-2 sm:px-4 sm:py-3 w-[120px] sm:w-1/6`}
+                      onClick={() => handleSort('date')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Date <span className={sortIconClass('date')}>{getSortIcon('date')}</span>
+                      </div>
+                    </th>
+                    <th
+                      className={`${sortHeaderClass('amount')} px-2 py-2 sm:px-4 sm:py-3 w-[100px] sm:w-1/6`}
+                      onClick={() => handleSort('amount')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Amount <span className={sortIconClass('amount')}>{getSortIcon('amount')}</span>
+                      </div>
+                    </th>
+                    <th
+                      className={`${sortHeaderClass('paymentMethod')} px-2 py-2 sm:px-4 sm:py-3 w-[140px] sm:w-1/6`}
+                      onClick={() => handleSort('paymentMethod')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Payment Method <span className={sortIconClass('paymentMethod')}>{getSortIcon('paymentMethod')}</span>
+                      </div>
+                    </th>
+                    <th
+                      className={`${sortHeaderClass('category')} px-2 py-2 sm:px-4 sm:py-3 w-[200px] sm:w-[25%]`}
+                      onClick={() => handleSort('category')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Category & Note <span className={sortIconClass('category')}>{getSortIcon('category')}</span>
+                      </div>
+                    </th>
+                    <th className="px-2 py-2 sm:px-6 sm:py-4 text-center w-[100px] sm:w-1/6">Attachment</th>
+                    <th className="px-2 py-2 sm:px-6 sm:py-4 text-right pr-4 sm:pr-8 w-[100px] sm:w-1/6">Actions</th>
+                  </tr>
+                </thead>
 
-    <tbody className="divide-y divide-primary/5 text-xs sm:text-sm break-words">
-      {/* keep your loading, empty, and expense rows here unchanged */}
-    </tbody>
-  </table>
-</div>
+                <tbody className="divide-y divide-primary/5 text-xs sm:text-sm break-words">
+                  {/* keep your loading, empty, and expense rows here unchanged */}
+                </tbody>
+              </table>
+            </div>
 
 
             {/* Pagination */}
@@ -840,7 +839,7 @@ const fetchCategories = async () => {
           <footer className="relative z-10 w-full opacity-40 text-center flex items-center justify-center gap-4 mt-8">
             <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-on-surface-variant to-transparent"></div>
             <p className="text-xs font-bold tracking-[0.2em] text-on-surface-variant uppercase">
-              BillTea Dashboard • Expenses
+              BillTea • Expenses
             </p>
             <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-on-surface-variant to-transparent"></div>
           </footer>
@@ -1034,7 +1033,7 @@ const fetchCategories = async () => {
                   <p className="text-sm text-error font-medium">{categoryError}</p>
                 </div>
               )}
-<table className="w-full text-left border-separate border-spacing-0 bg-surface border border-outline-variant/20 rounded-xl overflow-hidden shadow-sm">
+              <table className="w-full text-left border-separate border-spacing-0 bg-surface border border-outline-variant/20 rounded-xl overflow-hidden shadow-sm">
                 <thead>
                   <tr className="bg-surface-container-low text-[11px] font-bold text-on-surface-variant uppercase tracking-wider border-b border-outline-variant/20">
                     <th className="px-4 py-3">Category Name</th>

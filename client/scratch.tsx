@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { apiFetch } from "@/lib/auth";
-import { useBranch } from "../../../../components/BranchProvider";
+import { useBranch } from "@/components/BranchProvider";
 import { useRouter } from 'next/navigation';
 
 // ---- Toggle switch ----
