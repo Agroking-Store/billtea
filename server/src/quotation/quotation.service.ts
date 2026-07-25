@@ -460,6 +460,7 @@ export class QuotationService {
     return this.prisma.customer.findMany({
       where: {
         companyId,
+        isActive: true,
         ...(branchId ? { branchId } : {}),
         ...queryFilter
       },
