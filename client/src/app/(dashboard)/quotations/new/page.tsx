@@ -215,7 +215,7 @@ export default function CreateQuotationPage() {
       const branch: any = branches.find(b => b.id === selectedBranchId);
       if (branch?.taxes && Array.isArray(branch.taxes) && branch.taxes.length > 0) {
         setBranchTaxes(branch.taxes);
-        setBranchTaxConfig({ label: branch.taxes[0].label, tax: branch.taxes[0].percentage || 0 });
+        setBranchTaxConfig({ label: branch.taxes[0].label, tax: branch.taxes[0].percentage ?? branch.taxes[0].value ?? 0 });
       } else if (branch?.taxLabel) {
         setBranchTaxes([{ label: branch.taxLabel, percentage: branch.tax || 0 }]);
         setBranchTaxConfig({ label: branch.taxLabel, tax: branch.tax || 0 });
@@ -666,13 +666,13 @@ export default function CreateQuotationPage() {
                               onChange={(e) => {
                                 const selectedTax = branchTaxes.find(t => t.label === e.target.value);
                                 if (selectedTax) {
-                                  setBranchTaxConfig({ label: selectedTax.label, tax: selectedTax.percentage || 0 });
+                                  setBranchTaxConfig({ label: selectedTax.label, tax: selectedTax.percentage ?? selectedTax.value ?? 0 });
                                 }
                               }}
                             >
                               {branchTaxes.length > 0 ? (
                                 branchTaxes.map((tax, idx) => (
-                                  <option key={idx} value={tax.label} className="text-on-surface bg-surface">{tax.label} ({tax.percentage || 0}%)</option>
+                                  <option key={idx} value={tax.label} className="text-on-surface bg-surface">{tax.label} ({tax.percentage ?? tax.value ?? 0}%)</option>
                                 ))
                               ) : (
                                 <option value="GST" className="text-on-surface bg-surface">GST (0%)</option>
