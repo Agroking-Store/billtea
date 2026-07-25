@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from 'next/navigation';
 
 // Removed hardcoded colors, using global Tailwind theme variables instead
 
@@ -48,6 +49,7 @@ function Icon({
 }
 
 export default function QuotationConfigurationPage() {
+  const router = useRouter();
   const [hsn, setHsn] = useState(true);
   const [sku, setSku] = useState(false);
 
@@ -98,18 +100,17 @@ export default function QuotationConfigurationPage() {
           <div className="max-w-[1600px] mx-auto space-y-6 pb-16">
             {/* Page Header */}
             <div className="mb-8">
-              <div className="flex items-center gap-2 mb-1">
-                <Icon name="settings" className="text-primary/70" />
-                <span className="text-sm tracking-wider uppercase text-on-surface-variant">
-                  Settings
-                </span>
-                <Icon
-                  name="chevron_right"
-                  className="text-sm text-on-surface-variant/50"
-                />
-                <span className="text-sm text-primary">
-                  Quotation
-                </span>
+              <div className="flex items-center gap-2 text-sm text-on-surface-variant mb-4 font-medium tracking-wide uppercase">
+                <button 
+                  onClick={() => router.back()} 
+                  className="hover:bg-surface-container p-1 rounded-full transition-colors mr-1 group flex items-center justify-center" 
+                  aria-label="Go back"
+                >
+                  <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
+                </button>
+                <span>Settings</span>
+                <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+                <span className="text-primary">Quotation Settings</span>
               </div>
               <h1 className="text-3xl md:text-4xl font-black tracking-tight font-display mb-2">
                 <span className="text-on-surface">Quotation </span>
@@ -256,7 +257,6 @@ export default function QuotationConfigurationPage() {
                     </p>
                   </div>
                 </GlassPanel>
-
 
               </div>
             </div>

@@ -4,6 +4,7 @@ import {
   Alert,
   Dimensions,
   FlatList,
+  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -14,7 +15,11 @@ import {
   View,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { router } from "expo-router";
+import { useRouter } from "expo-router";
+import * as Clipboard from "expo-clipboard";
+import * as Sharing from "expo-sharing";
+import * as FileSystem from "expo-file-system/legacy";
+import * as ImagePicker from "expo-image-picker";
 import {
   Eye,
   PencilLine,
@@ -25,8 +30,9 @@ import {
   Trash2,
   MessageSquare,
   Phone,
-  FileText,
+  Wallet,
   X,
+  FileText,
   Filter,
   RotateCcw,
   Check,
@@ -43,8 +49,6 @@ import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import { useTheme } from "../../hooks/useTheme";
 import { useBranch } from "../../components/BranchProvider";
 import { apiClient } from "@/api/client";
-import * as FileSystem from "expo-file-system/legacy";
-import * as Sharing from "expo-sharing";
 import { ENV } from "@/config/env";
 import { getStorageItemAsync } from "@/utils/storage";
 import { TOKEN_KEYS } from "@/constants/keys";
@@ -141,6 +145,7 @@ function formatAbbreviatedCurrency(amount: number) {
 }
 
 export default function QuotationsScreen() {
+  const router = useRouter();
   const searchInputRef = useRef<TextInput>(null);
   const [activeTab, setActiveTab] = useState<Tab>("Quotations");
   const { colors, isDark } = useTheme();
@@ -154,6 +159,18 @@ export default function QuotationsScreen() {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+
+  // Payment modal state
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<Invoice | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<
+    "CASH" | "BANK_TRANSFER" | "CHEQUE" | "CREDIT_CARD" | "UPI" | "OTHER"
+  >("CASH");
+  const [paymentNote, setPaymentNote] = useState("");
+  const [paymentAttachment, setPaymentAttachment] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // Fetching & Loading states
   const [loading, setLoading] = useState(false);
@@ -638,6 +655,122 @@ export default function QuotationsScreen() {
     );
   };
 
+  const handleEditInvoice = (item: Invoice) => {
+    // Opens the same create-invoice screen, in edit mode via the id param.
+    router.push({ pathname: "/create-invoice", params: { id: item.id } });
+  };
+
+  const handleCopyInvoice = async (item: Invoice) => {
+    const summary =
+      `Invoice ${item.invoiceNumber}\n` +
+      `Customer: ${item.customer?.customerName ?? "N/A"}\n` +
+      `Company: ${item.customer?.companyName ?? "N/A"}\n` +
+      `Amount: ${formatCurrency(item.totals?.grandTotal ?? 0)}\n` +
+      `Status: ${item.status}`;
+    await Clipboard.setStringAsync(summary);
+    Alert.alert("Copied", "Invoice details copied. Paste it anywhere to share.");
+  };
+
+  const handleCallCustomer = (item: Invoice) => {
+    const number = item.customer?.mobileNumber;
+    if (!number) {
+      Alert.alert("No Number", "This customer has no phone number saved.");
+      return;
+    }
+    Linking.openURL(`tel:${number}`);
+  };
+
+  const handlePickPaymentAttachment = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return;
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets?.[0]) {
+      setPaymentAttachment(result.assets[0]);
+    }
+  };
+
+  const handleOpenPayment = (item: Invoice) => {
+    setSelectedInvoiceForPayment(item);
+    setPaymentAmount(item.amountDue ? String(item.amountDue) : "");
+    setPaymentMethod("CASH");
+    setPaymentNote("");
+    setPaymentAttachment(null);
+    setPaymentError(null);
+    setPaymentModalOpen(true);
+  };
+
+  const handleSubmitPayment = async () => {
+    if (!selectedInvoiceForPayment) return;
+
+    const amountNum = parseFloat(paymentAmount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      setPaymentError("Enter a valid amount.");
+      return;
+    }
+    if (amountNum > selectedInvoiceForPayment.amountDue) {
+      setPaymentError("Amount cannot be more than the due amount.");
+      return;
+    }
+
+    setPaymentSubmitting(true);
+    setPaymentError(null);
+    try {
+      const res = await apiClient.post(`/invoices/${selectedInvoiceForPayment.id}/payments`, {
+        amount: amountNum,
+        method: paymentMethod,
+        date: new Date().toISOString(),
+        note: paymentNote.trim() || undefined,
+      });
+
+      if (res.status === 200 || res.status === 201) {
+        const paymentId = res.data?.id;
+
+        // Upload attachment as a separate request, same as web
+        if (paymentAttachment && paymentId) {
+          const formData = new FormData();
+          formData.append("file", {
+            uri: paymentAttachment.uri,
+            name: paymentAttachment.fileName || `payment-proof-${Date.now()}.jpg`,
+            type: paymentAttachment.mimeType || "image/jpeg",
+          } as any);
+
+          await apiClient.post(
+            `/invoices/${selectedInvoiceForPayment.id}/payments/${paymentId}/attachment`,
+            formData,
+            { headers: { "Content-Type": "multipart/form-data" } }
+          );
+        }
+
+        // Update this invoice locally so the card reflects the new balance right away
+        setInvoices((current) =>
+          current.map((inv) =>
+            inv.id === selectedInvoiceForPayment.id
+              ? {
+                  ...inv,
+                  amountPaid: inv.amountPaid + amountNum,
+                  amountDue: Math.max(inv.amountDue - amountNum, 0),
+                  status: inv.amountDue - amountNum <= 0 ? "PAID" : "PARTIAL",
+                }
+              : inv
+          )
+        );
+        setPaymentModalOpen(false);
+        Alert.alert("Success", "Payment recorded successfully.");
+      } else {
+        setPaymentError("Failed to record payment.");
+      }
+    } catch (err: any) {
+      setPaymentError(err?.response?.data?.message || "Failed to record payment.");
+    } finally {
+      setPaymentSubmitting(false);
+    }
+  };
+
   const handleDeleteExpense = async (id: string) => {
     Alert.alert(
       "Delete Expense",
@@ -993,17 +1126,16 @@ export default function QuotationsScreen() {
 
         {/* Actions Row */}
         <View style={[styles.actionsRow, { justifyContent: "space-between" }]}>
-          <ActionIconButton icon={Eye} onPress={() => handleComingSoon("View")} />
           <ActionIconButton
             icon={PencilLine}
-            onPress={() => handleComingSoon("Edit")}
+            onPress={() => handleEditInvoice(item)}
             color="#fbbf24"
           />
-          <ActionIconButton icon={Copy} onPress={() => handleComingSoon("Copy")} />
+          <ActionIconButton icon={Copy} onPress={() => handleCopyInvoice(item)} />
           <ActionIconButton
-            icon={MessageSquare}
-            onPress={() => handleComingSoon("Chat")}
-            color="#34D399"
+            icon={Wallet}
+            onPress={() => handleOpenPayment(item)}
+            color="#c084fc"
           />
           <ActionIconButton
             icon={Send}
@@ -1012,7 +1144,7 @@ export default function QuotationsScreen() {
           />
           <ActionIconButton
             icon={Phone}
-            onPress={() => handleComingSoon("Call")}
+            onPress={() => handleCallCustomer(item)}
             color="#34D399"
           />
           <ActionIconButton
@@ -1713,6 +1845,155 @@ export default function QuotationsScreen() {
         }
       />
 
+      {/* Add Payment Modal */}
+      <Modal
+        visible={paymentModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPaymentModalOpen(false)}
+      >
+        <View style={styles.paymentModalBackdrop}>
+          <View
+            style={[
+              styles.paymentModalCard,
+              { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 },
+            ]}
+          >
+            <View style={styles.paymentModalHeader}>
+              <View>
+                <Text style={[styles.paymentModalTitle, { color: colors.text }]}>Record Payment</Text>
+                {selectedInvoiceForPayment && (
+                  <Text style={[styles.paymentModalSubtitle, { color: colors.textSecondary }]}>
+                    Invoice {selectedInvoiceForPayment.invoiceNumber}
+                  </Text>
+                )}
+              </View>
+              <TouchableOpacity onPress={() => setPaymentModalOpen(false)}>
+                <X size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {paymentError && (
+              <View style={[styles.paymentModalErrorBanner, { backgroundColor: colors.error + "20", borderColor: colors.error + "40" }]}>
+                <Text style={{ color: colors.error, fontSize: 13 }}>{paymentError}</Text>
+              </View>
+            )}
+
+            <Text style={[styles.paymentModalLabel, { color: colors.textSecondary }]}>Amount</Text>
+            <TextInput
+              value={paymentAmount}
+              onChangeText={setPaymentAmount}
+              keyboardType="decimal-pad"
+              placeholder="0.00"
+              placeholderTextColor={colors.textSecondary + "80"}
+              style={[
+                styles.paymentModalInput,
+                { backgroundColor: colors.surfaceVariant + "80", borderColor: colors.border, color: colors.text },
+              ]}
+            />
+
+            {selectedInvoiceForPayment && (
+              <Text style={[styles.paymentModalHint, { color: colors.textSecondary }]}>
+                Due: {formatCurrency(selectedInvoiceForPayment.amountDue)} · Remaining after this payment:{" "}
+                {formatCurrency(
+                  Math.max(selectedInvoiceForPayment.amountDue - (parseFloat(paymentAmount) || 0), 0)
+                )}
+              </Text>
+            )}
+
+            <Text style={[styles.paymentModalLabel, { color: colors.textSecondary, marginTop: 16 }]}>
+              Payment Method
+            </Text>
+            <View style={styles.paymentModalMethodRow}>
+              {(["CASH", "BANK_TRANSFER", "CHEQUE", "CREDIT_CARD", "UPI", "OTHER"] as const).map((method) => (
+                <TouchableOpacity
+                  key={method}
+                  onPress={() => setPaymentMethod(method)}
+                  style={[
+                    styles.paymentModalMethodChip,
+                    {
+                      backgroundColor:
+                        paymentMethod === method ? colors.primary + "20" : colors.surfaceVariant + "80",
+                      borderColor: paymentMethod === method ? colors.primary : colors.border,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontWeight: "600",
+                      color: paymentMethod === method ? colors.primary : colors.textSecondary,
+                    }}
+                  >
+                    {method.replace("_", " ")}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={[styles.paymentModalLabel, { color: colors.textSecondary, marginTop: 16 }]}>
+              Transaction Note / Reference
+            </Text>
+            <TextInput
+              value={paymentNote}
+              onChangeText={setPaymentNote}
+              placeholder="e.g. UPI Ref #12345678"
+              placeholderTextColor={colors.textSecondary + "80"}
+              style={[
+                styles.paymentModalInput,
+                { backgroundColor: colors.surfaceVariant + "80", borderColor: colors.border, color: colors.text, fontSize: 14, fontWeight: "400" },
+              ]}
+            />
+
+            <Text style={[styles.paymentModalLabel, { color: colors.textSecondary, marginTop: 16 }]}>
+              Payment Proof (Optional)
+            </Text>
+            {paymentAttachment ? (
+              <View
+                style={[
+                  styles.paymentAttachmentRow,
+                  { backgroundColor: colors.surfaceVariant + "80", borderColor: colors.border },
+                ]}
+              >
+                <Text style={{ color: colors.text, fontSize: 13, flex: 1 }} numberOfLines={1}>
+                  {paymentAttachment.fileName || "Attached image"}
+                </Text>
+                <TouchableOpacity onPress={() => setPaymentAttachment(null)}>
+                  <X size={16} color={colors.error} />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={handlePickPaymentAttachment}
+                style={[
+                  styles.paymentAttachmentUploadBox,
+                  { backgroundColor: colors.surfaceVariant + "60", borderColor: colors.primary + "40" },
+                ]}
+              >
+                <Text style={{ color: colors.primary, fontSize: 13, fontWeight: "600" }}>
+                  + Attach Receipt
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              onPress={handleSubmitPayment}
+              disabled={paymentSubmitting}
+              style={[
+                styles.paymentModalSaveButton,
+                { backgroundColor: colors.primary + "20", borderColor: colors.primary + "40", opacity: paymentSubmitting ? 0.6 : 1 },
+              ]}
+            >
+              {paymentSubmitting ? (
+                <ActivityIndicator color={colors.primary} />
+              ) : (
+                <Text style={{ color: colors.primary, fontWeight: "700", fontSize: 15 }}>Save Payment</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Notes & Reminder Modal */}
       <Modal
         visible={!!notesModalData}
@@ -2350,6 +2631,90 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     textAlign: "center",
+  },
+  paymentModalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    justifyContent: "center",
+    padding: 20,
+  },
+  paymentModalCard: {
+    borderRadius: 20,
+    padding: 20,
+    width: '100%',
+    maxWidth: 420,
+    alignSelf: 'center',
+  },
+  paymentModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 16,
+  },
+  paymentModalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  paymentModalSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  paymentModalErrorBanner: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 12,
+  },
+  paymentModalLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginBottom: 6,
+  },
+  paymentModalInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  paymentModalHint: {
+    fontSize: 11,
+    marginTop: 6,
+  },
+  paymentModalMethodRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  paymentModalMethodChip: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  paymentModalSaveButton: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 20,
+  },
+  paymentAttachmentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  paymentAttachmentUploadBox: {
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: "center",
   },
   modalOverlay: {
     flex: 1,
