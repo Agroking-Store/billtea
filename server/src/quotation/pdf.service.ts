@@ -203,8 +203,8 @@ export class PdfService {
     // The requirement says: "Pre-populate the Terms & Conditions text area by fetching the DocumentSettings API when the page mounts."
     // So the quotation will already have the correct terms. But we still need topMessage and bottomMessage.
     
-    const topMessageHtml = settings.topMessage ? settings.topMessage.split('\\n').map((m: string) => `<div>${m}</div>`).join('') : '';
-    const bottomMessageHtml = settings.bottomMessage ? settings.bottomMessage.split('\\n').map((m: string) => `<div>${m}</div>`).join('') : '';
+    const topMessageHtml = settings.topMessage ? settings.topMessage.split(/\r?\n|\\n/).map((m: string) => `<div>${m}</div>`).join('') : '';
+    const bottomMessageHtml = settings.bottomMessage ? settings.bottomMessage.split(/\r?\n|\\n/).map((m: string) => `<div>${m}</div>`).join('') : '';
 
     let tncList: string[] = [];
     const tncRaw = quotation.termsAndConditions;
@@ -214,7 +214,7 @@ export class PdfService {
       if (Array.isArray((tncRaw as any).terms)) {
          tncList = (tncRaw as any).terms;
       } else if (typeof (tncRaw as any).text === 'string') {
-         tncList = (tncRaw as any).text.split('\\n').filter((t: string) => t.trim() !== '');
+         tncList = (tncRaw as any).text.split(/\r?\n|\\n/).filter((t: string) => t.trim() !== '');
       } else {
          tncList = Object.values(tncRaw).filter(v => typeof v === 'string') as string[];
       }
@@ -223,11 +223,11 @@ export class PdfService {
          const parsed = JSON.parse(tncRaw);
          if (Array.isArray(parsed)) tncList = parsed;
          else if (parsed && Array.isArray(parsed.terms)) tncList = parsed.terms;
-         else if (parsed && typeof parsed.text === 'string') tncList = parsed.text.split('\\n').filter((t: string) => t.trim() !== '');
+         else if (parsed && typeof parsed.text === 'string') tncList = parsed.text.split(/\r?\n|\\n/).filter((t: string) => t.trim() !== '');
          else if (parsed && typeof parsed === 'object') tncList = Object.values(parsed).filter(v => typeof v === 'string') as string[];
-         else tncList = tncRaw.split('\\n').filter(t => t.trim() !== '');
+         else tncList = tncRaw.split(/\r?\n|\\n/).filter(t => t.trim() !== '');
       } catch (e) {
-         tncList = tncRaw.split('\\n').filter(t => t.trim() !== '');
+         tncList = tncRaw.split(/\r?\n|\\n/).filter(t => t.trim() !== '');
       }
     }
 

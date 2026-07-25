@@ -3,6 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiFetch, API_BASE } from '@/lib/auth';
+import { useBranch } from '@/components/BranchProvider';
+import CustomerModal from '@/components/CustomerModal';
+import imageCompression from 'browser-image-compression';
 
 const getImageUrl = (url?: string) => {
   if (!url || url === 'null' || url === 'undefined') return '';
@@ -16,7 +19,6 @@ const getImageUrl = (url?: string) => {
   }
   return url;
 };
-import { useBranch } from '@/components/BranchProvider';
 
 export default function CreateQuotationPage() {
   const router = useRouter();
@@ -45,6 +47,7 @@ export default function CreateQuotationPage() {
   const [customerResults, setCustomerResults] = useState<any[]>([]);
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [selectedCustomerDetails, setSelectedCustomerDetails] = useState<any>(null);
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
 
   // Address State
   const [billingAddress, setBillingAddress] = useState({ address: '', city: '', state: '', pincode: '' });
@@ -59,8 +62,8 @@ export default function CreateQuotationPage() {
   // Attachments State
   const [attachments, setAttachments] = useState<File[]>([]);
 
-  // Branch Settings
   const [branchTaxConfig, setBranchTaxConfig] = useState({ label: 'GST', tax: 0 });
+  const [branchTaxes, setBranchTaxes] = useState<any[]>([]);
 
 
 
@@ -210,7 +213,16 @@ export default function CreateQuotationPage() {
   useEffect(() => {
     if (selectedBranchId) {
       const branch: any = branches.find(b => b.id === selectedBranchId);
-      if (branch?.taxLabel) setBranchTaxConfig({ label: branch.taxLabel, tax: branch.tax || 0 });
+      if (branch?.taxes && Array.isArray(branch.taxes) && branch.taxes.length > 0) {
+        setBranchTaxes(branch.taxes);
+        setBranchTaxConfig({ label: branch.taxes[0].label, tax: branch.taxes[0].percentage || 0 });
+      } else if (branch?.taxLabel) {
+        setBranchTaxes([{ label: branch.taxLabel, percentage: branch.tax || 0 }]);
+        setBranchTaxConfig({ label: branch.taxLabel, tax: branch.tax || 0 });
+      } else {
+        setBranchTaxes([]);
+        setBranchTaxConfig({ label: 'GST', tax: 0 });
+      }
     }
   }, [selectedBranchId, branches]);
 
@@ -296,6 +308,10 @@ export default function CreateQuotationPage() {
     setShowCustomerDropdown(false);
   };
 
+  const handleCustomerCreated = (newCustomer: any) => {
+    handleCustomerSelect(newCustomer);
+  };
+
   // Product Lookup
   const handleProductSearch = async (query: string, rowId: string) => {
     setProductSearchRows(prev => ({ ...prev, [rowId]: { ...prev[rowId], query, show: true } }));
@@ -310,7 +326,7 @@ export default function CreateQuotationPage() {
     setItems(items.map(i => i.id === rowId ? {
       ...i, productId: product.id, name: product.name, description: product.description, price: product.price,
       originalPrice: product.price, originalDescription: product.description, image: product.image || '',
-      sku: product.sku || '', hsnCode: product.hsnCode || ''
+      sku: product.skuNumber || product.sku || '', hsnCode: product.hsnNumber || product.hsnCode || ''
     } : i));
     setProductSearchRows(prev => ({ ...prev, [rowId]: { ...prev[rowId], show: false, query: product.name } }));
   };
@@ -319,68 +335,11 @@ export default function CreateQuotationPage() {
   const addItem = () => setItems([...items, { id: Math.random().toString(), productId: '', name: '', description: '', price: 0, originalPrice: 0, originalDescription: '', quantity: 1, discount: { type: 'PERCENTAGE', value: 0 }, tax: 0, image: '', sku: '', hsnCode: '' }]);
   const removeItem = (id: string) => { if (items.length > 1) setItems(items.filter(i => i.id !== id)); };
 
-  const compressImage = (file: File): Promise<File> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target?.result as string;
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 1920;
-          const MAX_HEIGHT = 1080;
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            resolve(file); // fallback
-            return;
-          }
-          ctx.drawImage(img, 0, 0, width, height);
-
-          canvas.toBlob((blob) => {
-            if (!blob) {
-              resolve(file); // fallback
-              return;
-            }
-            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
-              type: 'image/jpeg',
-              lastModified: Date.now(),
-            });
-            resolve(compressedFile);
-          }, 'image/jpeg', 0.7); // 70% quality
-        };
-        img.onerror = () => resolve(file); // fallback to original file if browser cannot render it (e.g., HEIC)
-      };
-      reader.onerror = () => resolve(file); // fallback
-    });
-  };
-
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
 
     setError(''); // clear previous errors
-    const allowedTypes = [
-      'application/pdf',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    ];
+    const allowedTypes = ['application/pdf'];
     const MAX_SIZE_MB = 5;
     const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
@@ -388,8 +347,9 @@ export default function CreateQuotationPage() {
     const errors: string[] = [];
 
     for (const file of Array.from(e.target.files)) {
-      if (!allowedTypes.includes(file.type) && !file.type.startsWith('image/')) {
-        errors.push(`${file.name}: Invalid format. (PDF, Excel, Word, or Images only)`);
+      const isHeic = file.name.toLowerCase().endsWith('.heic');
+      if (!allowedTypes.includes(file.type) && !file.type.startsWith('image/') && !isHeic) {
+        errors.push(`${file.name}: Invalid format. (PDF or Images only)`);
         continue;
       }
       if (file.size > MAX_SIZE_BYTES) {
@@ -398,8 +358,28 @@ export default function CreateQuotationPage() {
       }
 
       try {
-        if (file.type.startsWith('image/')) {
-          const compressed = await compressImage(file);
+        if (file.type.startsWith('image/') || isHeic) {
+          let fileToCompress = file;
+          
+          if (isHeic) {
+            const heic2any = (await import('heic2any')).default;
+            const convertedBlob = await heic2any({
+              blob: file,
+              toType: 'image/jpeg',
+              quality: 0.8
+            });
+            const blobArray = Array.isArray(convertedBlob) ? convertedBlob : [convertedBlob];
+            fileToCompress = new File(blobArray, file.name.replace(/\.heic$/i, '.jpg'), {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+          }
+
+          const compressed = await imageCompression(fileToCompress, {
+            maxSizeMB: 1,
+            maxWidthOrHeight: 1920,
+            useWebWorker: true
+          });
           validFiles.push(compressed);
         } else {
           validFiles.push(file);
@@ -409,12 +389,13 @@ export default function CreateQuotationPage() {
       }
     }
 
+
     if (errors.length > 0) {
       setError(`Attachment errors:\n• ${errors.join('\n• ')}`);
     }
 
     if (validFiles.length > 0) {
-      setAttachments(prev => [...prev, ...validFiles]);
+      setAttachments([validFiles[0]]);
     }
 
     e.target.value = ''; // reset input
@@ -544,34 +525,39 @@ export default function CreateQuotationPage() {
 
               <div className="mb-6 relative">
                 <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1 block">Search Customer *</label>
-                <div className="relative">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50">search</span>
-                  <input
-                    type="text"
-                    value={customerSearch}
-                    onChange={(e) => { setCustomerSearch(e.target.value); if (e.target.value === '') setSelectedCustomerDetails(null); }}
-                    onFocus={() => setShowCustomerDropdown(true)}
-                    onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
-                    className="glass-input pl-10 pr-4 py-2.5 rounded-lg text-sm text-on-surface w-full focus:ring-primary/50 font-semibold"
-                    placeholder="Type to search..."
-                  />
-                  {showCustomerDropdown && customerResults.length > 0 && (
-                    <div className="absolute top-full left-0 w-full mt-2 bg-surface/95 backdrop-blur-xl shadow-2xl rounded-xl border border-outline-variant/30 z-[100] max-h-60 overflow-y-auto overflow-x-hidden flex flex-col p-1">
-                      {customerResults.map(c => (
-                        <div key={c.id} onMouseDown={(e) => { e.preventDefault(); handleCustomerSelect(c); }} className="px-3 py-2.5 hover:bg-primary/5 rounded-lg cursor-pointer transition-all duration-200 group flex items-center gap-3 border-b border-outline-variant/10 last:border-0">
-                          <div className="text-primary/70 flex items-center justify-center">
-                            <span className="material-symbols-outlined text-[20px]">person</span>
+                <div className="flex gap-2 items-center">
+                  <div className="relative flex-1">
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50">search</span>
+                    <input
+                      type="text"
+                      value={customerSearch}
+                      onChange={(e) => { setCustomerSearch(e.target.value); if (e.target.value === '') setSelectedCustomerDetails(null); }}
+                      onFocus={() => setShowCustomerDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
+                      className="glass-input pl-10 pr-4 py-2.5 rounded-lg text-sm text-on-surface w-full focus:ring-primary/50 font-semibold"
+                      placeholder="Type to search..."
+                    />
+                    {showCustomerDropdown && customerResults.length > 0 && (
+                      <div className="absolute top-full left-0 w-full mt-2 bg-surface/95 backdrop-blur-xl shadow-2xl rounded-xl border border-outline-variant/30 z-[100] max-h-60 overflow-y-auto overflow-x-hidden flex flex-col p-1">
+                        {customerResults.map(c => (
+                          <div key={c.id} onMouseDown={(e) => { e.preventDefault(); handleCustomerSelect(c); }} className="px-3 py-2.5 hover:bg-primary/5 rounded-lg cursor-pointer transition-all duration-200 group flex items-center gap-3 border-b border-outline-variant/10 last:border-0">
+                            <div className="text-primary/70 flex items-center justify-center">
+                              <span className="material-symbols-outlined text-[20px]">person</span>
+                            </div>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="font-bold text-sm text-on-surface group-hover:text-primary transition-colors">{c.customerName}</span>
+                              <span className="text-[11px] text-on-surface-variant">
+                                {[c.companyName, c.email, c.mobileNumber].filter(Boolean).join(' • ')}
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex flex-col gap-0.5">
-                            <span className="font-bold text-sm text-on-surface group-hover:text-primary transition-colors">{c.customerName}</span>
-                            <span className="text-[11px] text-on-surface-variant">
-                              {[c.companyName, c.email, c.mobileNumber].filter(Boolean).join(' • ')}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <button type="button" onClick={() => setIsCustomerModalOpen(true)} className="w-11 h-11 shrink-0 rounded-xl bg-primary text-white flex items-center justify-center hover:bg-primary/90 transition-all shadow-md" title="Add New Customer">
+                    <span className="material-symbols-outlined text-[20px]">add</span>
+                  </button>
                 </div>
               </div>
 
@@ -608,7 +594,7 @@ export default function CreateQuotationPage() {
 
                 {!formData.shippingSameAsBilling && (
                   <div className="p-4 rounded-lg bg-surface-container/30 border border-outline-variant/20 space-y-3">
-                    <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider block">Manual Shipping Address</label>
+                    <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider block">Shipping Address</label>
                     <textarea value={shippingAddress.address} onChange={(e) => setShippingAddress({ ...shippingAddress, address: e.target.value })} className="glass-input w-full p-3 rounded-lg text-sm text-on-surface" placeholder="Enter complete shipping address..." rows={3}></textarea>
                   </div>
                 )}
@@ -623,19 +609,17 @@ export default function CreateQuotationPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
                 {/* Discount Rules */}
                 <div className="flex flex-col">
-                  <h3 className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-4">Discount Method</h3>
-                  <div className="flex gap-6 mb-5">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" name="discMode" checked={formData.discountConfiguration.mode === 'FIXED'} onChange={() => setFormData({ ...formData, discountConfiguration: { ...formData.discountConfiguration, mode: 'FIXED' } })} className="text-primary w-4 h-4" />
-                      <span className="text-sm font-semibold text-on-surface">Fixed for all</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" name="discMode" checked={formData.discountConfiguration.mode === 'PER_PRODUCT'} onChange={() => setFormData({ ...formData, discountConfiguration: { ...formData.discountConfiguration, mode: 'PER_PRODUCT' } })} className="text-primary w-4 h-4" />
-                      <span className="text-sm font-semibold text-on-surface">Per Product</span>
-                    </label>
+                  <h3 className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-3">Discount Method</h3>
+                  <div className="flex bg-surface-container/50 p-1 rounded-xl mb-6 w-full border border-outline-variant/20">
+                    <button type="button" onClick={() => setFormData({ ...formData, discountConfiguration: { ...formData.discountConfiguration, mode: 'FIXED' } })} className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all ${formData.discountConfiguration.mode === 'FIXED' ? 'bg-surface shadow-sm text-primary border border-outline-variant/10' : 'text-on-surface-variant hover:text-on-surface'}`}>
+                      Fixed for all
+                    </button>
+                    <button type="button" onClick={() => setFormData({ ...formData, discountConfiguration: { ...formData.discountConfiguration, mode: 'PER_PRODUCT' } })} className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all ${formData.discountConfiguration.mode === 'PER_PRODUCT' ? 'bg-surface shadow-sm text-primary border border-outline-variant/10' : 'text-on-surface-variant hover:text-on-surface'}`}>
+                      Per Product
+                    </button>
                   </div>
 
-                  <div className="h-[70px]">
+                  <div className="h-[50px]">
                     {formData.discountConfiguration.mode === 'FIXED' && (
                       <div className="flex">
                         <input type="number" value={formData.discountConfiguration.value} onChange={(e) => setFormData({ ...formData, discountConfiguration: { ...formData.discountConfiguration, value: parseFloat(e.target.value) || 0 } })} className="glass-input px-4 py-2.5 rounded-l-lg w-full text-sm font-semibold border-r-0 focus:ring-0 focus:border-primary/50" placeholder="Amount" />
@@ -650,19 +634,20 @@ export default function CreateQuotationPage() {
 
                 {/* Tax Rules */}
                 <div className="flex flex-col">
-                  <h3 className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-4">Tax Method</h3>
-                  <div className="flex gap-6 mb-5">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" name="taxMode" checked={formData.taxConfiguration.mode === 'FIXED'} onChange={() => setFormData({ ...formData, taxConfiguration: { ...formData.taxConfiguration, mode: 'FIXED' } })} className="text-primary w-4 h-4" />
-                      <span className="text-sm font-semibold text-on-surface">Fixed for all</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" name="taxMode" checked={formData.taxConfiguration.mode === 'PER_PRODUCT'} onChange={() => setFormData({ ...formData, taxConfiguration: { ...formData.taxConfiguration, mode: 'PER_PRODUCT' } })} className="text-primary w-4 h-4" />
-                      <span className="text-sm font-semibold text-on-surface">Per Product</span>
-                    </label>
+                  <h3 className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-3">Tax Method</h3>
+                  <div className="flex bg-surface-container/50 p-1 rounded-xl mb-6 w-full border border-outline-variant/20">
+                    <button type="button" onClick={() => setFormData({ ...formData, taxConfiguration: { ...formData.taxConfiguration, mode: 'FIXED', customTaxActive: false } })} className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all ${formData.taxConfiguration.mode === 'FIXED' && !formData.taxConfiguration.customTaxActive ? 'bg-surface shadow-sm text-primary border border-outline-variant/10' : 'text-on-surface-variant hover:text-on-surface'}`}>
+                      Default
+                    </button>
+                    <button type="button" onClick={() => setFormData({ ...formData, taxConfiguration: { ...formData.taxConfiguration, mode: 'FIXED', customTaxActive: true } })} className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all ${formData.taxConfiguration.mode === 'FIXED' && formData.taxConfiguration.customTaxActive ? 'bg-surface shadow-sm text-primary border border-outline-variant/10' : 'text-on-surface-variant hover:text-on-surface'}`}>
+                      Custom
+                    </button>
+                    <button type="button" onClick={() => setFormData({ ...formData, taxConfiguration: { ...formData.taxConfiguration, mode: 'PER_PRODUCT' } })} className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all ${formData.taxConfiguration.mode === 'PER_PRODUCT' ? 'bg-surface shadow-sm text-primary border border-outline-variant/10' : 'text-on-surface-variant hover:text-on-surface'}`}>
+                      Per Item
+                    </button>
                   </div>
 
-                  <div className="h-[70px]">
+                  <div className="h-[50px]">
                     {formData.taxConfiguration.mode === 'FIXED' && (
                       <div className="flex flex-col gap-2 relative">
                         {formData.taxConfiguration.customTaxActive ? (
@@ -674,15 +659,28 @@ export default function CreateQuotationPage() {
                             </div>
                           </div>
                         ) : (
-                          <select className="glass-input px-4 py-2.5 rounded-lg w-full text-sm font-semibold cursor-pointer focus:ring-0 focus:border-primary/50 appearance-none bg-surface-container/30">
-                            <option value={branchTaxConfig.tax}>{branchTaxConfig.label} ({branchTaxConfig.tax}%)</option>
-                          </select>
+                          <div className="relative">
+                            <select 
+                              className="glass-input px-4 py-2.5 rounded-lg w-full text-sm font-semibold cursor-pointer focus:ring-0 focus:border-primary/50 appearance-none bg-surface-container/30 border-outline-variant/30 text-on-surface"
+                              value={branchTaxConfig.label}
+                              onChange={(e) => {
+                                const selectedTax = branchTaxes.find(t => t.label === e.target.value);
+                                if (selectedTax) {
+                                  setBranchTaxConfig({ label: selectedTax.label, tax: selectedTax.percentage || 0 });
+                                }
+                              }}
+                            >
+                              {branchTaxes.length > 0 ? (
+                                branchTaxes.map((tax, idx) => (
+                                  <option key={idx} value={tax.label} className="text-on-surface bg-surface">{tax.label} ({tax.percentage || 0}%)</option>
+                                ))
+                              ) : (
+                                <option value="GST" className="text-on-surface bg-surface">GST (0%)</option>
+                              )}
+                            </select>
+                            <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-lg">expand_more</span>
+                          </div>
                         )}
-
-                        <label className="absolute -top-7 right-0 flex items-center gap-1.5 cursor-pointer">
-                          <input type="checkbox" checked={formData.taxConfiguration.customTaxActive} onChange={(e) => setFormData({ ...formData, taxConfiguration: { ...formData.taxConfiguration, customTaxActive: e.target.checked } })} className="rounded text-primary w-3.5 h-3.5" />
-                          <span className="text-[11px] font-bold text-on-surface-variant uppercase">Custom</span>
-                        </label>
                       </div>
                     )}
                   </div>
@@ -752,14 +750,18 @@ export default function CreateQuotationPage() {
                                   {productSearchRows[item.id].results.map(p => (
                                     <div key={p.id} onMouseDown={(e) => { e.preventDefault(); handleProductSelect(p, item.id); }} className="px-3 py-2.5 hover:bg-primary/5 rounded-lg cursor-pointer transition-all duration-200 group flex justify-between items-center border-b border-outline-variant/10 last:border-0">
                                       <div className="flex items-center gap-3">
-                                        <div className="text-primary/70 flex items-center justify-center">
-                                          <span className="material-symbols-outlined text-[20px]">inventory_2</span>
+                                        <div className="text-primary/70 flex items-center justify-center w-8 h-8 shrink-0 bg-surface-container/50 rounded-md overflow-hidden border border-outline-variant/20">
+                                          {p.image ? (
+                                            <img src={getImageUrl(p.image)} alt={p.name} className="w-full h-full object-cover" />
+                                          ) : (
+                                            <span className="material-symbols-outlined text-[18px]">inventory_2</span>
+                                          )}
                                         </div>
                                         <div className="flex flex-col gap-0.5">
                                           <span className="font-bold text-sm text-on-surface group-hover:text-primary transition-colors">{p.name}</span>
-                                          {(p.sku || p.hsnCode) && (
+                                          {(p.skuNumber || p.sku) && (
                                             <span className="text-[11px] text-on-surface-variant">
-                                              {[p.sku && `SKU: ${p.sku}`, p.hsnCode && `HSN: ${p.hsnCode}`].filter(Boolean).join(' • ')}
+                                              SKU: {p.skuNumber || p.sku}
                                             </span>
                                           )}
                                         </div>
@@ -792,8 +794,8 @@ export default function CreateQuotationPage() {
                           {/* Row 2: Description, Discount, Tax, Total */}
                           <div className="grid grid-cols-12 gap-3 md:gap-4 items-end">
                             <div className={`col-span-12 ${(formData.discountConfiguration.mode === 'PER_PRODUCT' && formData.taxConfiguration.mode === 'PER_PRODUCT') ? 'md:col-span-4' :
-                                (formData.discountConfiguration.mode === 'PER_PRODUCT' ? 'md:col-span-6' :
-                                  (formData.taxConfiguration.mode === 'PER_PRODUCT' ? 'md:col-span-7' : 'md:col-span-9'))
+                              (formData.discountConfiguration.mode === 'PER_PRODUCT' ? 'md:col-span-6' :
+                                (formData.taxConfiguration.mode === 'PER_PRODUCT' ? 'md:col-span-7' : 'md:col-span-9'))
                               }`}>
                               <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1 block">Description</label>
                               <input type="text" value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} className="glass-input px-3 py-2 rounded-lg text-sm w-full text-on-surface" placeholder="Line item details..." />
@@ -851,6 +853,7 @@ export default function CreateQuotationPage() {
                 <span className="material-symbols-outlined text-primary">description</span> Terms & Conditions
               </h2>
               <textarea value={formData.termsAndConditions} onChange={(e) => setFormData({ ...formData, termsAndConditions: e.target.value })} className="glass-input w-full p-4 rounded-xl text-sm text-on-surface font-medium leading-relaxed" rows={4} placeholder="Enter quotation-specific terms here..."></textarea>
+              <p className="text-xs text-on-surface-variant/70 mt-3 flex items-center gap-1.5"><span className="material-symbols-outlined text-[14px]">info</span> Press Enter for a new line. Each line will be shown as a separate point in the PDF.</p>
             </div>
 
           </div>
@@ -901,12 +904,14 @@ export default function CreateQuotationPage() {
             {/* Attachments Dropzone */}
             <div className="glass-panel rounded-3xl p-6 md:p-8 shadow-sm border border-outline-variant/30">
               <h3 className="text-sm font-bold text-on-surface mb-4 uppercase tracking-wide">Attachments</h3>
-              <div className="border-2 border-dashed border-primary/30 rounded-xl p-6 text-center hover:bg-primary/5 transition-colors relative group cursor-pointer">
-                <input type="file" multiple accept=".pdf,.xlsx,.docx,.png,.jpg,.jpeg,.ppt,.pptx" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                <span className="material-symbols-outlined text-primary text-[32px] mb-2 group-hover:scale-110 transition-transform">cloud_upload</span>
-                <p className="text-sm font-bold text-on-surface">Click or drag files to attach</p>
-                <p className="text-xs text-on-surface-variant mt-1">PDF, Excel, Word, PPT, Images</p>
-              </div>
+              {attachments.length === 0 && (
+                <div className="border-2 border-dashed border-primary/30 rounded-xl p-6 text-center hover:bg-primary/5 transition-colors relative group cursor-pointer">
+                  <input type="file" accept=".pdf,image/*,.heic,.HEIC" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                  <span className="material-symbols-outlined text-primary text-[32px] mb-2 group-hover:scale-110 transition-transform">cloud_upload</span>
+                  <p className="text-sm font-bold text-on-surface">Click or drag a file to attach</p>
+                  <p className="text-xs text-on-surface-variant mt-1">PDF or Images (Max 5MB)</p>
+                </div>
+              )}
 
               {attachments.length > 0 && (
                 <div className="mt-4 space-y-2">
@@ -948,6 +953,12 @@ export default function CreateQuotationPage() {
           <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-on-surface-variant to-transparent"></div>
         </footer>
       </div>
+      <CustomerModal
+        isOpen={isCustomerModalOpen}
+        onClose={() => setIsCustomerModalOpen(false)}
+        branchId={selectedBranchId || ''}
+        onSaveSuccess={handleCustomerCreated}
+      />
     </div>
   );
 }
