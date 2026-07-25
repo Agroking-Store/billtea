@@ -530,7 +530,7 @@ export default function ExpensesPage() {
               <button
                 onClick={openNewModal}
                 disabled={!selectedBranchId}
-                className="w-full md:w-auto group relative h-14 px-8 rounded-2xl bg-surface-container-highest border border-primary/20 text-primary font-bold flex items-center justify-center gap-3 overflow-hidden shadow-[0_0_15px_rgba(125,211,252,0.1)] hover:shadow-[0_0_25px_rgba(125,211,252,0.3)] transition-all hover:-translate-y-0.5 hover:border-primary/40 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full md:w-auto group relative h-14 px-8 rounded-2xl bg-surface border border-primary/20 text-primary font-bold flex items-center justify-center gap-3 overflow-hidden shadow-[0_0_15px_rgba(125,211,252,0.1)] hover:shadow-[0_0_25px_rgba(125,211,252,0.3)] transition-all hover:-translate-y-0.5 hover:border-primary/40 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="absolute inset-0 w-full h-full bg-primary/5 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out" />
                 <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">add</span>
@@ -616,7 +616,7 @@ export default function ExpensesPage() {
                       <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-surface-container-high border border-outline-variant/30 rounded-xl shadow-xl z-50 overflow-hidden py-1 max-h-60 overflow-y-auto animate-fade-slide-up" style={{ animationDuration: '0.2s' }}>
                         <button
                           type="button"
-                          onClick={() => { setFilterCategory(''); setActiveDropdown(null); }}
+                          onMouseDown={() => { setFilterCategory(''); setActiveDropdown(null); }}
                           className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
                         >
                           All categories
@@ -625,7 +625,7 @@ export default function ExpensesPage() {
                           <button
                             key={c.id}
                             type="button"
-                            onClick={() => { setFilterCategory(c.name); setActiveDropdown(null); }}
+                            onMouseDown={() => { setFilterCategory(c.name); setActiveDropdown(null); }}
                             className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
                           >
                             {c.name}
@@ -651,7 +651,7 @@ export default function ExpensesPage() {
                       <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-surface-container-high border border-outline-variant/30 rounded-xl shadow-xl z-50 overflow-hidden py-1 animate-fade-slide-up" style={{ animationDuration: '0.2s' }}>
                         <button
                           type="button"
-                          onClick={() => { setFilterPaymentMethod(''); setActiveDropdown(null); }}
+                          onMouseDown={() => { setFilterPaymentMethod(''); setActiveDropdown(null); }}
                           className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
                         >
                           All methods
@@ -660,7 +660,7 @@ export default function ExpensesPage() {
                           <button
                             key={method}
                             type="button"
-                            onClick={() => { setFilterPaymentMethod(method); setActiveDropdown(null); }}
+                            onMouseDown={() => { setFilterPaymentMethod(method); setActiveDropdown(null); }}
                             className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
                           >
                             {method}
@@ -696,7 +696,7 @@ export default function ExpensesPage() {
                 <button
                   disabled={activeFilterCount === 0}
                   onClick={clearFilters}
-                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface border border-outline-variant/20 hover:border-outline-variant/40 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-on-surface-variant disabled:hover:border-outline-variant/20"
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface hover:text-on-surface border border-outline-variant/20 hover:border-outline-variant/40 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-on-surface-variant disabled:hover:border-outline-variant/20"
                 >
                   <span className="material-symbols-outlined text-[18px]">undo</span>
                   Reset Filters
@@ -731,7 +731,7 @@ export default function ExpensesPage() {
                           <button
                             key={n}
                             type="button"
-                            onClick={() => { handleEntriesPerPageChange(n); setActiveDropdown(null); }}
+                            onMouseDown={() => { handleEntriesPerPageChange(n); setActiveDropdown(null); }}
                             className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
                           >
                             {n}
@@ -816,7 +816,7 @@ export default function ExpensesPage() {
                   <button
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface-container-highest border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     Previous
                   </button>
@@ -826,7 +826,7 @@ export default function ExpensesPage() {
                   <button
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface hover:text-on-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     Next
                   </button>
@@ -953,7 +953,7 @@ export default function ExpensesPage() {
                               <button
                                 key={method}
                                 type="button"
-                                onClick={() => {
+                                onMouseDown={() => {
                                   setFormData({ ...formData, paymentMethod: method });
                                   setActiveDropdown(null);
                                 }}
@@ -978,7 +978,7 @@ export default function ExpensesPage() {
                       <span className="material-symbols-outlined text-[16px]">attach_file</span> Attachment (Img/PDF)
                     </label>
                     {isEditMode && editExpenseId && expenses.find(e => e.id === editExpenseId)?.attachment && (
-                      <div className="flex items-center gap-3 mb-2 p-3 rounded-xl border border-outline-variant/20 bg-surface-container-highest shadow-sm">
+                      <div className="flex items-center gap-3 mb-2 p-3 rounded-xl border border-outline-variant/20 bg-surface shadow-sm">
                         <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                           <span className="material-symbols-outlined text-[20px]">{isPdf(expenses.find(e => e.id === editExpenseId)?.attachment!) ? 'picture_as_pdf' : 'image'}</span>
                         </div>
@@ -1046,7 +1046,7 @@ export default function ExpensesPage() {
                     <tr><td colSpan={3} className="px-4 py-6 text-center text-on-surface-variant">No categories found.</td></tr>
                   ) : (
                     categories.map(cat => (
-                      <tr key={cat.id} className="hover:bg-surface-container-highest/30 transition-colors">
+                      <tr key={cat.id} className="hover:bg-surface/30 transition-colors">
                         <td className="px-4 py-3 font-medium text-on-surface w-1/2">
                           {editingCategoryId === cat.id ? (
                             <input

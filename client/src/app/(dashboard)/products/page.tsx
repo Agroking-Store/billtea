@@ -29,6 +29,19 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeDropdown, setActiveDropdown] = useState<'status' | 'hsn' | 'entries' | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.dropdown-container')) {
+        setActiveDropdown(null);
+      }
+    };
+    if (activeDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeDropdown]);
   const closeDropdowns = useCallback(() => {
     setActiveDropdown(null);
   }, []);
@@ -497,6 +510,7 @@ export default function ProductsPage() {
 
         {/* Filters Section */}
         <section className="glass-panel p-6 md:p-8 rounded-3xl relative z-20 overflow-visible animate-fade-slide-up shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]" style={{ animationDelay: '0.25s' }}>
+            
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
 
           <div className="flex items-center justify-between gap-3 mb-6 flex-wrap relative z-10">
@@ -565,21 +579,21 @@ export default function ProductsPage() {
                   <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-surface-container-high border border-outline-variant/30 rounded-xl shadow-xl z-50 overflow-hidden py-1 animate-fade-slide-up" style={{ animationDuration: '0.2s' }}>
                     <button
                       type="button"
-                      onClick={() => { setStatusFilter('all'); setActiveDropdown(null); }}
+                      onMouseDown={() => { setStatusFilter('all'); setActiveDropdown(null); }}
                       className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
                     >
                       All Status
                     </button>
                     <button
                       type="button"
-                      onClick={() => { setStatusFilter('active'); setActiveDropdown(null); }}
+                      onMouseDown={() => { setStatusFilter('active'); setActiveDropdown(null); }}
                       className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
                     >
                       Active
                     </button>
                     <button
                       type="button"
-                      onClick={() => { setStatusFilter('inactive'); setActiveDropdown(null); }}
+                      onMouseDown={() => { setStatusFilter('inactive'); setActiveDropdown(null); }}
                       className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
                     >
                       Inactive
@@ -609,21 +623,21 @@ export default function ProductsPage() {
                   <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-surface-container-high border border-outline-variant/30 rounded-xl shadow-xl z-50 overflow-hidden py-1 animate-fade-slide-up" style={{ animationDuration: '0.2s' }}>
                     <button
                       type="button"
-                      onClick={() => { setHsnFilter('all'); setActiveDropdown(null); }}
+                      onMouseDown={() => { setHsnFilter('all'); setActiveDropdown(null); }}
                       className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
                     >
                       All Products
                     </button>
                     <button
                       type="button"
-                      onClick={() => { setHsnFilter('with'); setActiveDropdown(null); }}
+                      onMouseDown={() => { setHsnFilter('with'); setActiveDropdown(null); }}
                       className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
                     >
                       With HSN Code
                     </button>
                     <button
                       type="button"
-                      onClick={() => { setHsnFilter('without'); setActiveDropdown(null); }}
+                      onMouseDown={() => { setHsnFilter('without'); setActiveDropdown(null); }}
                       className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
                     >
                       Without HSN Code
@@ -637,7 +651,7 @@ export default function ProductsPage() {
           <div className="mt-8 flex flex-wrap gap-4 relative z-10">
             <button
               disabled={activeFilterCount === 0}
-              className="w-full sm:w-auto px-6 py-2.5 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface border border-outline-variant/20 hover:border-outline-variant/40 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-on-surface-variant disabled:hover:border-outline-variant/20"
+              className="w-full sm:w-auto px-6 py-2.5 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface hover:text-on-surface border border-outline-variant/20 hover:border-outline-variant/40 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-on-surface-variant disabled:hover:border-outline-variant/20"
               onClick={handleClearFilters}
             >
               <span className="material-symbols-outlined text-[18px]">undo</span>
@@ -672,7 +686,7 @@ export default function ProductsPage() {
                       <button
                         key={n}
                         type="button"
-                        onClick={() => { handleEntriesPerPageChange(n); setActiveDropdown(null); }}
+                        onMouseDown={() => { handleEntriesPerPageChange(n); setActiveDropdown(null); }}
                         className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
                       >
                         {n}
@@ -731,7 +745,7 @@ export default function ProductsPage() {
                     <tr key={product.id} className="hover:bg-primary/5 transition-colors duration-200 group">
                       <td className="px-4 py-4 align-middle">
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="relative w-10 h-10 rounded-xl bg-surface-container-highest border border-outline-variant/30 flex items-center justify-center text-on-surface-variant/40 shadow-sm overflow-hidden shrink-0 group-hover:border-primary/30 transition-all">
+                          <div className="relative w-10 h-10 rounded-xl bg-surface border border-outline-variant/30 flex items-center justify-center text-on-surface-variant/40 shadow-sm overflow-hidden shrink-0 group-hover:border-primary/30 transition-all">
                             {product.image ? (
                               <img src={getImageUrl(product.image)!} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                             ) : (
@@ -794,7 +808,7 @@ export default function ProductsPage() {
                 <button
                   onClick={() => goToPage(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface-container-highest border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   Previous
                 </button>
@@ -804,7 +818,7 @@ export default function ProductsPage() {
                 <button
                   onClick={() => goToPage(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface hover:text-on-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   Next
                 </button>

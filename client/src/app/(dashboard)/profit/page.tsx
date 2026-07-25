@@ -56,6 +56,19 @@ export default function ProfitReportPage() {
     setActiveDropdown(prev => prev === name ? null : name);
   };
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.dropdown-container')) {
+        setActiveDropdown(null);
+      }
+    };
+    if (activeDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeDropdown]);
+
   // ---- Default date range (used both to initialize and to detect "nothing to reset") ----
   const defaultDateRange = useMemo(() => {
     const today = new Date();
@@ -322,12 +335,7 @@ export default function ProfitReportPage() {
 
   return (
     <>
-      {activeDropdown && (
-        <div
-          className="fixed inset-0 z-40 cursor-default"
-          onClick={() => setActiveDropdown(null)}
-        />
-      )}
+      
       <div
         className="flex-1 overflow-y-auto p-4 md:p-8 z-0 relative overflow-x-hidden selection:bg-primary/30 [&::-webkit-scrollbar]:hidden"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
@@ -370,11 +378,11 @@ export default function ProfitReportPage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <button className="group relative h-12 px-6 rounded-2xl bg-surface-container-highest text-on-surface font-bold flex items-center gap-2 overflow-hidden shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 border border-outline-variant/30 hover:border-primary/30 hover:text-primary">
+              <button className="group relative h-12 px-6 rounded-2xl bg-surface text-on-surface font-bold flex items-center gap-2 overflow-hidden shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 border border-outline-variant/30 hover:border-primary/30 hover:text-primary">
                 <span className="material-symbols-outlined text-[20px]">picture_as_pdf</span>
                 <span>Export PDF</span>
               </button>
-              <button className="group relative h-12 px-6 rounded-2xl bg-surface-container-highest text-on-surface font-bold flex items-center gap-2 overflow-hidden shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 border border-outline-variant/30 hover:border-primary/30 hover:text-primary">
+              <button className="group relative h-12 px-6 rounded-2xl bg-surface text-on-surface font-bold flex items-center gap-2 overflow-hidden shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 border border-outline-variant/30 hover:border-primary/30 hover:text-primary">
                 <span className="material-symbols-outlined text-[20px]">table_view</span>
                 <span>Export Excel</span>
               </button>
@@ -467,7 +475,7 @@ export default function ProfitReportPage() {
               <button
                 onClick={handleResetFilters}
                 disabled={!hasActiveFilters}
-                className="h-[46px] px-6 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface border border-outline-variant/20 hover:border-outline-variant/40 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-on-surface-variant disabled:hover:border-outline-variant/20"
+                className="h-[46px] px-6 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface hover:text-on-surface border border-outline-variant/20 hover:border-outline-variant/40 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-on-surface-variant disabled:hover:border-outline-variant/20"
               >
                 <span className="material-symbols-outlined text-[18px]">undo</span>
                 Reset Filters
@@ -495,21 +503,21 @@ export default function ProfitReportPage() {
                   </button>
 
                   {activeDropdown === 'entries' && (
-                    <div className="absolute top-full left-0 mt-1 z-[60] bg-surface-container-highest rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 min-w-[70px]">
+                    <div className="absolute top-full left-0 mt-1 z-[60] bg-surface rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 min-w-[70px]">
                       <div
-                        onClick={() => { handleEntriesPerPageChange(10); setActiveDropdown(null); }}
+                        onMouseDown={() => { handleEntriesPerPageChange(10); setActiveDropdown(null); }}
                         className={`px-4 py-2 text-sm cursor-pointer transition-colors ${entriesPerPage === 10 ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         10
                       </div>
                       <div
-                        onClick={() => { handleEntriesPerPageChange(25); setActiveDropdown(null); }}
+                        onMouseDown={() => { handleEntriesPerPageChange(25); setActiveDropdown(null); }}
                         className={`px-4 py-2 text-sm cursor-pointer transition-colors ${entriesPerPage === 25 ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         25
                       </div>
                       <div
-                        onClick={() => { handleEntriesPerPageChange(50); setActiveDropdown(null); }}
+                        onMouseDown={() => { handleEntriesPerPageChange(50); setActiveDropdown(null); }}
                         className={`px-4 py-2 text-sm cursor-pointer transition-colors ${entriesPerPage === 50 ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         50
@@ -674,7 +682,7 @@ export default function ProfitReportPage() {
                   <button
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface-container-highest border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     Previous
                   </button>
@@ -686,7 +694,7 @@ export default function ProfitReportPage() {
                   <button
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface hover:text-on-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     Next
                   </button>

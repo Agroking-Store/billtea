@@ -64,6 +64,19 @@ export default function InvoicesPage() {
     setActiveDropdown(prev => prev === name ? null : name);
   };
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.dropdown-container')) {
+        setActiveDropdown(null);
+      }
+    };
+    if (activeDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeDropdown]);
+
   const stats = React.useMemo(() => {
     const total = invoices.length;
     const unpaid = invoices.filter((i) => i.status === 'UNPAID' || i.status === 'OVERDUE').length;
@@ -449,12 +462,7 @@ export default function InvoicesPage() {
 
   return (
     <>
-      {activeDropdown && (
-        <div
-          className="fixed inset-0 z-40 cursor-default"
-          onClick={() => setActiveDropdown(null)}
-        />
-      )}
+      
       <div
         className="flex-1 overflow-y-auto p-4 md:p-8 z-0 relative overflow-x-hidden selection:bg-primary/30 [&::-webkit-scrollbar]:hidden"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
@@ -595,6 +603,7 @@ export default function InvoicesPage() {
 
           {/* Filters Section */}
           <section className="glass-panel p-6 md:p-8 rounded-3xl relative z-20 overflow-visible animate-fade-slide-up shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]" style={{ animationDelay: '0.2s' }}>
+            
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
 
             <div className="flex items-center justify-between gap-3 mb-6 flex-wrap relative z-10">
@@ -639,7 +648,7 @@ export default function InvoicesPage() {
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Customer</label>
-                <div className="relative w-full" style={{ zIndex: activeDropdown === 'customerFilter' ? 50 : 10 }}>
+                <div className="dropdown-container relative w-full" style={{ zIndex: activeDropdown === 'customerFilter' ? 50 : 10 }}>
                   <button
                     type="button"
                     className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-medium flex items-center justify-between cursor-pointer"
@@ -653,9 +662,9 @@ export default function InvoicesPage() {
                   </button>
 
                   {activeDropdown === 'customerFilter' && (
-                    <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-surface-container-highest rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 max-h-60 overflow-y-auto custom-scrollbar">
+                    <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-surface rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 max-h-60 overflow-y-auto custom-scrollbar">
                       <div
-                        onClick={() => { setSelectedCustomerId('ALL'); setActiveDropdown(null); }}
+                        onMouseDown={() => { setSelectedCustomerId('ALL'); setActiveDropdown(null); }}
                         className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedCustomerId === 'ALL' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         All Customers
@@ -663,7 +672,7 @@ export default function InvoicesPage() {
                       {uniqueCustomers.map(customer => (
                         <div
                           key={customer.id}
-                          onClick={() => { setSelectedCustomerId(customer.id); setActiveDropdown(null); }}
+                          onMouseDown={() => { setSelectedCustomerId(customer.id); setActiveDropdown(null); }}
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedCustomerId === customer.id ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           {customer.customerName} {customer.companyName ? `(${customer.companyName})` : ''}
@@ -675,7 +684,7 @@ export default function InvoicesPage() {
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Payment Status</label>
-                <div className="relative w-full" style={{ zIndex: activeDropdown === 'statusFilter' ? 50 : 10 }}>
+                <div className="dropdown-container relative w-full" style={{ zIndex: activeDropdown === 'statusFilter' ? 50 : 10 }}>
                   <button
                     type="button"
                     className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-medium flex items-center justify-between cursor-pointer"
@@ -692,7 +701,7 @@ export default function InvoicesPage() {
                   </button>
 
                   {activeDropdown === 'statusFilter' && (
-                    <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-surface-container-highest rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
+                    <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-surface rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
                       {[
                         { value: 'ALL', label: 'All Status' },
                         { value: 'PAID', label: 'Paid' },
@@ -702,7 +711,7 @@ export default function InvoicesPage() {
                       ].map(status => (
                         <div
                           key={status.value}
-                          onClick={() => { setSelectedStatus(status.value); setActiveDropdown(null); }}
+                          onMouseDown={() => { setSelectedStatus(status.value); setActiveDropdown(null); }}
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedStatus === status.value ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           {status.label}
@@ -716,7 +725,7 @@ export default function InvoicesPage() {
 
             <div className="mt-8 flex flex-wrap gap-4 relative z-10">
               <button
-                className="px-6 py-2.5 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface border border-outline-variant/20 hover:border-outline-variant/40 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2.5 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface hover:text-on-surface border border-outline-variant/20 hover:border-outline-variant/40 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleClearFilters}
                 disabled={!hasActiveFilters}
               >
@@ -733,13 +742,13 @@ export default function InvoicesPage() {
 
             {/* Table Controls */}
             <div className="p-4 md:p-6 border-b border-outline-variant/20 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 bg-surface-container-lowest">
-              <div className="flex items-center justify-between sm:justify-start gap-3 text-sm font-medium text-on-surface-variant w-full sm:w-auto relative" style={{ zIndex: activeDropdown === 'entries' ? 50 : 10 }}>
+              <div className="dropdown-container flex items-center justify-between sm:justify-start gap-3 text-sm font-medium text-on-surface-variant w-full sm:w-auto relative" style={{ zIndex: activeDropdown === 'entries' ? 50 : 10 }}>
                 <div className="flex items-center gap-2">
                   <span>Show</span>
                   <div className="relative">
                     <button
                       type="button"
-                      className="glass-input text-sm pl-3 pr-9 py-1.5 rounded-lg text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/50 cursor-pointer bg-surface-container-highest flex items-center justify-between min-w-[70px]"
+                      className="glass-input text-sm pl-3 pr-9 py-1.5 rounded-lg text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/50 cursor-pointer bg-surface flex items-center justify-between min-w-[70px]"
                       onClick={() => toggleDropdown('entries')}
                     >
                       <span>{entriesPerPage}</span>
@@ -747,21 +756,21 @@ export default function InvoicesPage() {
                     </button>
 
                     {activeDropdown === 'entries' && (
-                      <div className="absolute top-full left-0 mt-1 z-[60] bg-surface-container-highest rounded-lg border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 min-w-[70px]">
+                      <div className="absolute top-full left-0 mt-1 z-[60] bg-surface rounded-lg border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 min-w-[70px]">
                         <div
-                          onClick={() => { handleEntriesPerPageChange(10); setActiveDropdown(null); }}
+                          onMouseDown={() => { handleEntriesPerPageChange(10); setActiveDropdown(null); }}
                           className={`px-3 py-2 text-sm cursor-pointer transition-colors ${entriesPerPage === 10 ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           10
                         </div>
                         <div
-                          onClick={() => { handleEntriesPerPageChange(25); setActiveDropdown(null); }}
+                          onMouseDown={() => { handleEntriesPerPageChange(25); setActiveDropdown(null); }}
                           className={`px-3 py-2 text-sm cursor-pointer transition-colors ${entriesPerPage === 25 ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           25
                         </div>
                         <div
-                          onClick={() => { handleEntriesPerPageChange(50); setActiveDropdown(null); }}
+                          onMouseDown={() => { handleEntriesPerPageChange(50); setActiveDropdown(null); }}
                           className={`px-3 py-2 text-sm cursor-pointer transition-colors ${entriesPerPage === 50 ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           50
@@ -840,7 +849,7 @@ export default function InvoicesPage() {
                         <tr key={invoice.id} className="hover:bg-primary/5 transition-colors duration-200">
                           <td className="px-6 py-4 font-semibold text-primary">{invoice.invoiceNumber}</td>
                           <td className="px-6 py-4 flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-surface-container-highest border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
+                            <div className="w-8 h-8 rounded-full bg-surface border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
                               {invoice.customer?.customerName?.substring(0, 2).toUpperCase() || 'NA'}
                             </div>
                             <div className="flex flex-col">
@@ -886,7 +895,7 @@ export default function InvoicesPage() {
                                   <div className="w-px h-4 bg-primary/20 mx-1"></div>
                                   <button
                                     onClick={() => setOpenActionId(null)}
-                                    className="glass-button-icon p-1 rounded-md transition-all hover:text-on-surface-variant hover:bg-surface-container-highest tooltip cursor-pointer" title="Close">
+                                    className="glass-button-icon p-1 rounded-md transition-all hover:text-on-surface-variant hover:bg-surface tooltip cursor-pointer" title="Close">
                                     <span className="material-symbols-outlined text-[16px]">close</span>
                                   </button>
                                 </div>
@@ -976,7 +985,7 @@ export default function InvoicesPage() {
                       {/* Body: Customer & Amount */}
                       <div className="flex justify-between items-start">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-surface-container-highest border border-primary/20 flex items-center justify-center text-primary font-bold text-xs shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-surface border border-primary/20 flex items-center justify-center text-primary font-bold text-xs shrink-0">
                             {invoice.customer?.customerName?.substring(0, 2).toUpperCase() || 'NA'}
                           </div>
                           <div className="flex flex-col min-w-0">
@@ -1049,7 +1058,7 @@ export default function InvoicesPage() {
                   <button
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface-container-highest border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     Previous
                   </button>
@@ -1059,7 +1068,7 @@ export default function InvoicesPage() {
                   <button
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface hover:text-on-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     Next
                   </button>
@@ -1081,10 +1090,10 @@ export default function InvoicesPage() {
                 if (!activeInvoice) return null;
                 return (
                   <>
-                    <button onClick={() => { closePdfViewer(); handleOpenPaymentModal(activeInvoice as any); }} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-highest/50 hover:bg-purple-400/10 hover:text-purple-400 border border-transparent hover:border-purple-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Add Payment">
+                    <button onClick={() => { closePdfViewer(); handleOpenPaymentModal(activeInvoice as any); }} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface/50 hover:bg-purple-400/10 hover:text-purple-400 border border-transparent hover:border-purple-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Add Payment">
                       <span className="material-symbols-outlined text-[20px]">payments</span>
                     </button>
-                    <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-highest/50 hover:bg-emerald-400/10 hover:text-emerald-400 border border-transparent hover:border-emerald-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Send">
+                    <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface/50 hover:bg-emerald-400/10 hover:text-emerald-400 border border-transparent hover:border-emerald-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Send">
                       <span className="material-symbols-outlined text-[20px]">send</span>
                     </button>
                   </>
@@ -1110,7 +1119,7 @@ export default function InvoicesPage() {
                       <p className="text-xs text-on-surface-variant">Invoice {selectedInvoiceForPayment.invoiceNumber}</p>
                     </div>
                   </div>
-                  <button onClick={() => setPaymentModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface-container-highest text-on-surface-variant transition-colors">
+                  <button onClick={() => setPaymentModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface text-on-surface-variant transition-colors">
                     <span className="material-symbols-outlined text-[20px]">close</span>
                   </button>
                 </div>
@@ -1143,7 +1152,7 @@ export default function InvoicesPage() {
                             onClick={() => setPaymentForm({ ...paymentForm, method })}
                             className={`px-3 py-1.5 rounded-md text-xs font-bold border transition-all ${paymentForm.method === method
                                 ? 'bg-primary/20 text-primary border-primary/50'
-                                : 'bg-surface-container border-transparent text-on-surface-variant hover:bg-surface-container-highest'
+                                : 'bg-surface-container border-transparent text-on-surface-variant hover:bg-surface'
                               }`}
                           >
                             {method.replace('_', ' ')}
@@ -1176,7 +1185,7 @@ export default function InvoicesPage() {
                           </button>
                         </div>
                       ) : (
-                        <div className="border-2 border-dashed border-outline-variant/30 rounded-xl p-4 text-center hover:bg-surface-container-highest transition-colors relative group cursor-pointer">
+                        <div className="border-2 border-dashed border-outline-variant/30 rounded-xl p-4 text-center hover:bg-surface transition-colors relative group cursor-pointer">
                           <span className="material-symbols-outlined text-on-surface-variant text-[24px] mb-1 group-hover:text-primary transition-colors">upload_file</span>
                           <p className="text-sm font-semibold text-on-surface-variant group-hover:text-primary transition-colors">Attach Receipt</p>
                           <input
@@ -1223,7 +1232,7 @@ export default function InvoicesPage() {
 
                 {/* Modal Footer */}
                 <div className="px-6 py-4 border-t border-outline-variant/10 bg-surface-container-low/30 flex justify-end gap-3">
-                  <button onClick={() => setPaymentModalOpen(false)} className="px-4 py-2 rounded-lg text-sm font-semibold text-on-surface-variant hover:bg-surface-container-highest transition-colors">
+                  <button onClick={() => setPaymentModalOpen(false)} className="px-4 py-2 rounded-lg text-sm font-semibold text-on-surface-variant hover:bg-surface transition-colors">
                     Cancel
                   </button>
                   <button onClick={handleSubmitPayment} disabled={isSubmittingPayment} className="glass-button-primary px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-md hover:-translate-y-0.5 transition-all disabled:opacity-50">

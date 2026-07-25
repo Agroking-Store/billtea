@@ -83,6 +83,19 @@ export default function EditInvoicePage() {
   const toggleDropdown = (name: string) => {
     setActiveDropdown(prev => prev === name ? null : name);
   };
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.dropdown-container')) {
+        setActiveDropdown(null);
+      }
+    };
+    if (activeDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeDropdown]);
   
   const errorRef = useRef<HTMLDivElement>(null);
 
@@ -590,12 +603,7 @@ export default function EditInvoicePage() {
 
   return (
     <>
-      {activeDropdown && (
-        <div 
-          className="fixed inset-0 z-40 cursor-default" 
-          onClick={() => setActiveDropdown(null)} 
-        />
-      )}
+      
       <div className="flex-1 overflow-y-auto p-4 md:p-8 z-0 relative custom-scrollbar bg-background">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 relative z-10">
@@ -773,7 +781,7 @@ export default function EditInvoicePage() {
                   {formData.discountConfiguration.mode === 'FIXED' && (
                     <div className="flex relative">
                       <input type="number" value={formData.discountConfiguration.value} onChange={(e) => setFormData({ ...formData, discountConfiguration: { ...formData.discountConfiguration, value: parseFloat(e.target.value) || 0 } })} className="glass-input px-4 py-2.5 rounded-l-lg w-full text-sm font-semibold border-r-0 focus:ring-0 focus:border-primary/50" placeholder="Amount" />
-                      <div className="relative shrink-0" style={{ zIndex: activeDropdown === 'discountType' ? 100 : 10 }}>
+                      <div className="dropdown-container relative shrink-0" style={{ zIndex: activeDropdown === 'discountType' ? 100 : 10 }}>
                         <button
                           type="button"
                           className="glass-input px-3 py-2.5 rounded-r-lg text-sm font-bold bg-surface-container/30 cursor-pointer focus:ring-0 focus:border-primary/50 flex items-center justify-between gap-1 min-w-[65px] h-[46px] text-left"
@@ -784,15 +792,15 @@ export default function EditInvoicePage() {
                         </button>
                         
                         {activeDropdown === 'discountType' && (
-                          <div className="absolute right-0 top-full mt-1 z-[110] bg-surface-container-highest rounded-lg border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 min-w-[65px]">
+                          <div className="absolute right-0 top-full mt-1 z-[110] bg-surface rounded-lg border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 min-w-[65px]">
                             <div 
-                              onClick={() => { setFormData({ ...formData, discountConfiguration: { ...formData.discountConfiguration, type: 'PERCENTAGE' } }); setActiveDropdown(null); }} 
+                              onMouseDown={() => { setFormData({ ...formData, discountConfiguration: { ...formData.discountConfiguration, type: 'PERCENTAGE' } }); setActiveDropdown(null); }} 
                               className={`px-3 py-2 text-sm cursor-pointer transition-colors text-center ${formData.discountConfiguration.type === 'PERCENTAGE' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                             >
                               %
                             </div>
                             <div 
-                              onClick={() => { setFormData({ ...formData, discountConfiguration: { ...formData.discountConfiguration, type: 'AMOUNT' } }); setActiveDropdown(null); }} 
+                              onMouseDown={() => { setFormData({ ...formData, discountConfiguration: { ...formData.discountConfiguration, type: 'AMOUNT' } }); setActiveDropdown(null); }} 
                               className={`px-3 py-2 text-sm cursor-pointer transition-colors text-center ${formData.discountConfiguration.type === 'AMOUNT' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                             >
                               ₹
@@ -968,7 +976,7 @@ export default function EditInvoicePage() {
                               <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1 block">Discount</label>
                               <div className="flex items-center gap-1 relative">
                                 <input type="number" value={item.discount?.value || 0} onChange={(e) => updateItem(item.id, 'discount', { ...item.discount, value: parseFloat(e.target.value) || 0 })} className="glass-input px-3 py-2 rounded-lg text-sm w-full font-semibold" />
-                                <div className="relative shrink-0" style={{ zIndex: activeDropdown === `itemDiscountType-${item.id}` ? 100 : 10 }}>
+                                <div className="dropdown-container relative shrink-0" style={{ zIndex: activeDropdown === `itemDiscountType-${item.id}` ? 100 : 10 }}>
                                   <button
                                     type="button"
                                     className="glass-input p-2 rounded-lg text-xs font-bold bg-surface-container/30 cursor-pointer flex items-center justify-between gap-1 min-w-[50px]"
@@ -979,15 +987,15 @@ export default function EditInvoicePage() {
                                   </button>
                                   
                                   {activeDropdown === `itemDiscountType-${item.id}` && (
-                                    <div className="absolute right-0 top-full mt-1 z-[110] bg-surface-container-highest rounded-lg border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 min-w-[50px]">
+                                    <div className="absolute right-0 top-full mt-1 z-[110] bg-surface rounded-lg border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 min-w-[50px]">
                                       <div 
-                                        onClick={() => { updateItem(item.id, 'discount', { ...item.discount, type: 'PERCENTAGE' }); setActiveDropdown(null); }} 
+                                        onMouseDown={() => { updateItem(item.id, 'discount', { ...item.discount, type: 'PERCENTAGE' }); setActiveDropdown(null); }} 
                                         className={`px-3 py-2 text-xs cursor-pointer transition-colors text-center ${item.discount?.type === 'PERCENTAGE' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                                       >
                                         %
                                       </div>
                                       <div 
-                                        onClick={() => { updateItem(item.id, 'discount', { ...item.discount, type: 'AMOUNT' }); setActiveDropdown(null); }} 
+                                        onMouseDown={() => { updateItem(item.id, 'discount', { ...item.discount, type: 'AMOUNT' }); setActiveDropdown(null); }} 
                                         className={`px-3 py-2 text-xs cursor-pointer transition-colors text-center ${item.discount?.type === 'AMOUNT' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                                       >
                                         ₹
@@ -1071,7 +1079,7 @@ export default function EditInvoicePage() {
                 </div>
                 <div>
                   <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1 block">Payment Method</label>
-                  <div className="relative w-full" style={{ zIndex: activeDropdown === 'paymentMethod' ? 100 : 10 }}>
+                  <div className="dropdown-container relative w-full" style={{ zIndex: activeDropdown === 'paymentMethod' ? 100 : 10 }}>
                     <button
                       type="button"
                       className="glass-input px-4 py-2.5 rounded-lg text-sm text-on-surface w-full font-semibold text-left flex items-center justify-between cursor-pointer"
@@ -1087,7 +1095,7 @@ export default function EditInvoicePage() {
                     </button>
                     
                     {activeDropdown === 'paymentMethod' && (
-                      <div className="absolute left-0 right-0 top-full mt-1 z-[110] bg-surface-container-highest rounded-lg border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
+                      <div className="absolute left-0 right-0 top-full mt-1 z-[110] bg-surface rounded-lg border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
                         {[
                           { value: 'CASH', label: 'Cash' },
                           { value: 'UPI', label: 'UPI' },

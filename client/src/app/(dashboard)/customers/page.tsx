@@ -64,6 +64,19 @@ export default function CustomersPage() {
     setActiveDropdown(prev => prev === name ? null : name);
   };
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.dropdown-container')) {
+        setActiveDropdown(null);
+      }
+    };
+    if (activeDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeDropdown]);
+
   // ---- Filters ----
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
@@ -315,12 +328,7 @@ export default function CustomersPage() {
 
   return (
     <div className="flex-1 flex flex-col h-[calc(100vh-theme(spacing.16))] bg-background overflow-hidden relative">
-      {activeDropdown && (
-        <div
-          className="fixed inset-0 z-40 cursor-default"
-          onClick={() => setActiveDropdown(null)}
-        />
-      )}
+      
       <style dangerouslySetInnerHTML={{
         __html: `
         @keyframes fadeSlideUp {
@@ -427,7 +435,7 @@ export default function CustomersPage() {
               <button
                 onClick={handleOpenCreateModal}
                 disabled={!selectedBranchId}
-                className="w-full md:w-auto group relative h-14 px-8 rounded-2xl bg-surface-container-highest border border-primary/20 text-primary font-bold flex items-center justify-center gap-3 overflow-hidden shadow-[0_0_15px_rgba(125,211,252,0.1)] hover:shadow-[0_0_25px_rgba(125,211,252,0.3)] transition-all hover:-translate-y-0.5 hover:border-primary/40 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full md:w-auto group relative h-14 px-8 rounded-2xl bg-surface border border-primary/20 text-primary font-bold flex items-center justify-center gap-3 overflow-hidden shadow-[0_0_15px_rgba(125,211,252,0.1)] hover:shadow-[0_0_25px_rgba(125,211,252,0.3)] transition-all hover:-translate-y-0.5 hover:border-primary/40 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="absolute inset-0 w-full h-full bg-primary/5 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out" />
                 <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">person_add</span>
@@ -493,7 +501,7 @@ export default function CustomersPage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
-                <div className="space-y-2 relative" style={{ zIndex: activeDropdown === 'status' ? 50 : 10 }}>
+                <div className="dropdown-container space-y-2 relative" style={{ zIndex: activeDropdown === 'status' ? 50 : 10 }}>
                   <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Status</label>
                   <div className="relative">
                     <button
@@ -509,21 +517,21 @@ export default function CustomersPage() {
                     </button>
 
                     {activeDropdown === 'status' && (
-                      <div className="absolute top-full left-0 right-0 mt-1 z-[60] bg-surface-container-highest rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
+                      <div className="absolute top-full left-0 right-0 mt-1 z-[60] bg-surface rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
                         <div
-                          onClick={() => { setStatusFilter('all'); setActiveDropdown(null); }}
+                          onMouseDown={() => { setStatusFilter('all'); setActiveDropdown(null); }}
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${statusFilter === 'all' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           All status
                         </div>
                         <div
-                          onClick={() => { setStatusFilter('active'); setActiveDropdown(null); }}
+                          onMouseDown={() => { setStatusFilter('active'); setActiveDropdown(null); }}
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${statusFilter === 'active' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           Active
                         </div>
                         <div
-                          onClick={() => { setStatusFilter('inactive'); setActiveDropdown(null); }}
+                          onMouseDown={() => { setStatusFilter('inactive'); setActiveDropdown(null); }}
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${statusFilter === 'inactive' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           Inactive
@@ -533,7 +541,7 @@ export default function CustomersPage() {
                   </div>
                 </div>
 
-                <div className="space-y-2 relative" style={{ zIndex: activeDropdown === 'type' ? 50 : 10 }}>
+                <div className="dropdown-container space-y-2 relative" style={{ zIndex: activeDropdown === 'type' ? 50 : 10 }}>
                   <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Customer Type</label>
                   <div className="relative">
                     <button
@@ -549,21 +557,21 @@ export default function CustomersPage() {
                     </button>
 
                     {activeDropdown === 'type' && (
-                      <div className="absolute top-full left-0 right-0 mt-1 z-[60] bg-surface-container-highest rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
+                      <div className="absolute top-full left-0 right-0 mt-1 z-[60] bg-surface rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
                         <div
-                          onClick={() => { setTypeFilter('all'); setActiveDropdown(null); }}
+                          onMouseDown={() => { setTypeFilter('all'); setActiveDropdown(null); }}
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${typeFilter === 'all' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           All types
                         </div>
                         <div
-                          onClick={() => { setTypeFilter('company'); setActiveDropdown(null); }}
+                          onMouseDown={() => { setTypeFilter('company'); setActiveDropdown(null); }}
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${typeFilter === 'company' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           Company
                         </div>
                         <div
-                          onClick={() => { setTypeFilter('individual'); setActiveDropdown(null); }}
+                          onMouseDown={() => { setTypeFilter('individual'); setActiveDropdown(null); }}
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${typeFilter === 'individual' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           Individual
@@ -573,7 +581,7 @@ export default function CustomersPage() {
                   </div>
                 </div>
 
-                <div className="space-y-2 relative" style={{ zIndex: activeDropdown === 'invoice' ? 50 : 10 }}>
+                <div className="dropdown-container space-y-2 relative" style={{ zIndex: activeDropdown === 'invoice' ? 50 : 10 }}>
                   <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Invoices</label>
                   <div className="relative">
                     <button
@@ -589,21 +597,21 @@ export default function CustomersPage() {
                     </button>
 
                     {activeDropdown === 'invoice' && (
-                      <div className="absolute top-full left-0 right-0 mt-1 z-[60] bg-surface-container-highest rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
+                      <div className="absolute top-full left-0 right-0 mt-1 z-[60] bg-surface rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
                         <div
-                          onClick={() => { setInvoiceFilter('all'); setActiveDropdown(null); }}
+                          onMouseDown={() => { setInvoiceFilter('all'); setActiveDropdown(null); }}
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${invoiceFilter === 'all' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           Any
                         </div>
                         <div
-                          onClick={() => { setInvoiceFilter('with'); setActiveDropdown(null); }}
+                          onMouseDown={() => { setInvoiceFilter('with'); setActiveDropdown(null); }}
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${invoiceFilter === 'with' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           With invoices
                         </div>
                         <div
-                          onClick={() => { setInvoiceFilter('without'); setActiveDropdown(null); }}
+                          onMouseDown={() => { setInvoiceFilter('without'); setActiveDropdown(null); }}
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${invoiceFilter === 'without' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           Without invoices
@@ -613,7 +621,7 @@ export default function CustomersPage() {
                   </div>
                 </div>
 
-                <div className="space-y-2 relative" style={{ zIndex: activeDropdown === 'quotation' ? 50 : 10 }}>
+                <div className="dropdown-container space-y-2 relative" style={{ zIndex: activeDropdown === 'quotation' ? 50 : 10 }}>
                   <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Quotations</label>
                   <div className="relative">
                     <button
@@ -629,21 +637,21 @@ export default function CustomersPage() {
                     </button>
 
                     {activeDropdown === 'quotation' && (
-                      <div className="absolute top-full left-0 right-0 mt-1 z-[60] bg-surface-container-highest rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
+                      <div className="absolute top-full left-0 right-0 mt-1 z-[60] bg-surface rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
                         <div
-                          onClick={() => { setQuotationFilter('all'); setActiveDropdown(null); }}
+                          onMouseDown={() => { setQuotationFilter('all'); setActiveDropdown(null); }}
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${quotationFilter === 'all' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           Any
                         </div>
                         <div
-                          onClick={() => { setQuotationFilter('with'); setActiveDropdown(null); }}
+                          onMouseDown={() => { setQuotationFilter('with'); setActiveDropdown(null); }}
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${quotationFilter === 'with' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           With quotations
                         </div>
                         <div
-                          onClick={() => { setQuotationFilter('without'); setActiveDropdown(null); }}
+                          onMouseDown={() => { setQuotationFilter('without'); setActiveDropdown(null); }}
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${quotationFilter === 'without' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           Without quotations
@@ -657,7 +665,7 @@ export default function CustomersPage() {
               <div className="mt-8 flex flex-wrap gap-4 relative z-10">
                 <button
                   disabled={activeFilterCount === 0}
-                  className="px-6 py-2.5 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface border border-outline-variant/20 hover:border-outline-variant/40 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-on-surface-variant disabled:hover:border-outline-variant/20"
+                  className="px-6 py-2.5 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface hover:text-on-surface border border-outline-variant/20 hover:border-outline-variant/40 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-on-surface-variant disabled:hover:border-outline-variant/20"
                   onClick={handleClearFilters}
                 >
                   <span className="material-symbols-outlined text-[18px]">undo</span>
@@ -675,12 +683,12 @@ export default function CustomersPage() {
 
             {/* Table Controls */}
             <div className="p-6 border-b border-outline-variant/20 flex flex-col sm:flex-row justify-between items-center gap-4 bg-surface-container-lowest">
-              <div className="flex items-center gap-3 text-sm font-medium text-on-surface-variant relative" style={{ zIndex: activeDropdown === 'entries' ? 50 : 10 }}>
+              <div className="dropdown-container flex items-center gap-3 text-sm font-medium text-on-surface-variant relative" style={{ zIndex: activeDropdown === 'entries' ? 50 : 10 }}>
                 <span>Show</span>
                 <div className="relative">
                   <button
                     type="button"
-                    className="glass-input text-sm pl-3 pr-9 py-1.5 rounded-lg text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/50 cursor-pointer bg-surface-container-highest flex items-center justify-between min-w-[70px]"
+                    className="glass-input text-sm pl-3 pr-9 py-1.5 rounded-lg text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/50 cursor-pointer bg-surface flex items-center justify-between min-w-[70px]"
                     onClick={() => toggleDropdown('entries')}
                   >
                     <span>{entriesPerPage}</span>
@@ -688,21 +696,21 @@ export default function CustomersPage() {
                   </button>
 
                   {activeDropdown === 'entries' && (
-                    <div className="absolute top-full left-0 mt-1 z-[60] bg-surface-container-highest rounded-lg border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 min-w-[70px]">
+                    <div className="absolute top-full left-0 mt-1 z-[60] bg-surface rounded-lg border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 min-w-[70px]">
                       <div
-                        onClick={() => { handleEntriesPerPageChange(10); setActiveDropdown(null); }}
+                        onMouseDown={() => { handleEntriesPerPageChange(10); setActiveDropdown(null); }}
                         className={`px-3 py-2 text-sm cursor-pointer transition-colors ${entriesPerPage === 10 ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         10
                       </div>
                       <div
-                        onClick={() => { handleEntriesPerPageChange(25); setActiveDropdown(null); }}
+                        onMouseDown={() => { handleEntriesPerPageChange(25); setActiveDropdown(null); }}
                         className={`px-3 py-2 text-sm cursor-pointer transition-colors ${entriesPerPage === 25 ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         25
                       </div>
                       <div
-                        onClick={() => { handleEntriesPerPageChange(50); setActiveDropdown(null); }}
+                        onMouseDown={() => { handleEntriesPerPageChange(50); setActiveDropdown(null); }}
                         className={`px-3 py-2 text-sm cursor-pointer transition-colors ${entriesPerPage === 50 ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         50
@@ -914,7 +922,7 @@ export default function CustomersPage() {
                   <button
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface-container-highest border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     Previous
                   </button>
@@ -924,7 +932,7 @@ export default function CustomersPage() {
                   <button
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface hover:text-on-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     Next
                   </button>

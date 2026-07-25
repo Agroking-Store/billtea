@@ -78,6 +78,19 @@ export default function ReportsPage() {
   };
 
   useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.dropdown-container')) {
+        setActiveDropdown(null);
+      }
+    };
+    if (activeDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeDropdown]);
+
+  useEffect(() => {
     if (selectedBranchId) {
       fetchInvoices();
     } else {
@@ -271,12 +284,7 @@ export default function ReportsPage() {
 
   return (
     <>
-      {activeDropdown && (
-        <div
-          className="fixed inset-0 z-40 cursor-default"
-          onClick={() => setActiveDropdown(null)}
-        />
-      )}
+      
       <div
         className="flex-1 overflow-y-auto p-4 md:p-8 z-0 relative overflow-x-hidden selection:bg-primary/30 [&::-webkit-scrollbar]:hidden"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
@@ -328,7 +336,7 @@ export default function ReportsPage() {
               </p>
             </div>
             <Link href="/profit" className="w-full md:w-auto">
-              <button className="w-full md:w-auto group relative h-14 px-8 rounded-2xl bg-surface-container-highest border border-primary/20 text-primary font-bold flex items-center justify-center gap-3 overflow-hidden shadow-[0_0_15px_rgba(125,211,252,0.1)] hover:shadow-[0_0_25px_rgba(125,211,252,0.3)] transition-all hover:-translate-y-0.5 hover:border-primary/40 cursor-pointer">
+              <button className="w-full md:w-auto group relative h-14 px-8 rounded-2xl bg-surface border border-primary/20 text-primary font-bold flex items-center justify-center gap-3 overflow-hidden shadow-[0_0_15px_rgba(125,211,252,0.1)] hover:shadow-[0_0_25px_rgba(125,211,252,0.3)] transition-all hover:-translate-y-0.5 hover:border-primary/40 cursor-pointer">
                 <div className="absolute inset-0 w-full h-full bg-primary/5 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out" />
                 <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">analytics</span>
                 <span>Profit & Loss Report</span>
@@ -414,7 +422,7 @@ export default function ReportsPage() {
                   onChange={(e) => { setToDate(e.target.value); setCurrentPage(1); }}
                 />
               </div>
-              <div className="space-y-2 relative" style={{ zIndex: activeDropdown === 'customer' ? 50 : 10 }}>
+              <div className="dropdown-container space-y-2 relative" style={{ zIndex: activeDropdown === 'customer' ? 50 : 10 }}>
                 <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Customer</label>
                 <div className="relative">
                   <button
@@ -431,9 +439,9 @@ export default function ReportsPage() {
                   </button>
 
                   {activeDropdown === 'customer' && (
-                    <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface-container-highest rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
+                    <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
                       <div
-                        onClick={() => { setSelectedCustomerId('ALL'); setCurrentPage(1); setActiveDropdown(null); }}
+                        onMouseDown={() => { setSelectedCustomerId('ALL'); setCurrentPage(1); setActiveDropdown(null); }}
                         className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedCustomerId === 'ALL' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         All Customers
@@ -441,7 +449,7 @@ export default function ReportsPage() {
                       {uniqueCustomers.map(customer => (
                         <div
                           key={customer?.id}
-                          onClick={() => { if (customer?.id) { setSelectedCustomerId(customer.id); setCurrentPage(1); } setActiveDropdown(null); }}
+                          onMouseDown={() => { if (customer?.id) { setSelectedCustomerId(customer.id); setCurrentPage(1); } setActiveDropdown(null); }}
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedCustomerId === customer?.id ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           {customer?.customerName} {customer?.companyName ? `(${customer.companyName})` : ''}
@@ -451,7 +459,7 @@ export default function ReportsPage() {
                   )}
                 </div>
               </div>
-              <div className="space-y-2 relative" style={{ zIndex: activeDropdown === 'status' ? 50 : 10 }}>
+              <div className="dropdown-container space-y-2 relative" style={{ zIndex: activeDropdown === 'status' ? 50 : 10 }}>
                 <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Payment Status</label>
                 <div className="relative">
                   <button
@@ -466,33 +474,33 @@ export default function ReportsPage() {
                   </button>
 
                   {activeDropdown === 'status' && (
-                    <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface-container-highest rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
+                    <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
                       <div
-                        onClick={() => { setSelectedStatus('ALL'); setCurrentPage(1); setActiveDropdown(null); }}
+                        onMouseDown={() => { setSelectedStatus('ALL'); setCurrentPage(1); setActiveDropdown(null); }}
                         className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedStatus === 'ALL' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         All Status
                       </div>
                       <div
-                        onClick={() => { setSelectedStatus('PAID'); setCurrentPage(1); setActiveDropdown(null); }}
+                        onMouseDown={() => { setSelectedStatus('PAID'); setCurrentPage(1); setActiveDropdown(null); }}
                         className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedStatus === 'PAID' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         Paid
                       </div>
                       <div
-                        onClick={() => { setSelectedStatus('UNPAID'); setCurrentPage(1); setActiveDropdown(null); }}
+                        onMouseDown={() => { setSelectedStatus('UNPAID'); setCurrentPage(1); setActiveDropdown(null); }}
                         className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedStatus === 'UNPAID' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         Pending
                       </div>
                       <div
-                        onClick={() => { setSelectedStatus('PARTIAL'); setCurrentPage(1); setActiveDropdown(null); }}
+                        onMouseDown={() => { setSelectedStatus('PARTIAL'); setCurrentPage(1); setActiveDropdown(null); }}
                         className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedStatus === 'PARTIAL' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         Partial
                       </div>
                       <div
-                        onClick={() => { setSelectedStatus('OVERDUE'); setCurrentPage(1); setActiveDropdown(null); }}
+                        onMouseDown={() => { setSelectedStatus('OVERDUE'); setCurrentPage(1); setActiveDropdown(null); }}
                         className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedStatus === 'OVERDUE' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         Overdue
@@ -506,7 +514,7 @@ export default function ReportsPage() {
             <div className="mt-8 flex flex-wrap gap-4 relative z-10">
               <button
                 disabled={!hasActiveFilters}
-                className="px-6 py-2.5 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface border border-outline-variant/20 hover:border-outline-variant/40 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-on-surface-variant disabled:hover:border-outline-variant/20"
+                className="px-6 py-2.5 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface hover:text-on-surface border border-outline-variant/20 hover:border-outline-variant/40 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-on-surface-variant disabled:hover:border-outline-variant/20"
                 onClick={handleClearFilters}
               >
                 <span className="material-symbols-outlined text-[18px]">undo</span>
@@ -535,21 +543,21 @@ export default function ReportsPage() {
                   </button>
 
                   {activeDropdown === 'entries' && (
-                    <div className="absolute top-full left-0 mt-1 z-[60] bg-surface-container-highest rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 min-w-[70px]">
+                    <div className="absolute top-full left-0 mt-1 z-[60] bg-surface rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 min-w-[70px]">
                       <div
-                        onClick={() => { handleItemsPerPageChange(10); setActiveDropdown(null); }}
+                        onMouseDown={() => { handleItemsPerPageChange(10); setActiveDropdown(null); }}
                         className={`px-4 py-2 text-sm cursor-pointer transition-colors ${itemsPerPage === 10 ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         10
                       </div>
                       <div
-                        onClick={() => { handleItemsPerPageChange(25); setActiveDropdown(null); }}
+                        onMouseDown={() => { handleItemsPerPageChange(25); setActiveDropdown(null); }}
                         className={`px-4 py-2 text-sm cursor-pointer transition-colors ${itemsPerPage === 25 ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         25
                       </div>
                       <div
-                        onClick={() => { handleItemsPerPageChange(50); setActiveDropdown(null); }}
+                        onMouseDown={() => { handleItemsPerPageChange(50); setActiveDropdown(null); }}
                         className={`px-4 py-2 text-sm cursor-pointer transition-colors ${itemsPerPage === 50 ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         50
@@ -642,7 +650,7 @@ export default function ReportsPage() {
                           {new Date(invoice.invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </td>
                         <td className="px-6 py-4 flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-surface-container-highest border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
+                          <div className="w-8 h-8 rounded-full bg-surface border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
                             {invoice.customer?.customerName?.substring(0, 2).toUpperCase() || 'NA'}
                           </div>
                           <div className="flex flex-col">
@@ -701,7 +709,7 @@ export default function ReportsPage() {
                     </div>
 
                     <div className="flex items-center gap-3 border-t border-primary/5 pt-3">
-                      <div className="w-8 h-8 rounded-full bg-surface-container-highest border border-primary/20 flex items-center justify-center text-primary font-bold text-xs shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-surface border border-primary/20 flex items-center justify-center text-primary font-bold text-xs shrink-0">
                         {invoice.customer?.customerName?.substring(0, 2).toUpperCase() || 'NA'}
                       </div>
                       <div>
@@ -743,7 +751,7 @@ export default function ReportsPage() {
                 </span>
                 <div className="flex items-center gap-1">
                   <button
-                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface-container-highest border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     disabled={currentPage === 1}
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   >
@@ -755,7 +763,7 @@ export default function ReportsPage() {
                   </span>
 
                   <button
-                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface hover:text-on-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     disabled={currentPage === totalPages}
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   >

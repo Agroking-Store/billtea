@@ -17,6 +17,19 @@ export default function SettingsPage() {
     setActiveDropdown(prev => prev === name ? null : name);
   };
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.dropdown-container')) {
+        setActiveDropdown(null);
+      }
+    };
+    if (activeDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeDropdown]);
+
   // Fetch branch details when modal opens
   useEffect(() => {
     if (showQuotationSettings && selectedBranchId) {
@@ -62,12 +75,7 @@ export default function SettingsPage() {
 
   return (
     <>
-      {activeDropdown && (
-        <div 
-          className="fixed inset-0 z-40 cursor-default" 
-          onClick={() => setActiveDropdown(null)} 
-        />
-      )}
+      
       <div className="flex-1 overflow-y-auto p-4 md:p-8 z-0 relative overflow-x-hidden selection:bg-primary/30">
       <style dangerouslySetInnerHTML={{
         __html: `
@@ -347,7 +355,7 @@ export default function SettingsPage() {
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-bold text-on-surface mb-2">Layout Layout</label>
-                  <div className="relative w-full" style={{ zIndex: activeDropdown === 'quotationTheme' ? 50 : 10 }}>
+                  <div className="dropdown-container relative w-full" style={{ zIndex: activeDropdown === 'quotationTheme' ? 50 : 10 }}>
                     <button
                       type="button"
                       className="w-full bg-surface-container/50 border border-outline-variant/30 rounded-xl px-4 py-3.5 text-on-surface focus:outline-none focus:border-primary/60 focus:ring-4 focus:ring-primary/10 transition-all cursor-pointer font-medium flex items-center justify-between"
@@ -362,7 +370,7 @@ export default function SettingsPage() {
                     </button>
                     
                     {activeDropdown === 'quotationTheme' && (
-                      <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-surface-container-highest rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
+                      <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-surface rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
                         {[
                           { value: 'INDUX_MODERN', label: 'Indux Modern (Recommended)' },
                           { value: 'CLASSIC', label: 'Classic Corporate' },
@@ -370,7 +378,7 @@ export default function SettingsPage() {
                         ].map(theme => (
                           <div 
                             key={theme.value}
-                            onClick={() => { setQuotationTheme(theme.value); setActiveDropdown(null); }} 
+                            onMouseDown={() => { setQuotationTheme(theme.value); setActiveDropdown(null); }} 
                             className={`px-4 py-3 text-sm cursor-pointer transition-colors ${quotationTheme === theme.value ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                           >
                             {theme.label}

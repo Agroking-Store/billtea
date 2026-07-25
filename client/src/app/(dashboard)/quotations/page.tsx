@@ -66,6 +66,19 @@ export default function QuotationsPage() {
   };
 
   useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.dropdown-container')) {
+        setActiveDropdown(null);
+      }
+    };
+    if (activeDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeDropdown]);
+
+  useEffect(() => {
     if (selectedBranchId) {
       fetchQuotations();
     } else {
@@ -403,12 +416,7 @@ export default function QuotationsPage() {
 
   return (
     <>
-      {activeDropdown && (
-        <div
-          className="fixed inset-0 z-40 cursor-default"
-          onClick={() => setActiveDropdown(null)}
-        />
-      )}
+      
       <div
         className="flex-1 overflow-y-auto p-4 md:p-8 z-0 relative overflow-x-hidden selection:bg-primary/30 [&::-webkit-scrollbar]:hidden w-full max-w-full min-w-0"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
@@ -520,6 +528,7 @@ export default function QuotationsPage() {
             className="glass-panel rounded-3xl p-6 transition-transform duration-300 hover:-translate-y-1 animate-fade-slide-up relative z-20 overflow-visible shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]"
             style={{ animationDelay: '0.15s' }}
           >
+            
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
 
             {/* Header */}
@@ -540,7 +549,7 @@ export default function QuotationsPage() {
 
             {/* Filter Controls */}
             <div className="flex flex-wrap items-end gap-6 relative z-10">
-              <div className="flex-1 min-w-[220px] relative" style={{ zIndex: activeDropdown === 'customer' ? 50 : 10 }}>
+              <div className="dropdown-container flex-1 min-w-[220px] relative" style={{ zIndex: activeDropdown === 'customer' ? 50 : 10 }}>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-on-surface-variant mb-2 ml-1">
                   Customer
                 </label>
@@ -555,9 +564,9 @@ export default function QuotationsPage() {
                   </button>
 
                   {activeDropdown === 'customer' && (
-                    <div className="absolute top-full left-0 right-0 mt-1 z-[60] bg-surface-container-highest rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
+                    <div className="absolute top-full left-0 right-0 mt-1 z-[60] bg-surface rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
                       <div
-                        onClick={() => { setCustomerFilter(''); setActiveDropdown(null); }}
+                        onMouseDown={() => { setCustomerFilter(''); setActiveDropdown(null); }}
                         className={`px-4 py-3 text-sm cursor-pointer transition-colors ${customerFilter === '' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         All Customers
@@ -565,7 +574,7 @@ export default function QuotationsPage() {
                       {uniqueCustomers.map((name) => (
                         <div
                           key={name}
-                          onClick={() => { setCustomerFilter(name); setActiveDropdown(null); }}
+                          onMouseDown={() => { setCustomerFilter(name); setActiveDropdown(null); }}
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${customerFilter === name ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           {name}
@@ -576,7 +585,7 @@ export default function QuotationsPage() {
                 </div>
               </div>
 
-              <div className="flex-1 min-w-[200px] relative" style={{ zIndex: activeDropdown === 'status' ? 50 : 10 }}>
+              <div className="dropdown-container flex-1 min-w-[200px] relative" style={{ zIndex: activeDropdown === 'status' ? 50 : 10 }}>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-on-surface-variant mb-2 ml-1">
                   Status
                 </label>
@@ -597,9 +606,9 @@ export default function QuotationsPage() {
                   </button>
 
                   {activeDropdown === 'status' && (
-                    <div className="absolute top-full left-0 right-0 mt-1 z-[60] bg-surface-container-highest rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
+                    <div className="absolute top-full left-0 right-0 mt-1 z-[60] bg-surface rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
                       <div
-                        onClick={() => { setStatusFilter(''); setActiveDropdown(null); }}
+                        onMouseDown={() => { setStatusFilter(''); setActiveDropdown(null); }}
                         className={`px-4 py-3 text-sm cursor-pointer transition-colors ${statusFilter === '' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         All Status
@@ -607,7 +616,7 @@ export default function QuotationsPage() {
                       {['DRAFT', 'SENT', 'ACCEPTED', 'EXPIRED'].map((status) => (
                         <div
                           key={status}
-                          onClick={() => { setStatusFilter(status); setActiveDropdown(null); }}
+                          onMouseDown={() => { setStatusFilter(status); setActiveDropdown(null); }}
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${statusFilter === status ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           {status === 'DRAFT' && 'Draft'}
@@ -648,7 +657,7 @@ export default function QuotationsPage() {
               <div className="mt-8 flex flex-wrap gap-4 relative z-10">
                 <button
                   disabled={!hasActiveFilters}
-                  className="px-6 py-2.5 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface border border-outline-variant/20 hover:border-outline-variant/40 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-on-surface-variant disabled:hover:border-outline-variant/20"
+                  className="px-6 py-2.5 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface hover:text-on-surface border border-outline-variant/20 hover:border-outline-variant/40 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-on-surface-variant disabled:hover:border-outline-variant/20"
                   onClick={handleClearFilters}
                 >
                   <span className="material-symbols-outlined text-[18px]">undo</span>
@@ -665,12 +674,12 @@ export default function QuotationsPage() {
 
             {/* Table Controls */}
             <div className="p-6 border-b border-outline-variant/20 flex flex-col sm:flex-row justify-between items-center gap-4 bg-surface-container-lowest">
-              <div className="flex items-center gap-3 text-sm font-medium text-on-surface-variant relative" style={{ zIndex: activeDropdown === 'entries' ? 50 : 10 }}>
+              <div className="dropdown-container flex items-center gap-3 text-sm font-medium text-on-surface-variant relative" style={{ zIndex: activeDropdown === 'entries' ? 50 : 10 }}>
                 <span>Show</span>
                 <div className="relative">
                   <button
                     type="button"
-                    className="glass-input text-sm pl-3 pr-9 py-1.5 rounded-lg text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/50 cursor-pointer bg-surface-container-highest flex items-center justify-between min-w-[70px]"
+                    className="glass-input text-sm pl-3 pr-9 py-1.5 rounded-lg text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/50 cursor-pointer bg-surface flex items-center justify-between min-w-[70px]"
                     onClick={() => toggleDropdown('entries')}
                   >
                     <span>{pageSize}</span>
@@ -678,21 +687,21 @@ export default function QuotationsPage() {
                   </button>
 
                   {activeDropdown === 'entries' && (
-                    <div className="absolute top-full left-0 mt-1 z-[60] bg-surface-container-highest rounded-lg border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 min-w-[70px]">
+                    <div className="absolute top-full left-0 mt-1 z-[60] bg-surface rounded-lg border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 min-w-[70px]">
                       <div
-                        onClick={() => { handlePageSizeChange(10); setActiveDropdown(null); }}
+                        onMouseDown={() => { handlePageSizeChange(10); setActiveDropdown(null); }}
                         className={`px-3 py-2 text-sm cursor-pointer transition-colors ${pageSize === 10 ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         10
                       </div>
                       <div
-                        onClick={() => { handlePageSizeChange(25); setActiveDropdown(null); }}
+                        onMouseDown={() => { handlePageSizeChange(25); setActiveDropdown(null); }}
                         className={`px-3 py-2 text-sm cursor-pointer transition-colors ${pageSize === 25 ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         25
                       </div>
                       <div
-                        onClick={() => { handlePageSizeChange(50); setActiveDropdown(null); }}
+                        onMouseDown={() => { handlePageSizeChange(50); setActiveDropdown(null); }}
                         className={`px-3 py-2 text-sm cursor-pointer transition-colors ${pageSize === 50 ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         50
@@ -754,7 +763,7 @@ export default function QuotationsPage() {
                         <tr key={quotation.id} className="hover:bg-primary/5 transition-colors duration-200">
                           <td className="px-6 py-4 font-semibold text-primary">{quotation.quotationNumber}</td>
                           <td className="px-6 py-4 flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-surface-container-highest border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
+                            <div className="w-8 h-8 rounded-full bg-surface border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
                               {quotation.customer?.customerName?.substring(0, 2).toUpperCase() || 'NA'}
                             </div>
                             <div className="flex flex-col">
@@ -825,7 +834,7 @@ export default function QuotationsPage() {
                                 <div className="w-px h-4 bg-primary/20 mx-1"></div>
                                 <button
                                   onClick={() => setOpenActionId(null)}
-                                  className="glass-button-icon p-1 rounded-md transition-all hover:text-on-surface-variant hover:bg-surface-container-highest tooltip cursor-pointer" title="Close">
+                                  className="glass-button-icon p-1 rounded-md transition-all hover:text-on-surface-variant hover:bg-surface tooltip cursor-pointer" title="Close">
                                   <span className="material-symbols-outlined text-[16px]">close</span>
                                 </button>
                               </div>
@@ -888,7 +897,7 @@ export default function QuotationsPage() {
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-surface-container-highest border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
+                        <div className="w-9 h-9 rounded-full bg-surface border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
                           {quotation.customer?.customerName?.substring(0, 2).toUpperCase() || 'NA'}
                         </div>
                         <div className="flex flex-col">
@@ -962,7 +971,7 @@ export default function QuotationsPage() {
                             <div className="w-px h-5 bg-primary/20"></div>
                             <button
                               onClick={() => setOpenActionId(null)}
-                              className="glass-button-icon p-2 rounded-md hover:bg-surface-container-highest cursor-pointer" title="Close">
+                              className="glass-button-icon p-2 rounded-md hover:bg-surface cursor-pointer" title="Close">
                               <span className="material-symbols-outlined text-[16px]">close</span>
                             </button>
                           </div>
@@ -1004,7 +1013,7 @@ export default function QuotationsPage() {
                   <button
                     onClick={() => goToPage(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface-container-highest border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     Previous
                   </button>
@@ -1016,7 +1025,7 @@ export default function QuotationsPage() {
                   <button
                     onClick={() => goToPage(currentPage + 1)}
                     disabled={currentPage === totalPages}
-                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface hover:text-on-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     Next
                   </button>
@@ -1141,11 +1150,11 @@ export default function QuotationsPage() {
                 return (
                   <>
                     <Link href={`/invoices/new?copyFromQuotation=${activeQuotation.id}`}>
-                      <button onClick={closePdfViewer} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-highest/50 hover:bg-purple-400/10 hover:text-purple-400 border border-transparent hover:border-purple-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Convert to Invoice">
+                      <button onClick={closePdfViewer} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface/50 hover:bg-purple-400/10 hover:text-purple-400 border border-transparent hover:border-purple-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Convert to Invoice">
                         <span className="material-symbols-outlined text-[20px]">receipt_long</span>
                       </button>
                     </Link>
-                    <button onClick={() => handleSend(activeQuotation.id)} disabled={isSendingId === activeQuotation.id} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-highest/50 hover:bg-emerald-400/10 hover:text-emerald-400 border border-transparent hover:border-emerald-400/20 text-on-surface-variant transition-all cursor-pointer tooltip disabled:opacity-50 disabled:cursor-not-allowed" title="Send">
+                    <button onClick={() => handleSend(activeQuotation.id)} disabled={isSendingId === activeQuotation.id} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface/50 hover:bg-emerald-400/10 hover:text-emerald-400 border border-transparent hover:border-emerald-400/20 text-on-surface-variant transition-all cursor-pointer tooltip disabled:opacity-50 disabled:cursor-not-allowed" title="Send">
                       {isSendingId === activeQuotation.id ? <span className="material-symbols-outlined text-[20px] animate-spin">refresh</span> : <span className="material-symbols-outlined text-[20px]">send</span>}
                     </button>
                     <button
@@ -1157,7 +1166,7 @@ export default function QuotationsPage() {
                           followUpDate: activeQuotation.followUpDate ? new Date(activeQuotation.followUpDate).toISOString().split('T')[0] : ''
                         });
                       }}
-                      className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-highest/50 hover:bg-amber-400/10 hover:text-amber-400 border border-transparent hover:border-amber-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Notes & Reminder">
+                      className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface/50 hover:bg-amber-400/10 hover:text-amber-400 border border-transparent hover:border-amber-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Notes & Reminder">
                       <span className="material-symbols-outlined text-[20px]">sticky_note_2</span>
                     </button>
                   </>

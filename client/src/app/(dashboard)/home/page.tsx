@@ -30,6 +30,19 @@ export default function DashboardHome() {
     setActiveDropdown(prev => prev === name ? null : name);
   };
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.dropdown-container')) {
+        setActiveDropdown(null);
+      }
+    };
+    if (activeDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeDropdown]);
+
   const [dateRangeType, setDateRangeType] = useState<string>('30_days');
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
@@ -249,12 +262,7 @@ export default function DashboardHome() {
 
   return (
     <>
-      {activeDropdown && (
-        <div 
-          className="fixed inset-0 z-40 cursor-default" 
-          onClick={() => setActiveDropdown(null)} 
-        />
-      )}
+      
       <div className="flex-1 overflow-y-auto p-4 md:p-8 z-0 relative overflow-x-hidden selection:bg-primary/30">
       <style dangerouslySetInnerHTML={{
         __html: `
@@ -377,7 +385,7 @@ export default function DashboardHome() {
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full xl:w-auto">
                 <div className="flex items-center gap-4 w-full sm:w-auto">
                   <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider shrink-0 w-24 sm:w-auto">Branch Filter:</label>
-                  <div className="relative flex-1 sm:flex-none" style={{ zIndex: activeDropdown === 'branch' ? 50 : 10 }}>
+                  <div className="dropdown-container relative flex-1 sm:flex-none" style={{ zIndex: activeDropdown === 'branch' ? 50 : 10 }}>
                     <button
                       type="button"
                       className="glass-input rounded-xl py-2 pl-4 pr-10 text-sm font-medium cursor-pointer w-full sm:w-[180px] focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface text-left flex items-center justify-between min-h-[38px]"
@@ -390,9 +398,9 @@ export default function DashboardHome() {
                     </button>
                     
                     {activeDropdown === 'branch' && (
-                      <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface-container-highest rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
+                      <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
                         <div 
-                          onClick={() => { setBranchId(''); setActiveDropdown(null); }} 
+                          onMouseDown={() => { setBranchId(''); setActiveDropdown(null); }} 
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${branchId === '' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           All Branches
@@ -400,7 +408,7 @@ export default function DashboardHome() {
                         {branches.map(b => (
                           <div 
                             key={b.id}
-                            onClick={() => { setBranchId(b.id); setActiveDropdown(null); }} 
+                            onMouseDown={() => { setBranchId(b.id); setActiveDropdown(null); }} 
                             className={`px-4 py-3 text-sm cursor-pointer transition-colors ${branchId === b.id ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                           >
                             {b.name}
@@ -413,7 +421,7 @@ export default function DashboardHome() {
 
                 <div className="flex items-center gap-4 w-full sm:w-auto">
                   <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider shrink-0 w-24 sm:w-auto">Date Range:</label>
-                  <div className="relative flex-1 sm:flex-none" style={{ zIndex: activeDropdown === 'range' ? 50 : 10 }}>
+                  <div className="dropdown-container relative flex-1 sm:flex-none" style={{ zIndex: activeDropdown === 'range' ? 50 : 10 }}>
                     <button
                       type="button"
                       className="glass-input rounded-xl py-2 pl-4 pr-10 text-sm font-medium cursor-pointer w-full sm:w-[150px] focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface text-left flex items-center justify-between min-h-[38px]"
@@ -431,39 +439,39 @@ export default function DashboardHome() {
                     </button>
                     
                     {activeDropdown === 'range' && (
-                      <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface-container-highest rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
+                      <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
                         <div 
-                          onClick={() => { setDateRangeType('today'); setActiveDropdown(null); }} 
+                          onMouseDown={() => { setDateRangeType('today'); setActiveDropdown(null); }} 
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${dateRangeType === 'today' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           Today
                         </div>
                         <div 
-                          onClick={() => { setDateRangeType('1_week'); setActiveDropdown(null); }} 
+                          onMouseDown={() => { setDateRangeType('1_week'); setActiveDropdown(null); }} 
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${dateRangeType === '1_week' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           Last 7 Days
                         </div>
                         <div 
-                          onClick={() => { setDateRangeType('15_days'); setActiveDropdown(null); }} 
+                          onMouseDown={() => { setDateRangeType('15_days'); setActiveDropdown(null); }} 
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${dateRangeType === '15_days' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           Last 15 Days
                         </div>
                         <div 
-                          onClick={() => { setDateRangeType('30_days'); setActiveDropdown(null); }} 
+                          onMouseDown={() => { setDateRangeType('30_days'); setActiveDropdown(null); }} 
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${dateRangeType === '30_days' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           Last 30 Days
                         </div>
                         <div 
-                          onClick={() => { setDateRangeType('6_months'); setActiveDropdown(null); }} 
+                          onMouseDown={() => { setDateRangeType('6_months'); setActiveDropdown(null); }} 
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${dateRangeType === '6_months' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           Last 6 Months
                         </div>
                         <div 
-                          onClick={() => { setDateRangeType('1_year'); setActiveDropdown(null); }} 
+                          onMouseDown={() => { setDateRangeType('1_year'); setActiveDropdown(null); }} 
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${dateRangeType === '1_year' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           Last 1 Year
@@ -835,11 +843,11 @@ export default function DashboardHome() {
               return (
                 <>
                   <Link href={`/invoices/new?copyFromQuotation=${activeQuotation.id}`}>
-                    <button onClick={closePdfViewer} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-highest/50 hover:bg-purple-400/10 hover:text-purple-400 border border-transparent hover:border-purple-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Convert to Invoice">
+                    <button onClick={closePdfViewer} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface/50 hover:bg-purple-400/10 hover:text-purple-400 border border-transparent hover:border-purple-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Convert to Invoice">
                       <span className="material-symbols-outlined text-[20px]">receipt_long</span>
                     </button>
                   </Link>
-                  <button onClick={() => handleSend(activeQuotation.id, 'quotation')} disabled={isSendingId === activeQuotation.id} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-highest/50 hover:bg-emerald-400/10 hover:text-emerald-400 border border-transparent hover:border-emerald-400/20 text-on-surface-variant transition-all cursor-pointer tooltip disabled:opacity-50" title="Send">
+                  <button onClick={() => handleSend(activeQuotation.id, 'quotation')} disabled={isSendingId === activeQuotation.id} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface/50 hover:bg-emerald-400/10 hover:text-emerald-400 border border-transparent hover:border-emerald-400/20 text-on-surface-variant transition-all cursor-pointer tooltip disabled:opacity-50" title="Send">
                     {isSendingId === activeQuotation.id ? <span className="material-symbols-outlined text-[20px] animate-spin">refresh</span> : <span className="material-symbols-outlined text-[20px]">send</span>}
                   </button>
                   <button 
@@ -851,7 +859,7 @@ export default function DashboardHome() {
                         followUpDate: activeQuotation.followUpDate ? new Date(activeQuotation.followUpDate).toISOString().split('T')[0] : ''
                       });
                     }}
-                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-highest/50 hover:bg-amber-400/10 hover:text-amber-400 border border-transparent hover:border-amber-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Notes & Reminder">
+                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface/50 hover:bg-amber-400/10 hover:text-amber-400 border border-transparent hover:border-amber-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Notes & Reminder">
                     <span className="material-symbols-outlined text-[20px]">sticky_note_2</span>
                   </button>
                 </>
@@ -861,10 +869,10 @@ export default function DashboardHome() {
               if (!activeInvoice) return null;
               return (
                 <>
-                  <button onClick={() => { closePdfViewer(); setPaymentModalInvoice({ id: activeInvoice.id, invoiceNumber: activeInvoice.invoiceNumber, amountDue: activeInvoice.amountDue }); }} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-highest/50 hover:bg-purple-400/10 hover:text-purple-400 border border-transparent hover:border-purple-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Add Payment">
+                  <button onClick={() => { closePdfViewer(); setPaymentModalInvoice({ id: activeInvoice.id, invoiceNumber: activeInvoice.invoiceNumber, amountDue: activeInvoice.amountDue }); }} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface/50 hover:bg-purple-400/10 hover:text-purple-400 border border-transparent hover:border-purple-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Add Payment">
                     <span className="material-symbols-outlined text-[20px]">payments</span>
                   </button>
-                  <button onClick={() => handleSend(activeInvoice.id, 'invoice')} disabled={isSendingId === activeInvoice.id} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-highest/50 hover:bg-emerald-400/10 hover:text-emerald-400 border border-transparent hover:border-emerald-400/20 text-on-surface-variant transition-all cursor-pointer tooltip disabled:opacity-50" title="Send">
+                  <button onClick={() => handleSend(activeInvoice.id, 'invoice')} disabled={isSendingId === activeInvoice.id} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface/50 hover:bg-emerald-400/10 hover:text-emerald-400 border border-transparent hover:border-emerald-400/20 text-on-surface-variant transition-all cursor-pointer tooltip disabled:opacity-50" title="Send">
                     {isSendingId === activeInvoice.id ? <span className="material-symbols-outlined text-[20px] animate-spin">refresh</span> : <span className="material-symbols-outlined text-[20px]">send</span>}
                   </button>
                 </>
