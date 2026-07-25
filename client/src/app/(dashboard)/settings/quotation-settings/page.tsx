@@ -111,9 +111,9 @@ export default function QuotationConfigurationPage() {
                   Quotation
                 </span>
               </div>
-                <h1 className="text-3xl md:text-4xl font-black tracking-tight font-display mb-2">
+              <h1 className="text-3xl md:text-4xl font-black tracking-tight font-display mb-2">
                 <span className="text-on-surface">Quotation </span>
-              <span className="bg-gradient-to-br from-primary to-tertiary bg-clip-text text-transparent">Settings
+                <span className="bg-gradient-to-br from-primary to-tertiary bg-clip-text text-transparent">Settings
                 </span>
               </h1>
               <p className="text-on-surface-variant text-lg">
@@ -248,30 +248,16 @@ export default function QuotationConfigurationPage() {
                       id="toggle_name"
                     />
                   </div>
-                </GlassPanel>
-
-                {/* Status Summary Panel */}
-                <GlassPanel className="relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/5 rounded-full blur-2xl -mr-10 -mt-10" />
-                  <h3 className="font-semibold text-lg mb-4 relative z-10 text-on-surface">
-                    Configuration Status
-                  </h3>
-                  <div className="space-y-4 relative z-10">
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-surface-container/50 border border-outline-variant/30">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
-                        <span className="text-sm text-on-surface">
-                          Auto-Sync Enabled
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-xs leading-relaxed text-on-surface-variant/70">
-                      Changes made here are applied instantly to all newly
-                      generated draft quotations. Existing finalized quotes
-                      remain unaffected.
+                  <div className="mt-2 p-4 bg-surface-container-low rounded-lg border border-outline-variant/30 flex gap-3 items-start">
+                    <span className="material-symbols-outlined text-secondary-fixed text-lg">info</span>
+                    <p className="text-xs text-on-surface-variant leading-relaxed">
+                      Changes to these display settings will only affect invoices generated after
+                      saving. Historical invoices retain their original format.
                     </p>
                   </div>
                 </GlassPanel>
+
+
               </div>
             </div>
 

@@ -35,6 +35,10 @@ export class AdminService {
       throw new ForbiddenException('Admin access only.');
     }
 
+    if (!dto.password) {
+      throw new BadRequestException('Password is required for admin login.');
+    }
+
     const isMatch = await bcrypt.compare(dto.password, user.password);
     if (!isMatch) {
       throw new UnauthorizedException('Incorrect password. Please try again.');

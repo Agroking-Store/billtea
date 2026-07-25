@@ -104,6 +104,20 @@ export class PdfService {
       });
     }
 
+    // Fetch theme settings
+    const themeSettings = await this.prisma.themeSettings.findUnique({
+      where: { companyId: company.id }
+    });
+    
+    let quoTheme: any = {};
+    if (themeSettings && themeSettings.lightTheme) {
+      try {
+        quoTheme = typeof themeSettings.lightTheme === 'string' ? JSON.parse(themeSettings.lightTheme) : themeSettings.lightTheme;
+      } catch (e) {}
+    }
+
+    const getThemeVar = (key: string, defaultVal: string) => quoTheme[key] || defaultVal;
+
     const showSkuHsnCol = settings.showSku || settings.showHsn;
     const prodWidth = showSkuHsnCol ? 'w-[19%]' : 'w-[29%]';
     const imgWidth = showSkuHsnCol ? 'w-[14%]' : 'w-[19%]';
@@ -145,30 +159,30 @@ export class PdfService {
           : imgPlaceholder;
 
         itemsHtml += `
-          <tr class="bg-[#F9F7F5] border-b border-[#e2e2e2]">
-            <td class="py-2 px-2 border-x border-[#e2e2e2] text-[14px]">${index + 1}</td>
-            <td class="py-2 px-2 border-x border-[#e2e2e2]">
-              <div class="font-bold text-[13px] text-[#192C27] tracking-[0.05em] uppercase leading-tight mb-1 mt-1">${itemName}</div>
-              <div class="text-[#74777c] font-medium text-[11px] uppercase pb-1">${desc}</div>
+          <tr class="bg-[var(--quo-surface-alt)] border-b border-[var(--quo-border)]">
+            <td class="py-2 px-2 border-x border-[var(--quo-border)] text-[14px]">${index + 1}</td>
+            <td class="py-2 px-2 border-x border-[var(--quo-border)]">
+              <div class="font-bold text-[13px] text-[var(--quo-text)] tracking-[0.05em] uppercase leading-tight mb-1 mt-1">${itemName}</div>
+              <div class="text-[var(--quo-text-muted)] font-medium text-[11px] uppercase pb-1">${desc}</div>
             </td>
             ${showSkuHsnCol ? `
-            <td class="py-2 px-2 border-x border-[#e2e2e2]">
+            <td class="py-2 px-2 border-x border-[var(--quo-border)]">
               ${settings.showSku ? `<div class="text-[14px]">${sku}</div>` : ''}
-              ${settings.showHsn ? `<div class="text-[#74777c] text-[12px] ${!settings.showSku ? 'font-bold text-[14px] mt-1' : ''}">${settings.showSku ? 'HSN: ' : ''}${hsn}</div>` : ''}
+              ${settings.showHsn ? `<div class="text-[var(--quo-text-muted)] text-[12px] ${!settings.showSku ? 'font-bold text-[14px] mt-1' : ''}">${settings.showSku ? 'HSN: ' : ''}${hsn}</div>` : ''}
             </td>
             ` : ''}
-            <td class="py-2 px-2 border-x border-[#e2e2e2] text-[14px]">${item.quantity}</td>
-            <td class="py-2 px-2 border-x border-[#e2e2e2] text-[14px]">${item.editedPrice.toLocaleString('en-IN')}</td>
-            <td class="py-2 px-2 border-x border-[#e2e2e2]">
+            <td class="py-2 px-2 border-x border-[var(--quo-border)] text-[14px]">${item.quantity}</td>
+            <td class="py-2 px-2 border-x border-[var(--quo-border)] text-[14px]">${item.editedPrice.toLocaleString('en-IN')}</td>
+            <td class="py-2 px-2 border-x border-[var(--quo-border)]">
               <div class="text-[14px]">${discountPercent}</div>
-              <div class="text-[#74777c] text-[12px]">(₹ ${item.discountAmount.toLocaleString('en-IN')})</div>
+              <div class="text-[var(--quo-text-muted)] text-[12px]">(₹ ${item.discountAmount.toLocaleString('en-IN')})</div>
             </td>
-            <td class="py-2 px-2 border-x border-[#e2e2e2]">
+            <td class="py-2 px-2 border-x border-[var(--quo-border)]">
               <div class="text-[14px]">${taxPercent}</div>
-              <div class="text-[#74777c] text-[12px]">(₹ ${item.taxAmount.toLocaleString('en-IN')})</div>
+              <div class="text-[var(--quo-text-muted)] text-[12px]">(₹ ${item.taxAmount.toLocaleString('en-IN')})</div>
             </td>
-            <td class="py-2 px-2 border-x border-[#e2e2e2] text-[14px]">${item.total.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
-            <td class="py-2 px-2 border-x border-[#e2e2e2]">
+            <td class="py-2 px-2 border-x border-[var(--quo-border)] text-[14px]">${item.total.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+            <td class="py-2 px-2 border-x border-[var(--quo-border)]">
               ${itemImage}
             </td>
           </tr>
@@ -213,14 +227,14 @@ export class PdfService {
     if (tncList && tncList.length > 0) {
       tncHtml = tncList.map((t: string) => `
         <li class="flex items-start text-xs">
-          <span class="mr-2 text-[#9D7E6C]">•</span>
+          <span class="mr-2 text-[var(--quo-primary)]">•</span>
           <span class="flex-1">${t.trim()}</span>
         </li>
       `).join('');
     } else {
       tncHtml = `
         <li class="flex items-start text-xs">
-          <span class="mr-2 text-[#9D7E6C]">•</span>
+          <span class="mr-2 text-[var(--quo-primary)]">•</span>
           <span class="flex-1">As per mutual discussion</span>
         </li>
       `;
@@ -248,17 +262,26 @@ export class PdfService {
           .font-signature {
             font-family: 'Great Vibes', cursive;
           }
+          :root {
+            --quo-bg: ${getThemeVar('--quo-bg', '#FFFFFF')};
+            --quo-surface: ${getThemeVar('--quo-surface', '#1B1C1D')};
+            --quo-surface-alt: ${getThemeVar('--quo-surface-alt', '#F9F7F5')};
+            --quo-primary: ${getThemeVar('--quo-primary', '#9D7E6C')};
+            --quo-border: ${getThemeVar('--quo-border', '#e2e2e2')};
+            --quo-text: ${getThemeVar('--quo-text', '#1a1c1c')};
+            --quo-text-muted: ${getThemeVar('--quo-text-muted', '#74777c')};
+          }
         </style>
       </head>
-      <body class="w-[1000px] bg-[#FFFFFF] relative overflow-hidden flex flex-col text-[#1a1c1c] mx-auto min-h-[1405px]">
+      <body class="w-[1000px] bg-[var(--quo-bg)] relative overflow-hidden flex flex-col text-[var(--quo-text)] mx-auto min-h-[1405px]">
         
         <div class="flex relative h-[250px]">
           <div 
-            class="absolute left-0 top-0 h-full w-[40%] bg-[#1B1C1D] z-0"
+            class="absolute left-0 top-0 h-full w-[40%] bg-[var(--quo-surface)] z-0"
             style="clip-path: polygon(0 0, 100% 0, 75% 100%, 0 100%);"
           ></div>
 
-          <div class="w-[30%] text-[#9D7E6C] p-8 pr-6 flex flex-col items-center justify-center relative z-10 h-full">
+          <div class="w-[30%] text-[var(--quo-primary)] p-8 pr-6 flex flex-col items-center justify-center relative z-10 h-full">
             ${company.logo ? `
                 <div class="w-[100px] h-[100px] rounded-full overflow-hidden bg-white/5 flex items-center justify-center mb-4 border border-[#D1B08C]/20 shadow-md">
                     <img src="${company.logo.startsWith('http') || company.logo.startsWith('data:') ? company.logo : `${baseUrl}/${company.logo.replace(/^\/+/, '')}`}" alt="${company.name}" class="w-full h-full object-cover" />
@@ -276,14 +299,14 @@ export class PdfService {
 
           <div class="w-[70%] flex items-center justify-end pr-16 relative z-10 h-full">
             <div class="flex flex-col items-end text-right">
-              <h2 class="font-serif text-[46px] text-[#1a1c1c] leading-none tracking-widest mb-4 uppercase">QUOTATION</h2>
+              <h2 class="font-serif text-[46px] text-[var(--quo-text)] leading-none tracking-widest mb-4 uppercase">QUOTATION</h2>
               <div class="flex items-center justify-end w-40 mb-5 opacity-80">
-                <div class="flex-1 h-[1.5px] bg-[#9D7E6C]"></div>
-                <div class="w-1.5 h-1.5 rounded-full bg-[#9D7E6C] mx-2"></div>
-                <div class="w-8 h-[1.5px] bg-[#9D7E6C]"></div>
+                <div class="flex-1 h-[1.5px] bg-[var(--quo-primary)]"></div>
+                <div class="w-1.5 h-1.5 rounded-full bg-[var(--quo-primary)] mx-2"></div>
+                <div class="w-8 h-[1.5px] bg-[var(--quo-primary)]"></div>
               </div>
               
-              <div class="text-[12px] leading-[1.7] text-[#43474b] max-w-[260px] opacity-90">
+              <div class="text-[12px] leading-[1.7] text-[var(--quo-text-muted)] max-w-[260px] opacity-90">
                 ${topMessageHtml}
               </div>
             </div>
@@ -293,58 +316,58 @@ export class PdfService {
         <div class="px-10 mt-6 mb-8 flex">
           <div class="w-[26%] pl-2 pr-4">
             <div class="flex items-center mb-3">
-              <h3 class="uppercase text-[#9D7E6C] text-[10px] font-semibold tracking-[0.2em] mr-4">COMPANY DETAILS</h3>
-              <div class="w-10 h-[1.5px] bg-[#9D7E6C]"></div>
+              <h3 class="uppercase text-[var(--quo-primary)] text-[10px] font-semibold tracking-[0.2em] mr-4">COMPANY DETAILS</h3>
+              <div class="w-10 h-[1.5px] bg-[var(--quo-primary)]"></div>
             </div>
-            <h4 class="font-semibold text-[13px] text-[#192C27] mb-1">${company.name}</h4>
-            <p class="text-[12px] text-[#43474b] leading-[1.7]">
+            <h4 class="font-semibold text-[13px] text-[var(--quo-text)] mb-1">${company.name}</h4>
+            <p class="text-[12px] text-[var(--quo-text-muted)] leading-[1.7]">
               ${branch.city || ''}${branch.state ? ', ' + branch.state : ''}
               ${branch.phone ? '<br/>' + branch.phone : ''}
               ${branch.email ? '<br/>' + branch.email : ''}
             </p>
             ${company.identifiers && Array.isArray(company.identifiers) && company.identifiers.length > 0 ? 
-              company.identifiers.filter((i:any) => (i.label || i.name)?.toUpperCase() !== 'TAGLINE').map((i:any) => `<p class="text-[11px] text-[#1a1c1c] mt-2 tracking-wide font-medium uppercase">${i.label || i.name}: ${i.value}</p>`).join('')
+              company.identifiers.filter((i:any) => (i.label || i.name)?.toUpperCase() !== 'TAGLINE').map((i:any) => `<p class="text-[11px] text-[var(--quo-text)] mt-2 tracking-wide font-medium uppercase">${i.label || i.name}: ${i.value}</p>`).join('')
             : ''}
           </div>
           
-          <div class="w-[42%] pl-6 border-l border-[#9D7E6C]">
+          <div class="w-[42%] pl-6 border-l border-[var(--quo-primary)]">
             <div class="flex items-center mb-3">
-              <h3 class="uppercase text-[#9D7E6C] text-[10px] font-semibold tracking-[0.2em] mr-4">CLIENT DETAILS</h3>
-              <div class="w-10 h-[1.5px] bg-[#9D7E6C]"></div>
+              <h3 class="uppercase text-[var(--quo-primary)] text-[10px] font-semibold tracking-[0.2em] mr-4">CLIENT DETAILS</h3>
+              <div class="w-10 h-[1.5px] bg-[var(--quo-primary)]"></div>
             </div>
-            <h4 class="font-semibold text-[13px] text-[#192C27] mb-0.5">${customer.customerName}</h4>
-            <p class="text-[11px] text-[#74777c] mb-2 uppercase tracking-wide">${customer.companyName || ''}</p>
-            <div class="text-[12px] text-[#43474b] leading-[1.7]">
-              <p class="mb-1">${customer.mobileNumber || ''} ${customer.businessLabel && customer.businessLabelValue ? `<span class="mx-2 text-[#e2e2e2]">|</span> ${customer.businessLabel.toUpperCase()}: ${customer.businessLabelValue}` : ''}</p>
-              <p class="mb-1"><span class="font-semibold text-[#1a1c1c]">Billing:</span> ${quotation.billingAddressSnapshot?.address || '-'}, ${quotation.billingAddressSnapshot?.city || ''}</p>
-              <p><span class="font-semibold text-[#1a1c1c]">Shipping:</span> ${quotation.shippingAddressSnapshot?.address || '-'}, ${quotation.shippingAddressSnapshot?.city || ''}</p>
+            <h4 class="font-semibold text-[13px] text-[var(--quo-text)] mb-0.5">${customer.customerName}</h4>
+            <p class="text-[11px] text-[var(--quo-text-muted)] mb-2 uppercase tracking-wide">${customer.companyName || ''}</p>
+            <div class="text-[12px] text-[var(--quo-text-muted)] leading-[1.7]">
+              <p class="mb-1">${customer.mobileNumber || ''} ${customer.businessLabel && customer.businessLabelValue ? `<span class="mx-2 text-[var(--quo-border)]">|</span> ${customer.businessLabel.toUpperCase()}: ${customer.businessLabelValue}` : ''}</p>
+              <p class="mb-1"><span class="font-semibold text-[var(--quo-text)]">Billing:</span> ${quotation.billingAddressSnapshot?.address || '-'}, ${quotation.billingAddressSnapshot?.city || ''}</p>
+              <p><span class="font-semibold text-[var(--quo-text)]">Shipping:</span> ${quotation.shippingAddressSnapshot?.address || '-'}, ${quotation.shippingAddressSnapshot?.city || ''}</p>
             </div>
           </div>
           
-          <div class="w-[32%] pl-6 border-l border-[#9D7E6C]">
+          <div class="w-[32%] pl-6 border-l border-[var(--quo-primary)]">
             <div class="flex items-center mb-3">
-              <h3 class="uppercase text-[#9D7E6C] text-[10px] font-semibold tracking-[0.2em] mr-4">ORDER DETAILS</h3>
-              <div class="w-10 h-[1.5px] bg-[#9D7E6C]"></div>
+              <h3 class="uppercase text-[var(--quo-primary)] text-[10px] font-semibold tracking-[0.2em] mr-4">ORDER DETAILS</h3>
+              <div class="w-10 h-[1.5px] bg-[var(--quo-primary)]"></div>
             </div>
-            <div class="flex flex-col gap-3 text-[11px] text-[#1a1c1c]">
+            <div class="flex flex-col gap-3 text-[11px] text-[var(--quo-text)]">
               <div class="flex items-start gap-3">
-                <span class="material-symbols-outlined text-[14px] text-[#9D7E6C]">description</span>
+                <span class="material-symbols-outlined text-[14px] text-[var(--quo-primary)]">description</span>
                 <div class="flex flex-1">
-                  <span class="w-24 font-medium text-[#43474b]">Quotation No.</span>
+                  <span class="w-24 font-medium text-[var(--quo-text-muted)]">Quotation No.</span>
                   <span class="font-semibold">: ${quotation.quotationNumber}</span>
                 </div>
               </div>
               <div class="flex items-start gap-3">
-                <span class="material-symbols-outlined text-[14px] text-[#9D7E6C]">calendar_month</span>
+                <span class="material-symbols-outlined text-[14px] text-[var(--quo-primary)]">calendar_month</span>
                 <div class="flex flex-1">
-                  <span class="w-24 font-medium text-[#43474b]">Date</span>
+                  <span class="w-24 font-medium text-[var(--quo-text-muted)]">Date</span>
                   <span class="font-semibold">: ${qDate}</span>
                 </div>
               </div>
               <div class="flex items-start gap-3">
-                <span class="material-symbols-outlined text-[14px] text-[#9D7E6C]">event_available</span>
+                <span class="material-symbols-outlined text-[14px] text-[var(--quo-primary)]">event_available</span>
                 <div class="flex flex-1">
-                  <span class="w-24 font-medium text-[#43474b]">Valid Till</span>
+                  <span class="w-24 font-medium text-[var(--quo-text-muted)]">Valid Till</span>
                   <span class="font-semibold">: ${validTillDate}</span>
                 </div>
               </div>
@@ -353,9 +376,9 @@ export class PdfService {
         </div>
 
         <div class="px-8 mb-6 mt-2">
-          <table class="w-full text-center border-collapse border-b border-[#e2e2e2]">
+          <table class="w-full text-center border-collapse border-b border-[var(--quo-border)]">
             <thead>
-              <tr class="bg-[#1B1C1D] text-[#9D7E6C] text-[10px] uppercase font-bold tracking-[0.1em]">
+              <tr class="bg-[var(--quo-surface)] text-[var(--quo-primary)] text-[10px] uppercase font-bold tracking-[0.1em]">
                 <th class="py-[16px] px-2 font-bold w-[5%]">#</th>
                 <th class="py-[16px] px-2 font-bold ${prodWidth}">PRODUCT</th>
                 ${settings.showSku && settings.showHsn ? `<th class="py-[16px] px-2 font-bold w-[15%]">SKU / HSN NUMBER</th>` : ''}
@@ -369,7 +392,7 @@ export class PdfService {
                 <th class="py-[16px] px-2 font-bold ${imgWidth}">PRODUCT IMG</th>
               </tr>
             </thead>
-            <tbody class="text-[13px] text-[#1a1c1c] align-middle">
+            <tbody class="text-[13px] text-[var(--quo-text)] align-middle">
               ${itemsHtml}
             </tbody>
           </table>
@@ -378,54 +401,54 @@ export class PdfService {
         <div class="px-8 flex">
           <div class="w-[33%] pr-4 pb-2">
             <div class="flex items-center mb-4">
-              <h3 class="uppercase text-[#9D7E6C] text-[11px] font-semibold tracking-wider mr-4">TERMS & CONDITIONS</h3>
-              <div class="w-10 h-[1.5px] bg-[#9D7E6C]"></div>
+              <h3 class="uppercase text-[var(--quo-primary)] text-[11px] font-semibold tracking-wider mr-4">TERMS & CONDITIONS</h3>
+              <div class="w-10 h-[1.5px] bg-[var(--quo-primary)]"></div>
             </div>
-            <ul class="text-[11px] text-[#1a1c1c] leading-[1.6] space-y-[10px]">
+            <ul class="text-[11px] text-[var(--quo-text)] leading-[1.6] space-y-[10px]">
               ${tncHtml}
             </ul>
           </div>
 
-          <div class="w-[33%] pl-8 border-l border-[#9D7E6C] pb-2">
+          <div class="w-[33%] pl-8 border-l border-[var(--quo-primary)] pb-2">
             <div class="flex items-center mb-4">
-              <h3 class="uppercase text-[#9D7E6C] text-[11px] font-semibold tracking-wider mr-4">BANK DETAILS</h3>
-              <div class="w-10 h-[1.5px] bg-[#9D7E6C]"></div>
+              <h3 class="uppercase text-[var(--quo-primary)] text-[11px] font-semibold tracking-wider mr-4">BANK DETAILS</h3>
+              <div class="w-10 h-[1.5px] bg-[var(--quo-primary)]"></div>
             </div>
-            <div class="text-[11px] text-[#1a1c1c] space-y-3">
+            <div class="text-[11px] text-[var(--quo-text)] space-y-3">
               <div class="flex">
-                <span class="w-[75px] font-medium text-[#43474b]">Bank Name</span><span class="mr-8 text-[#43474b]">:</span><span class="font-medium text-[#1a1c1c]">${branch.bankName || '-'}</span>
+                <span class="w-[75px] font-medium text-[var(--quo-text-muted)]">Bank Name</span><span class="mr-8 text-[var(--quo-text-muted)]">:</span><span class="font-medium text-[var(--quo-text)]">${branch.bankName || '-'}</span>
               </div>
               <div class="flex">
-                <span class="w-[75px] font-medium text-[#43474b]">A/C Name</span><span class="mr-8 text-[#43474b]">:</span><span class="font-medium text-[#1a1c1c]">${company.name}</span>
+                <span class="w-[75px] font-medium text-[var(--quo-text-muted)]">A/C Name</span><span class="mr-8 text-[var(--quo-text-muted)]">:</span><span class="font-medium text-[var(--quo-text)]">${company.name}</span>
               </div>
               <div class="flex">
-                <span class="w-[75px] font-medium text-[#43474b]">A/C No.</span><span class="mr-8 text-[#43474b]">:</span><span class="font-medium text-[#1a1c1c]">${branch.accountNumber || '-'}</span>
+                <span class="w-[75px] font-medium text-[var(--quo-text-muted)]">A/C No.</span><span class="mr-8 text-[var(--quo-text-muted)]">:</span><span class="font-medium text-[var(--quo-text)]">${branch.accountNumber || '-'}</span>
               </div>
               <div class="flex">
-                <span class="w-[75px] font-medium text-[#43474b]">IFSC Code</span><span class="mr-8 text-[#43474b]">:</span><span class="font-medium text-[#1a1c1c]">${branch.ifscCode || '-'}</span>
+                <span class="w-[75px] font-medium text-[var(--quo-text-muted)]">IFSC Code</span><span class="mr-8 text-[var(--quo-text-muted)]">:</span><span class="font-medium text-[var(--quo-text)]">${branch.ifscCode || '-'}</span>
               </div>
               <div class="flex">
-                <span class="w-[75px] font-medium text-[#43474b]">UPI ID</span><span class="mr-8 text-[#43474b]">:</span><span class="font-medium text-[#1a1c1c]">${branch.upiId || '-'}</span>
+                <span class="w-[75px] font-medium text-[var(--quo-text-muted)]">UPI ID</span><span class="mr-8 text-[var(--quo-text-muted)]">:</span><span class="font-medium text-[var(--quo-text)]">${branch.upiId || '-'}</span>
               </div>
             </div>
           </div>
 
-          <div class="w-[34%] ml-auto bg-[#FFFFFF] flex flex-col">
-            <div class="flex border border-[#e2e2e2] border-b-0 bg-[#F9F7F5]">
-               <span class="px-5 py-4 uppercase text-[10px] tracking-widest text-[#43474b] w-1/2 border-r border-[#e2e2e2]">SUBTOTAL</span>
+          <div class="w-[34%] ml-auto bg-[var(--quo-bg)] flex flex-col">
+            <div class="flex border border-[var(--quo-border)] border-b-0 bg-[var(--quo-surface-alt)]">
+               <span class="px-5 py-4 uppercase text-[10px] tracking-widest text-[var(--quo-text-muted)] w-1/2 border-r border-[var(--quo-border)]">SUBTOTAL</span>
                <span class="px-5 py-4 text-right w-1/2 text-sm font-medium">₹ ${quotation.subtotal.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
             </div>
-            <div class="flex border border-[#e2e2e2] border-b-0 bg-[#F9F7F5]">
-               <span class="px-5 py-4 uppercase text-[10px] tracking-widest text-[#43474b] w-1/2 border-r border-[#e2e2e2]">DISCOUNT %</span>
+            <div class="flex border border-[var(--quo-border)] border-b-0 bg-[var(--quo-surface-alt)]">
+               <span class="px-5 py-4 uppercase text-[10px] tracking-widest text-[var(--quo-text-muted)] w-1/2 border-r border-[var(--quo-border)]">DISCOUNT %</span>
                <span class="px-5 py-4 text-right w-1/2 text-sm font-medium">₹ ${quotation.discountAmount.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
             </div>
-            <div class="flex border border-[#e2e2e2] border-b-0 bg-[#F9F7F5]">
-               <span class="px-5 py-4 uppercase text-[10px] tracking-widest text-[#43474b] w-1/2 border-r border-[#e2e2e2]">TAX %</span>
+            <div class="flex border border-[var(--quo-border)] border-b-0 bg-[var(--quo-surface-alt)]">
+               <span class="px-5 py-4 uppercase text-[10px] tracking-widest text-[var(--quo-text-muted)] w-1/2 border-r border-[var(--quo-border)]">TAX %</span>
                <span class="px-5 py-4 text-right w-1/2 text-sm font-medium">₹ ${quotation.taxAmount.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
             </div>
-            <div class="bg-[#1B1C1D] text-white p-5 flex flex-col">
-               <span class="uppercase text-[10px] tracking-widest text-[#9D7E6C] mb-1">GRAND TOTAL</span>
-               <span class="font-serif text-[32px] text-[#9D7E6C] tracking-wide leading-none mb-2">₹ ${quotation.grandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
+            <div class="bg-[var(--quo-surface)] text-white p-5 flex flex-col">
+               <span class="uppercase text-[10px] tracking-widest text-[var(--quo-primary)] mb-1">GRAND TOTAL</span>
+               <span class="font-serif text-[32px] text-[var(--quo-primary)] tracking-wide leading-none mb-2">₹ ${quotation.grandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2})}</span>
                <p class="text-[10px] text-[#c3c7cb] leading-snug">
                  (Rupees ${numberToWordsRupees(quotation.grandTotal)})
                </p>
@@ -436,9 +459,9 @@ export class PdfService {
         <!-- Pre-Footer Grid (Pushed to bottom using mt-auto if needed, but min-h makes it stretch) -->
         <div class="mx-10 mt-auto pt-6 pb-2 flex items-end justify-between">
           <div class="flex flex-col items-start relative w-[25%] pl-2">
-             <span class="text-[10.5px] text-[#74777c] mb-1">Prepared By</span>
-             <span class="text-[11.5px] text-[#1a1c1c] font-medium z-10 relative bg-[#FFFFFF] pr-2">${company.name}</span>
-             <div class="font-signature text-4xl text-[#192C27] mt-2 -ml-2 -mb-2 relative z-10 transform -rotate-2">
+             <span class="text-[10.5px] text-[var(--quo-text-muted)] mb-1">Prepared By</span>
+             <span class="text-[11.5px] text-[var(--quo-text)] font-medium z-10 relative bg-[var(--quo-bg)] pr-2">${company.name}</span>
+             <div class="font-signature text-4xl text-[var(--quo-text)] mt-2 -ml-2 -mb-2 relative z-10 transform -rotate-2">
                ${branch.signatureValue ? 
                   (branch.signatureValue.startsWith('data:image') || branch.signatureValue.startsWith('/uploads') || branch.signatureValue.startsWith('http')
                     ? `<img src="${branch.signatureValue.startsWith('http') || branch.signatureValue.startsWith('data:') ? branch.signatureValue : `${baseUrl}/${branch.signatureValue.replace(/^\/+/, '')}`}" style="max-height: 40px;"/>` 
@@ -448,35 +471,35 @@ export class PdfService {
           </div>
 
           <div class="text-center w-[40%] pb-[14px]">
-             <div class="font-serif text-[15px] text-[#1a1c1c] leading-[1.6]">
+             <div class="font-serif text-[15px] text-[var(--quo-text)] leading-[1.6]">
                ${bottomMessageHtml}
              </div>
-             <div class="w-8 h-[1.5px] bg-[#9D7E6C] mx-auto mt-4"></div>
+             <div class="w-8 h-[1.5px] bg-[var(--quo-primary)] mx-auto mt-4"></div>
           </div>
 
           <div class="w-[35%] flex justify-end items-center pr-2 pb-2">
-             <div class="h-[75px] w-[1.5px] bg-[#9D7E6C] mr-5 opacity-40"></div>
+             <div class="h-[75px] w-[1.5px] bg-[var(--quo-primary)] mr-5 opacity-40"></div>
              ${branch.upiId ? `
-             <div class="border border-[#9D7E6C] p-[4px] rounded-sm mr-5 shrink-0 bg-white">
+             <div class="border border-[var(--quo-primary)] p-[4px] rounded-sm mr-5 shrink-0 bg-white">
                <img src="${qrCodeUrl}" alt="Payment QR Code" class="w-[72px] h-[72px] block" />
              </div>
              ` : ''}
              <div class="flex flex-col relative w-[130px] pt-1">
-                <span class="text-[11px] font-bold tracking-[0.08em] pb-[2px] uppercase text-[#1a1c1c] leading-tight">PAYMENT QR</span>
-                <span class="text-[10px] font-medium tracking-[0.05em] uppercase text-[#74777c] leading-tight mt-[2px]">SCAN TO PAY</span>
+                <span class="text-[11px] font-bold tracking-[0.08em] pb-[2px] uppercase text-[var(--quo-text)] leading-tight">PAYMENT QR</span>
+                <span class="text-[10px] font-medium tracking-[0.05em] uppercase text-[var(--quo-text-muted)] leading-tight mt-[2px]">SCAN TO PAY</span>
                 
-                <svg class="w-[140px] h-5 text-[#9D7E6C] mt-2 block -ml-2" viewBox="0 0 140 20" fill="none" stroke="currentColor">
+                <svg class="w-[140px] h-5 text-[var(--quo-primary)] mt-2 block -ml-2" viewBox="0 0 140 20" fill="none" stroke="currentColor">
                    <path d="M2 16 L125 16 Q135 16, 137 5 M132 8 L137 5 L140 10" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
              </div>
           </div>
         </div>
 
-        <div class="bg-[#1B1C1D] px-12 py-[16px] flex items-center justify-center border-t border-[#9D7E6C]/20 w-full mt-0 shadow-[0_20px_0_0_#1B1C1D]">
-           <span class="text-[#9D7E6C] text-[10px] uppercase tracking-[0.3em] font-medium opacity-80 flex items-center gap-3">
-              <span class="w-8 h-[1px] bg-[#9D7E6C]/40"></span>
+        <div class="bg-[var(--quo-surface)] px-12 py-[16px] flex items-center justify-center border-t border-[var(--quo-primary)]/20 w-full mt-0 shadow-[0_20px_0_0_#1B1C1D]">
+           <span class="text-[var(--quo-primary)] text-[10px] uppercase tracking-[0.3em] font-medium opacity-80 flex items-center gap-3">
+              <span class="w-8 h-[1px] bg-[var(--quo-primary)]/40"></span>
               BillTea By Indux Technology
-              <span class="w-8 h-[1px] bg-[#9D7E6C]/40"></span>
+              <span class="w-8 h-[1px] bg-[var(--quo-primary)]/40"></span>
            </span>
         </div>
       </body>

@@ -124,7 +124,7 @@ export default function SettingsPage() {
                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 text-primary group-hover:scale-110 transition-transform bg-primary/10 shadow-[0_0_15px_rgba(125,211,252,0.1)] border border-primary/20">
                   <span className="material-symbols-outlined text-3xl">account_circle</span>
                 </div>
-                <h3 className="text-xl font-bold text-on-surface mb-3">Update Profile</h3>
+                <h3 className="text-xl font-bold text-on-surface mb-3">User Profile</h3>
                 <p className="text-on-surface-variant text-sm leading-relaxed mb-8 flex-grow">
                   Update your personal information, manage security settings, and change your password.
                 </p>
@@ -134,6 +134,32 @@ export default function SettingsPage() {
                   </Link>
                 </div>
               </div>
+
+              {/* Company Settings */}
+              <div className="glass-panel p-8 rounded-3xl flex flex-col h-full group hover:border-secondary/40 hover:shadow-[0_20px_40px_-15px_rgba(136,180,204,0.15)] hover:-translate-y-1 transition-all duration-300">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 text-secondary group-hover:scale-110 transition-transform bg-secondary/10 shadow-[0_0_15px_rgba(136,180,204,0.1)] border border-secondary/20">
+                  <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 0" }}>corporate_fare</span>
+                </div>
+                <h3 className="text-xl font-bold text-on-surface mb-3">Company Profile</h3>
+                <p className="text-on-surface-variant text-sm leading-relaxed mb-8 flex-grow">
+                  Company name, brand, logo, and tax entries. Maintain your professional presence and legal identification.
+                </p>
+                <div className="flex items-center gap-3">
+                  <Link href="/settings/company" className="w-full glass-button-icon py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 group-hover:border-secondary/30 group-hover:text-secondary transition-all">
+                    <span className="material-symbols-outlined text-lg">settings</span> Manage
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Section 2: Business Settings */}
+          <section className="animate-fade-slide-up" style={{ animationDelay: '0.3s' }}>
+            <h2 className="text-xl font-bold text-on-surface mb-6 flex items-center gap-2">
+              <span className="material-symbols-outlined text-secondary">domain</span>
+              Business Identity
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
               {/* Users Card */}
               <div className="glass-panel p-8 rounded-3xl flex flex-col h-full group hover:border-tertiary/40 hover:shadow-[0_20px_40px_-15px_rgba(200,160,240,0.15)] hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
@@ -151,32 +177,6 @@ export default function SettingsPage() {
                   </Link>
                   <Link href="/settings/users?action=create" className="w-full sm:flex-1 bg-tertiary/10 border border-tertiary/30 hover:bg-tertiary/20 text-tertiary py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:shadow-[0_0_20px_rgba(200,160,240,0.2)]">
                     <span className="material-symbols-outlined text-lg">person_add</span> Create User
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Section 2: Business Settings */}
-          <section className="animate-fade-slide-up" style={{ animationDelay: '0.3s' }}>
-            <h2 className="text-xl font-bold text-on-surface mb-6 flex items-center gap-2">
-              <span className="material-symbols-outlined text-secondary">domain</span>
-              Business Identity
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-              {/* Company Settings */}
-              <div className="glass-panel p-8 rounded-3xl flex flex-col h-full group hover:border-secondary/40 hover:shadow-[0_20px_40px_-15px_rgba(136,180,204,0.15)] hover:-translate-y-1 transition-all duration-300">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 text-secondary group-hover:scale-110 transition-transform bg-secondary/10 shadow-[0_0_15px_rgba(136,180,204,0.1)] border border-secondary/20">
-                  <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 0" }}>corporate_fare</span>
-                </div>
-                <h3 className="text-xl font-bold text-on-surface mb-3">Company Settings</h3>
-                <p className="text-on-surface-variant text-sm leading-relaxed mb-8 flex-grow">
-                  Company name, brand, logo, and tax entries. Maintain your professional presence and legal identification.
-                </p>
-                <div className="flex items-center gap-3">
-                  <Link href="/settings/company" className="w-full glass-button-icon py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 group-hover:border-secondary/30 group-hover:text-secondary transition-all">
-                    <span className="material-symbols-outlined text-lg">settings</span> Manage
                   </Link>
                 </div>
               </div>

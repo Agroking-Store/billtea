@@ -517,7 +517,7 @@ export default function QuotationsPage() {
 
           {/* Filters Section */}
           <section
-            className="glass-panel rounded-3xl p-6 transition-transform duration-300 hover:-translate-y-1 animate-fade-slide-up relative overflow-visible shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]"
+            className="glass-panel rounded-3xl p-6 transition-transform duration-300 hover:-translate-y-1 animate-fade-slide-up relative z-20 overflow-visible shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]"
             style={{ animationDelay: '0.15s' }}
           >
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
@@ -598,16 +598,16 @@ export default function QuotationsPage() {
 
                   {activeDropdown === 'status' && (
                     <div className="absolute top-full left-0 right-0 mt-1 z-[60] bg-surface-container-highest rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
-                      <div 
-                        onClick={() => { setStatusFilter(''); setActiveDropdown(null); }} 
+                      <div
+                        onClick={() => { setStatusFilter(''); setActiveDropdown(null); }}
                         className={`px-4 py-3 text-sm cursor-pointer transition-colors ${statusFilter === '' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         All Status
                       </div>
                       {['DRAFT', 'SENT', 'ACCEPTED', 'EXPIRED'].map((status) => (
-                        <div 
+                        <div
                           key={status}
-                          onClick={() => { setStatusFilter(status); setActiveDropdown(null); }} 
+                          onClick={() => { setStatusFilter(status); setActiveDropdown(null); }}
                           className={`px-4 py-3 text-sm cursor-pointer transition-colors ${statusFilter === status ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                         >
                           {status === 'DRAFT' && 'Draft'}
@@ -815,8 +815,8 @@ export default function QuotationsPage() {
                                   onClick={() => isMostRecent && setQuotationToDelete(quotation.id)}
                                   disabled={!isMostRecent}
                                   className={`glass-button-icon p-1 rounded-md transition-all tooltip ${isMostRecent
-                                      ? 'hover:text-error hover:border-error/30 hover:bg-error/10 cursor-pointer'
-                                      : 'opacity-30 cursor-not-allowed'
+                                    ? 'hover:text-error hover:border-error/30 hover:bg-error/10 cursor-pointer'
+                                    : 'opacity-30 cursor-not-allowed'
                                     }`}
                                   title={isMostRecent ? 'Delete' : 'Only the most recent quotation can be deleted'}
                                 >
@@ -1170,7 +1170,7 @@ export default function QuotationsPage() {
           <footer className="relative z-10 w-full opacity-40 text-center flex items-center justify-center gap-4 mt-8">
             <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-on-surface-variant to-transparent"></div>
             <p className="text-xs font-bold tracking-[0.2em] text-on-surface-variant uppercase">
-              BillTea
+              BillTea • Quotations
             </p>
             <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-on-surface-variant to-transparent"></div>
           </footer>

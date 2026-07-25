@@ -20,6 +20,8 @@ import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
 import {
   Building2,
+  Check,
+  ChevronDown,
   Filter,
   House,
   Mail,
@@ -38,6 +40,7 @@ import {
 
 import { AppHeader } from "../../components/ui/AppHeader";
 import { useTheme } from "../../hooks/useTheme";
+import { useBranch, Branch } from "../../components/BranchProvider";
 
 import { ENV } from "@/config/env";
 import { apiClient } from "@/api/client";
@@ -47,11 +50,6 @@ import { create } from "zustand";
 type Section = "customers" | "products";
 type FilterMode = "all" | "active" | "inactive";
 
-type Branch = {
-  id: string;
-  name: string;
-  isMainBranch: boolean;
-};
 
 type CustomerRecord = {
   id: string;
@@ -510,15 +508,59 @@ export default function ProductsScreen() {
   const [activeSection, setActiveSection] = useState<Section>("customers");
   const [customers, setCustomers] = useState<CustomerRecord[]>([]);
   const [products, setProducts] = useState<ProductRecord[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
-  const [loadingBranches, setLoadingBranches] = useState(true);
+  const { selectedBranchId, branches, isLoadingBranches: loadingBranches } = useBranch();
   const [loadingRecords, setLoadingRecords] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchActive, setSearchActive] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  // Customer Filters (Matching Web Screenshot 1)
+  const [customerStatusFilter, setCustomerStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [customerTypeFilter, setCustomerTypeFilter] = useState<"all" | "company" | "individual">("all");
+  const [customerInvoiceFilter, setCustomerInvoiceFilter] = useState<"all" | "with" | "without">("all");
+  const [customerQuotationFilter, setCustomerQuotationFilter] = useState<"all" | "with" | "without">("all");
+
+  // Product Filters (Matching Web Screenshot 2)
+  const [productMinPrice, setProductMinPrice] = useState("");
+  const [productMaxPrice, setProductMaxPrice] = useState("");
+  const [productStatusFilter, setProductStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [productHsnFilter, setProductHsnFilter] = useState<"all" | "with" | "without">("all");
+
+  // Selection Pickers Modals
+  const [showCustomerStatusPicker, setShowCustomerStatusPicker] = useState(false);
+  const [showCustomerTypePicker, setShowCustomerTypePicker] = useState(false);
+  const [showCustomerInvoicePicker, setShowCustomerInvoicePicker] = useState(false);
+  const [showCustomerQuotationPicker, setShowCustomerQuotationPicker] = useState(false);
+
+  const [showProductStatusPicker, setShowProductStatusPicker] = useState(false);
+  const [showProductHsnPicker, setShowProductHsnPicker] = useState(false);
+
+  const hasActiveFilters = Boolean(
+    (activeSection === "customers" &&
+      (customerStatusFilter !== "all" ||
+        customerTypeFilter !== "all" ||
+        customerInvoiceFilter !== "all" ||
+        customerQuotationFilter !== "all")) ||
+      (activeSection === "products" &&
+        (productStatusFilter !== "all" ||
+          productHsnFilter !== "all" ||
+          productMinPrice !== "" ||
+          productMaxPrice !== ""))
+  );
+
+  const handleResetFilters = () => {
+    setCustomerStatusFilter("all");
+    setCustomerTypeFilter("all");
+    setCustomerInvoiceFilter("all");
+    setCustomerQuotationFilter("all");
+
+    setProductMinPrice("");
+    setProductMaxPrice("");
+    setProductStatusFilter("all");
+    setProductHsnFilter("all");
+  };
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalSection, setModalSection] = useState<Section>("customers");
   const [editCustomerId, setEditCustomerId] = useState<string | null>(null);
@@ -536,35 +578,6 @@ export default function ProductsScreen() {
     [activeSection],
   );
 
-  useEffect(() => {
-    async function loadBranches() {
-      try {
-        const res = await apiClient.get("/branches");
-        if (res.status === 200 && res.data?.success) {
-          const loadedBranches = Array.isArray(res.data.branches)
-            ? res.data.branches
-            : [];
-          setBranches(loadedBranches);
-          const mainBranch = loadedBranches.find(
-            (branch: Branch) => branch.isMainBranch,
-          );
-          setSelectedBranchId(mainBranch?.id ?? loadedBranches[0]?.id ?? null);
-        } else {
-          setBranches([]);
-          setSelectedBranchId(null);
-        }
-      } catch (err: any) {
-        console.error("Failed to load branches:", err);
-        setBranches([]);
-        setSelectedBranchId(null);
-        setError(err?.message || "Failed to load branches.");
-      } finally {
-        setLoadingBranches(false);
-      }
-    }
-
-    loadBranches();
-  }, []);
 
   useEffect(() => {
     if (!selectedBranchId) {
@@ -738,22 +751,64 @@ export default function ProductsScreen() {
   const filteredCustomers = useMemo(() => {
     const query = searchText.trim().toLowerCase();
     return customers.filter((customer) => {
-      if (filterMode === "active" && !customer.isActive) return false;
-      if (filterMode === "inactive" && customer.isActive) return false;
+      // Status
+      if (customerStatusFilter === "active" && !customer.isActive) return false;
+      if (customerStatusFilter === "inactive" && customer.isActive) return false;
+
+      // Type
+      const isCompany = Boolean(customer.companyName && customer.companyName.trim() !== "");
+      if (customerTypeFilter === "company" && !isCompany) return false;
+      if (customerTypeFilter === "individual" && isCompany) return false;
+
+      // Invoices count
+      const invoiceCount = customer.invoiceCount ?? 0;
+      if (customerInvoiceFilter === "with" && invoiceCount === 0) return false;
+      if (customerInvoiceFilter === "without" && invoiceCount > 0) return false;
+
+      // Quotations count
+      const quotationCount = customer.quotationCount ?? 0;
+      if (customerQuotationFilter === "with" && quotationCount === 0) return false;
+      if (customerQuotationFilter === "without" && quotationCount > 0) return false;
+
       if (!query) return true;
       return normalizeCustomerText(customer).includes(query);
     });
-  }, [customers, filterMode, searchText]);
+  }, [
+    customers,
+    customerStatusFilter,
+    customerTypeFilter,
+    customerInvoiceFilter,
+    customerQuotationFilter,
+    searchText,
+  ]);
 
   const filteredProducts = useMemo(() => {
     const query = searchText.trim().toLowerCase();
     return products.filter((product) => {
-      if (filterMode === "active" && !product.isActive) return false;
-      if (filterMode === "inactive" && product.isActive) return false;
+      // Min & Max Price
+      if (productMinPrice && product.price < parseFloat(productMinPrice)) return false;
+      if (productMaxPrice && product.price > parseFloat(productMaxPrice)) return false;
+
+      // Status
+      if (productStatusFilter === "active" && !product.isActive) return false;
+      if (productStatusFilter === "inactive" && product.isActive) return false;
+
+      // HSN Code
+      const hasHsn = Boolean(product.hsnNumber && product.hsnNumber.trim() !== "");
+      if (productHsnFilter === "with" && !hasHsn) return false;
+      if (productHsnFilter === "without" && hasHsn) return false;
+
       if (!query) return true;
       return normalizeProductText(product).includes(query);
     });
-  }, [filterMode, products, searchText]);
+  }, [
+    products,
+    productMinPrice,
+    productMaxPrice,
+    productStatusFilter,
+    productHsnFilter,
+    searchText,
+  ]);
 
   const visibleCustomers = filteredCustomers;
   const visibleProducts = filteredProducts;
@@ -1147,9 +1202,11 @@ export default function ProductsScreen() {
       <AppHeader
         title={title}
         onSearchPress={handleSearchIconPress}
-        onFilterPress={handleFilterPress}
+        onFilterPress={() => setShowFilterPanel((prev) => !prev)}
+        showCloseButton={showFilterPanel}
+        onClosePress={() => setShowFilterPanel(false)}
         searchActive={searchActive}
-        filterActive={filterMode !== "all"}
+        filterActive={hasActiveFilters || showFilterPanel}
         showSearchInput={searchActive}
         searchInputRef={searchInputRef}
         searchText={searchText}
@@ -1160,7 +1217,157 @@ export default function ProductsScreen() {
             : "Search products..."
         }
         onSearchBlur={() => setSearchActive(false)}
-      />
+      >
+        {/* Header Filter Panel for Customers (Matching Web Screenshot 1) */}
+        {showFilterPanel && activeSection === "customers" && (
+          <View style={styles.headerFilterExpansion}>
+            {/* Grid Row 1: STATUS & CUSTOMER TYPE */}
+            <View style={styles.filterGridRow}>
+              <View style={styles.filterFieldContainer}>
+                <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>STATUS</Text>
+                <TouchableOpacity
+                  onPress={() => setShowCustomerStatusPicker(true)}
+                  style={[styles.filterSelectBtn, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}
+                >
+                  <Text style={[styles.filterSelectText, { color: colors.text }]} numberOfLines={1}>
+                    {customerStatusFilter === "all" ? "All status" : customerStatusFilter === "active" ? "Active" : "Inactive"}
+                  </Text>
+                  <ChevronDown size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.filterFieldContainer}>
+                <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>CUSTOMER TYPE</Text>
+                <TouchableOpacity
+                  onPress={() => setShowCustomerTypePicker(true)}
+                  style={[styles.filterSelectBtn, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}
+                >
+                  <Text style={[styles.filterSelectText, { color: colors.text }]} numberOfLines={1}>
+                    {customerTypeFilter === "all" ? "All types" : customerTypeFilter === "company" ? "Company" : "Individual"}
+                  </Text>
+                  <ChevronDown size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Grid Row 2: INVOICES & QUOTATIONS */}
+            <View style={styles.filterGridRow}>
+              <View style={styles.filterFieldContainer}>
+                <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>INVOICES</Text>
+                <TouchableOpacity
+                  onPress={() => setShowCustomerInvoicePicker(true)}
+                  style={[styles.filterSelectBtn, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}
+                >
+                  <Text style={[styles.filterSelectText, { color: colors.text }]} numberOfLines={1}>
+                    {customerInvoiceFilter === "all" ? "Any" : customerInvoiceFilter === "with" ? "With Invoices" : "Without Invoices"}
+                  </Text>
+                  <ChevronDown size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.filterFieldContainer}>
+                <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>QUOTATIONS</Text>
+                <TouchableOpacity
+                  onPress={() => setShowCustomerQuotationPicker(true)}
+                  style={[styles.filterSelectBtn, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}
+                >
+                  <Text style={[styles.filterSelectText, { color: colors.text }]} numberOfLines={1}>
+                    {customerQuotationFilter === "all" ? "Any" : customerQuotationFilter === "with" ? "With Quotations" : "Without Quotations"}
+                  </Text>
+                  <ChevronDown size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Reset & Apply */}
+            <View style={styles.filterActionButtonsRow}>
+              <TouchableOpacity onPress={handleResetFilters} style={[styles.resetOutlineBtn, { borderColor: colors.border }]}>
+                <Text style={[styles.resetOutlineText, { color: colors.text }]}>Reset Filters</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowFilterPanel(false)} style={[styles.applyFiltersBtn, { backgroundColor: "#7dd3fc" }]}>
+                <Text style={styles.applyFiltersText}>Apply Filters</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Header Filter Panel for Products (Matching Web Screenshot 2) */}
+        {showFilterPanel && activeSection === "products" && (
+          <View style={styles.headerFilterExpansion}>
+            {/* Grid Row 1: MIN PRICE & MAX PRICE */}
+            <View style={styles.filterGridRow}>
+              <View style={styles.filterFieldContainer}>
+                <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>MIN PRICE</Text>
+                <View style={[styles.dateInputWrapper, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}>
+                  <Text style={{ fontSize: 13, color: colors.textSecondary, marginRight: 4 }}>₹</Text>
+                  <TextInput
+                    value={productMinPrice}
+                    onChangeText={setProductMinPrice}
+                    keyboardType="numeric"
+                    placeholder="0"
+                    placeholderTextColor={colors.textSecondary + "70"}
+                    style={[styles.filterDateInput, { color: colors.text }]}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.filterFieldContainer}>
+                <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>MAX PRICE</Text>
+                <View style={[styles.dateInputWrapper, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}>
+                  <Text style={{ fontSize: 13, color: colors.textSecondary, marginRight: 4 }}>₹</Text>
+                  <TextInput
+                    value={productMaxPrice}
+                    onChangeText={setProductMaxPrice}
+                    keyboardType="numeric"
+                    placeholder="Any"
+                    placeholderTextColor={colors.textSecondary + "70"}
+                    style={[styles.filterDateInput, { color: colors.text }]}
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* Grid Row 2: STATUS & HSN CODE */}
+            <View style={styles.filterGridRow}>
+              <View style={styles.filterFieldContainer}>
+                <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>STATUS</Text>
+                <TouchableOpacity
+                  onPress={() => setShowProductStatusPicker(true)}
+                  style={[styles.filterSelectBtn, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}
+                >
+                  <Text style={[styles.filterSelectText, { color: colors.text }]} numberOfLines={1}>
+                    {productStatusFilter === "all" ? "All Status" : productStatusFilter === "active" ? "Active" : "Inactive"}
+                  </Text>
+                  <ChevronDown size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.filterFieldContainer}>
+                <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>HSN CODE</Text>
+                <TouchableOpacity
+                  onPress={() => setShowProductHsnPicker(true)}
+                  style={[styles.filterSelectBtn, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}
+                >
+                  <Text style={[styles.filterSelectText, { color: colors.text }]} numberOfLines={1}>
+                    {productHsnFilter === "all" ? "All Products" : productHsnFilter === "with" ? "With HSN Code" : "Without HSN Code"}
+                  </Text>
+                  <ChevronDown size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Reset & Apply */}
+            <View style={styles.filterActionButtonsRow}>
+              <TouchableOpacity onPress={handleResetFilters} style={[styles.resetOutlineBtn, { borderColor: colors.border }]}>
+                <Text style={[styles.resetOutlineText, { color: colors.text }]}>Reset Filters</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowFilterPanel(false)} style={[styles.applyFiltersBtn, { backgroundColor: "#7dd3fc" }]}>
+                <Text style={styles.applyFiltersText}>Apply Filters</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </AppHeader>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -1313,6 +1520,174 @@ export default function ProductsScreen() {
             </View>
           </View>
         </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* 1. Customer Status Modal */}
+      <Modal visible={showCustomerStatusPicker} transparent animationType="fade" onRequestClose={() => setShowCustomerStatusPicker(false)}>
+        <TouchableOpacity activeOpacity={1} style={styles.filterModalOverlay} onPress={() => setShowCustomerStatusPicker(false)}>
+          <View style={[styles.filterModalContent, { backgroundColor: isDark ? "#0f172a" : colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.filterModalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.filterModalTitle, { color: colors.text }]}>Select Status</Text>
+              <TouchableOpacity onPress={() => setShowCustomerStatusPicker(false)} style={{ padding: 4 }}>
+                <X size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            {[
+              { label: "All status", value: "all" },
+              { label: "Active", value: "active" },
+              { label: "Inactive", value: "inactive" },
+            ].map((item) => (
+              <TouchableOpacity
+                key={item.value}
+                style={[styles.pickerOptionItem, customerStatusFilter === item.value && { backgroundColor: colors.primary + "15" }]}
+                onPress={() => { setCustomerStatusFilter(item.value as any); setShowCustomerStatusPicker(false); }}
+              >
+                <Text style={[styles.pickerOptionText, { color: customerStatusFilter === item.value ? colors.primary : colors.text }]}>{item.label}</Text>
+                {customerStatusFilter === item.value && <Check size={18} color={colors.primary} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* 2. Customer Type Modal */}
+      <Modal visible={showCustomerTypePicker} transparent animationType="fade" onRequestClose={() => setShowCustomerTypePicker(false)}>
+        <TouchableOpacity activeOpacity={1} style={styles.filterModalOverlay} onPress={() => setShowCustomerTypePicker(false)}>
+          <View style={[styles.filterModalContent, { backgroundColor: isDark ? "#0f172a" : colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.filterModalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.filterModalTitle, { color: colors.text }]}>Select Customer Type</Text>
+              <TouchableOpacity onPress={() => setShowCustomerTypePicker(false)} style={{ padding: 4 }}>
+                <X size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            {[
+              { label: "All types", value: "all" },
+              { label: "Company", value: "company" },
+              { label: "Individual", value: "individual" },
+            ].map((item) => (
+              <TouchableOpacity
+                key={item.value}
+                style={[styles.pickerOptionItem, customerTypeFilter === item.value && { backgroundColor: colors.primary + "15" }]}
+                onPress={() => { setCustomerTypeFilter(item.value as any); setShowCustomerTypePicker(false); }}
+              >
+                <Text style={[styles.pickerOptionText, { color: customerTypeFilter === item.value ? colors.primary : colors.text }]}>{item.label}</Text>
+                {customerTypeFilter === item.value && <Check size={18} color={colors.primary} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* 3. Customer Invoice Modal */}
+      <Modal visible={showCustomerInvoicePicker} transparent animationType="fade" onRequestClose={() => setShowCustomerInvoicePicker(false)}>
+        <TouchableOpacity activeOpacity={1} style={styles.filterModalOverlay} onPress={() => setShowCustomerInvoicePicker(false)}>
+          <View style={[styles.filterModalContent, { backgroundColor: isDark ? "#0f172a" : colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.filterModalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.filterModalTitle, { color: colors.text }]}>Select Invoice Filter</Text>
+              <TouchableOpacity onPress={() => setShowCustomerInvoicePicker(false)} style={{ padding: 4 }}>
+                <X size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            {[
+              { label: "Any", value: "all" },
+              { label: "With Invoices", value: "with" },
+              { label: "Without Invoices", value: "without" },
+            ].map((item) => (
+              <TouchableOpacity
+                key={item.value}
+                style={[styles.pickerOptionItem, customerInvoiceFilter === item.value && { backgroundColor: colors.primary + "15" }]}
+                onPress={() => { setCustomerInvoiceFilter(item.value as any); setShowCustomerInvoicePicker(false); }}
+              >
+                <Text style={[styles.pickerOptionText, { color: customerInvoiceFilter === item.value ? colors.primary : colors.text }]}>{item.label}</Text>
+                {customerInvoiceFilter === item.value && <Check size={18} color={colors.primary} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* 4. Customer Quotation Modal */}
+      <Modal visible={showCustomerQuotationPicker} transparent animationType="fade" onRequestClose={() => setShowCustomerQuotationPicker(false)}>
+        <TouchableOpacity activeOpacity={1} style={styles.filterModalOverlay} onPress={() => setShowCustomerQuotationPicker(false)}>
+          <View style={[styles.filterModalContent, { backgroundColor: isDark ? "#0f172a" : colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.filterModalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.filterModalTitle, { color: colors.text }]}>Select Quotation Filter</Text>
+              <TouchableOpacity onPress={() => setShowCustomerQuotationPicker(false)} style={{ padding: 4 }}>
+                <X size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            {[
+              { label: "Any", value: "all" },
+              { label: "With Quotations", value: "with" },
+              { label: "Without Quotations", value: "without" },
+            ].map((item) => (
+              <TouchableOpacity
+                key={item.value}
+                style={[styles.pickerOptionItem, customerQuotationFilter === item.value && { backgroundColor: colors.primary + "15" }]}
+                onPress={() => { setCustomerQuotationFilter(item.value as any); setShowCustomerQuotationPicker(false); }}
+              >
+                <Text style={[styles.pickerOptionText, { color: customerQuotationFilter === item.value ? colors.primary : colors.text }]}>{item.label}</Text>
+                {customerQuotationFilter === item.value && <Check size={18} color={colors.primary} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* 5. Product Status Modal */}
+      <Modal visible={showProductStatusPicker} transparent animationType="fade" onRequestClose={() => setShowProductStatusPicker(false)}>
+        <TouchableOpacity activeOpacity={1} style={styles.filterModalOverlay} onPress={() => setShowProductStatusPicker(false)}>
+          <View style={[styles.filterModalContent, { backgroundColor: isDark ? "#0f172a" : colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.filterModalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.filterModalTitle, { color: colors.text }]}>Select Product Status</Text>
+              <TouchableOpacity onPress={() => setShowProductStatusPicker(false)} style={{ padding: 4 }}>
+                <X size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            {[
+              { label: "All Status", value: "all" },
+              { label: "Active", value: "active" },
+              { label: "Inactive", value: "inactive" },
+            ].map((item) => (
+              <TouchableOpacity
+                key={item.value}
+                style={[styles.pickerOptionItem, productStatusFilter === item.value && { backgroundColor: colors.primary + "15" }]}
+                onPress={() => { setProductStatusFilter(item.value as any); setShowProductStatusPicker(false); }}
+              >
+                <Text style={[styles.pickerOptionText, { color: productStatusFilter === item.value ? colors.primary : colors.text }]}>{item.label}</Text>
+                {productStatusFilter === item.value && <Check size={18} color={colors.primary} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* 6. Product HSN Code Modal */}
+      <Modal visible={showProductHsnPicker} transparent animationType="fade" onRequestClose={() => setShowProductHsnPicker(false)}>
+        <TouchableOpacity activeOpacity={1} style={styles.filterModalOverlay} onPress={() => setShowProductHsnPicker(false)}>
+          <View style={[styles.filterModalContent, { backgroundColor: isDark ? "#0f172a" : colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.filterModalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.filterModalTitle, { color: colors.text }]}>Select HSN Code Filter</Text>
+              <TouchableOpacity onPress={() => setShowProductHsnPicker(false)} style={{ padding: 4 }}>
+                <X size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            {[
+              { label: "All Products", value: "all" },
+              { label: "With HSN Code", value: "with" },
+              { label: "Without HSN Code", value: "without" },
+            ].map((item) => (
+              <TouchableOpacity
+                key={item.value}
+                style={[styles.pickerOptionItem, productHsnFilter === item.value && { backgroundColor: colors.primary + "15" }]}
+                onPress={() => { setProductHsnFilter(item.value as any); setShowProductHsnPicker(false); }}
+              >
+                <Text style={[styles.pickerOptionText, { color: productHsnFilter === item.value ? colors.primary : colors.text }]}>{item.label}</Text>
+                {productHsnFilter === item.value && <Check size={18} color={colors.primary} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
@@ -1817,5 +2192,138 @@ const styles = StyleSheet.create({
     color: "#001F2E",
     fontSize: 14,
     fontWeight: "800",
+  },
+  headerFilterExpansion: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    paddingTop: 4,
+  },
+  filterGridRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 12,
+  },
+  filterFieldContainer: {
+    flex: 1,
+  },
+  filterFieldLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
+  filterPriceInput: {
+    height: 42,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    fontSize: 13,
+  },
+  statusChipBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  statusChipText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  filterActionButtonsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginTop: 4,
+  },
+  resetOutlineBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  resetOutlineText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  applyFiltersBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  applyFiltersText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0f172a",
+  },
+  filterModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  filterModalContent: {
+    width: "100%",
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+  },
+  filterModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingBottom: 12,
+    marginBottom: 8,
+    borderBottomWidth: 1,
+  },
+  filterModalTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  pickerOptionItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    marginBottom: 4,
+  },
+  pickerOptionText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  dateInputWrapper: {
+    height: 42,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  filterDateInput: {
+    flex: 1,
+    height: "100%",
+    fontSize: 13,
+    padding: 0,
+    margin: 0,
+  },
+  filterSelectBtn: {
+    height: 42,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  filterSelectText: {
+    fontSize: 13,
+    fontWeight: "500",
+    flex: 1,
   },
 });

@@ -53,4 +53,5 @@ async function bootstrap() {
   console.log(`📚 Swagger documentation available at http://localhost:${port}/api/docs`);
 }
 bootstrap();
-// Force reload
+// Force reload 2
+console.log("Forcing reload");

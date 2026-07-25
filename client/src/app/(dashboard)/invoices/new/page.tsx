@@ -94,6 +94,27 @@ export default function CreateInvoicePage() {
     }
   }, [selectedBranchId, branches]);
 
+  // Fetch default invoice settings for terms
+  useEffect(() => {
+    if (!selectedBranchId || copyFromQuotationId) return;
+    
+    const fetchDefaultSettings = async () => {
+      try {
+        const res = await apiFetch(`/document-settings/${selectedBranchId}?type=INVOICE`);
+        const data = await res.json();
+        if (data && data.settings && data.settings.terms) {
+          setFormData(prev => ({
+            ...prev,
+            termsAndConditions: data.settings.terms
+          }));
+        }
+      } catch (e) {
+        // Ignore errors
+      }
+    };
+    fetchDefaultSettings();
+  }, [selectedBranchId, copyFromQuotationId]);
+
   useEffect(() => {
     if (selectedBranchId && branchTaxConfig.tax > 0) {
       setFormData(prev => ({
