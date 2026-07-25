@@ -448,7 +448,7 @@ export default function CreateQuotationPage() {
 
   if (isLoading) {
     return (
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 z-0 relative overflow-x-hidden selection:bg-primary/30">
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 relative overflow-x-hidden selection:bg-primary/30">
         <div className="flex flex-col items-center justify-center py-32">
           <div className="relative">
             <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
@@ -460,7 +460,7 @@ export default function CreateQuotationPage() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 md:p-8 z-0 relative overflow-x-hidden selection:bg-primary/30 w-full max-w-full min-w-0">
+    <div className="flex-1 overflow-y-auto p-4 md:p-8 relative overflow-x-hidden selection:bg-primary/30 w-full max-w-full min-w-0">
       <style dangerouslySetInnerHTML={{
         __html: `
         @keyframes fadeSlideUp {
@@ -474,7 +474,7 @@ export default function CreateQuotationPage() {
       `}} />
 
       {/* Premium Background */}
-      <div className="fixed inset-0 z-0 bg-surface pointer-events-none">
+      <div className="fixed inset-0 bg-surface pointer-events-none">
         <div className="absolute top-[-10%] left-[-5%] w-[50%] h-[50%] rounded-full bg-primary/5 blur-[120px]"></div>
         <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] rounded-full bg-tertiary/10 blur-[120px]"></div>
         <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-secondary/5 blur-[100px]"></div>
