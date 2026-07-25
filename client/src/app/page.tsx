@@ -51,23 +51,23 @@ export default function LandingPage() {
       {/* Top Navbar */}
       <header className="fixed top-0 w-full z-50 bg-white/80 dark:bg-[#030305]/60 backdrop-blur-xl border-b border-slate-200 dark:border-white/5 transition-all">
         <div className="flex justify-between items-center px-6 py-4 max-w-7xl mx-auto">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-3 cursor-pointer group"
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           >
             <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-[0_0_15px_rgba(34,211,238,0.3)] dark:shadow-[0_0_20px_rgba(34,211,238,0.4)] group-hover:shadow-[0_0_20px_rgba(34,211,238,0.5)] transition-all">
-              <span className="text-white font-bold text-xl">I</span>
+              <span className="text-white font-bold text-xl">B</span>
             </div>
             <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-300 transition-colors">
-              Indux Tech
+              BillTea
             </span>
           </motion.div>
 
           <nav className="hidden md:flex items-center gap-8">
             {['Features', 'Reviews', 'Pricing'].map((item, i) => (
-              <motion.a 
+              <motion.a
                 key={item}
                 href={`#${item.toLowerCase()}`}
                 initial={{ opacity: 0, y: -10 }}
@@ -81,13 +81,13 @@ export default function LandingPage() {
             ))}
           </nav>
 
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-4"
           >
             {/* Theme Toggle Button */}
-            <button 
+            <button
               onClick={toggleTheme}
               className="text-slate-600 dark:text-cyan-400 hover:text-cyan-600 dark:hover:text-cyan-300 transition-colors flex items-center justify-center p-2 rounded-full hover:bg-slate-100 dark:hover:bg-cyan-500/10 active:scale-95"
               aria-label="Toggle Theme"
@@ -98,7 +98,7 @@ export default function LandingPage() {
             </button>
 
             {isUserLoggedIn ? (
-              <button 
+              <button
                 onClick={() => router.push('/home')}
                 className="hidden md:block relative overflow-hidden group bg-transparent border border-cyan-500/50 hover:border-cyan-500 text-cyan-600 dark:text-cyan-300 px-6 py-2 rounded-full font-semibold transition-all duration-300 hover:shadow-[0_0_20px_rgba(34,211,238,0.2)]"
               >
@@ -107,13 +107,13 @@ export default function LandingPage() {
               </button>
             ) : (
               <>
-                <button 
+                <button
                   onClick={() => router.push('/login')}
                   className="hidden md:block text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors text-sm font-semibold"
                 >
                   Login
                 </button>
-                <button 
+                <button
                   onClick={() => router.push('/signup')}
                   className="hidden md:block relative overflow-hidden group bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-6 py-2 rounded-full font-semibold transition-all duration-300 shadow-[0_0_10px_rgba(34,211,238,0.3)] dark:shadow-[0_0_15px_rgba(34,211,238,0.4)] hover:shadow-[0_0_15px_rgba(34,211,238,0.5)] hover:scale-105"
                 >
@@ -122,7 +122,7 @@ export default function LandingPage() {
               </>
             )}
 
-            <button 
+            <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden text-cyan-600 dark:text-cyan-400 p-2"
             >
@@ -134,7 +134,7 @@ export default function LandingPage() {
         {/* Mobile Nav */}
         <AnimatePresence>
           {mobileMenuOpen && (
-            <motion.div 
+            <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
@@ -142,9 +142,9 @@ export default function LandingPage() {
             >
               <div className="flex flex-col p-6 gap-4">
                 {['Features', 'Reviews', 'Pricing'].map((item) => (
-                  <a 
-                    key={item} 
-                    href={`#${item.toLowerCase()}`} 
+                  <a
+                    key={item}
+                    href={`#${item.toLowerCase()}`}
                     onClick={() => setMobileMenuOpen(false)}
                     className="text-lg font-medium text-slate-700 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-cyan-300 transition-colors"
                   >
@@ -153,7 +153,7 @@ export default function LandingPage() {
                 ))}
                 <div className="h-px bg-slate-200 dark:bg-white/10 my-2"></div>
                 {isUserLoggedIn ? (
-                  <button 
+                  <button
                     onClick={() => { setMobileMenuOpen(false); router.push('/home'); }}
                     className="w-full bg-cyan-50 dark:bg-cyan-500/20 border border-cyan-500/50 text-cyan-700 dark:text-cyan-300 py-3 rounded-xl font-semibold flex justify-center items-center gap-2"
                   >
@@ -161,13 +161,13 @@ export default function LandingPage() {
                   </button>
                 ) : (
                   <div className="flex flex-col gap-3">
-                    <button 
+                    <button
                       onClick={() => { setMobileMenuOpen(false); router.push('/login'); }}
                       className="w-full text-slate-700 dark:text-slate-300 font-semibold py-2"
                     >
                       Login
                     </button>
-                    <button 
+                    <button
                       onClick={() => { setMobileMenuOpen(false); router.push('/signup'); }}
                       className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-white py-3 rounded-xl font-semibold shadow-[0_0_15px_rgba(34,211,238,0.4)]"
                     >
@@ -185,7 +185,7 @@ export default function LandingPage() {
         {/* Hero Section */}
         <section className="relative min-h-[90vh] flex items-center justify-center px-6 py-20 overflow-hidden">
           <div className="max-w-5xl mx-auto text-center space-y-8 relative z-10">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5 }}
@@ -198,19 +198,19 @@ export default function LandingPage() {
               Next-Gen Billing Software is Here
             </motion.div>
 
-            <motion.h1 
+            <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.1 }}
               className="text-5xl md:text-7xl lg:text-8xl font-black text-slate-900 dark:text-white tracking-tighter leading-[1.1]"
             >
-              Billing From <br/>
+              Billing From <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 via-blue-600 to-purple-600 dark:from-cyan-400 dark:via-blue-500 dark:to-purple-600 drop-shadow-sm dark:drop-shadow-[0_0_30px_rgba(34,211,238,0.4)]">
                 The Future.
               </span>
             </motion.h1>
 
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.2 }}
@@ -219,14 +219,14 @@ export default function LandingPage() {
               Experience seamless invoicing, smart quotations, and effortless payment tracking, all wrapped in a beautiful interface.
             </motion.p>
 
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.3 }}
               className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8"
             >
-              <button 
-                onClick={() => router.push('/signup')} 
+              <button
+                onClick={() => router.push('/signup')}
                 className="group relative px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-black rounded-full font-bold text-lg overflow-hidden transition-all hover:scale-105 shadow-xl shadow-slate-200/50 dark:shadow-none"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-600 dark:from-cyan-300 dark:to-blue-400 opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -234,7 +234,7 @@ export default function LandingPage() {
                   Launch Platform <span className="material-symbols-outlined text-xl group-hover:translate-x-1 transition-transform">arrow_forward</span>
                 </span>
               </button>
-              
+
               <button className="flex items-center gap-3 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors font-medium group">
                 <div className="h-12 w-12 rounded-full border border-slate-200 dark:border-white/20 flex items-center justify-center bg-white/50 dark:bg-white/5 group-hover:bg-slate-100 dark:group-hover:bg-white/10 group-hover:border-cyan-500/50 transition-all backdrop-blur-md shadow-sm dark:shadow-none">
                   <span className="material-symbols-outlined text-cyan-600 dark:text-cyan-400">play_arrow</span>
@@ -243,14 +243,14 @@ export default function LandingPage() {
               </button>
             </motion.div>
           </div>
-          
+
           {/* Decorative Hero Elements */}
-          <motion.div 
+          <motion.div
             animate={{ y: [0, -20, 0] }}
             transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
             className="absolute top-1/4 left-10 w-24 h-24 bg-gradient-to-br from-purple-500/10 to-transparent rounded-2xl border border-purple-500/20 backdrop-blur-xl rotate-12 hidden lg:block"
           />
-          <motion.div 
+          <motion.div
             animate={{ y: [0, 30, 0], rotate: [0, 45, 0] }}
             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
             className="absolute bottom-1/3 right-10 w-32 h-32 bg-gradient-to-bl from-cyan-500/10 to-transparent rounded-full border border-cyan-500/20 backdrop-blur-xl hidden lg:block"
@@ -266,7 +266,7 @@ export default function LandingPage() {
 
           <div className="grid md:grid-cols-12 gap-6 relative">
             {/* Feature 1 */}
-            <motion.div 
+            <motion.div
               whileHover={{ y: -5 }}
               className="md:col-span-7 bg-white/70 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl p-10 hover:border-cyan-500/50 transition-colors group relative overflow-hidden shadow-xl shadow-slate-200/50 dark:shadow-none backdrop-blur-md"
             >
@@ -279,7 +279,7 @@ export default function LandingPage() {
             </motion.div>
 
             {/* Feature 2 */}
-            <motion.div 
+            <motion.div
               whileHover={{ y: -5 }}
               className="md:col-span-5 bg-white/70 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl p-10 hover:border-purple-500/50 transition-colors group relative overflow-hidden flex flex-col justify-between shadow-xl shadow-slate-200/50 dark:shadow-none backdrop-blur-md"
             >
@@ -294,7 +294,7 @@ export default function LandingPage() {
             </motion.div>
 
             {/* Feature 3 */}
-            <motion.div 
+            <motion.div
               whileHover={{ y: -5 }}
               className="md:col-span-4 bg-white/70 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 rounded-3xl p-10 hover:border-blue-500/50 transition-colors group relative overflow-hidden shadow-xl shadow-slate-200/50 dark:shadow-none backdrop-blur-md"
             >
@@ -306,7 +306,7 @@ export default function LandingPage() {
             </motion.div>
 
             {/* Feature 4 */}
-            <motion.div 
+            <motion.div
               whileHover={{ y: -5 }}
               className="md:col-span-8 bg-gradient-to-br from-white/70 dark:from-white/[0.05] to-transparent border border-slate-200 dark:border-white/10 rounded-3xl p-10 hover:border-emerald-500/50 dark:hover:border-white/30 transition-colors group relative overflow-hidden shadow-xl shadow-slate-200/50 dark:shadow-none backdrop-blur-md"
             >
@@ -324,19 +324,52 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Cross-Platform Support */}
+        <section className="py-20 bg-white dark:bg-white/[0.02] border-y border-slate-200 dark:border-white/5 relative z-10">
+          <div className="max-w-7xl mx-auto px-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="flex flex-col md:flex-row items-center justify-between gap-10"
+            >
+              <div className="text-center md:text-left">
+                <h3 className="text-3xl font-bold text-slate-900 dark:text-white mb-3">Work from anywhere, on any device.</h3>
+                <p className="text-lg text-slate-600 dark:text-slate-400">Available across all platforms to keep your business moving.</p>
+              </div>
+              <div className="flex flex-wrap justify-center gap-6 text-slate-700 dark:text-slate-300">
+                <div className="flex items-center gap-3 font-medium bg-slate-50 dark:bg-[#08080C] px-6 py-4 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm dark:shadow-none">
+                  <span className="material-symbols-outlined text-cyan-500 text-3xl">language</span>
+                  <span className="text-lg">Web</span>
+                </div>
+                <div className="flex items-center gap-3 font-medium bg-slate-50 dark:bg-[#08080C] px-6 py-4 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm dark:shadow-none">
+                  <span className="material-symbols-outlined text-emerald-500 text-3xl">android</span>
+                  <span className="text-lg">Android</span>
+                </div>
+                <div className="flex items-center gap-3 font-medium bg-slate-50 dark:bg-[#08080C] px-6 py-4 rounded-2xl border border-slate-200 dark:border-white/5 opacity-60 relative shadow-sm dark:shadow-none">
+                  <span className="material-symbols-outlined text-slate-800 dark:text-white text-3xl">phone_iphone</span>
+                  <span className="text-lg">iOS</span>
+                  <span className="absolute -top-3 -right-4 text-xs font-bold bg-cyan-100 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 px-3 py-1 rounded-full border border-cyan-200 dark:border-cyan-500/30 whitespace-nowrap">Coming Soon</span>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
         {/* Marquee Testimonials */}
         <section className="py-32 bg-slate-100 dark:bg-black/50 border-y border-slate-200 dark:border-white/5 overflow-hidden" id="reviews">
           <div className="text-center mb-16">
             <h2 className="text-sm font-bold tracking-widest text-cyan-600 dark:text-cyan-400 uppercase mb-4">Community</h2>
             <h3 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white">Loved by business owners.</h3>
           </div>
-          
+
           <div className="relative flex overflow-x-hidden group">
             {/* Gradient masks for smooth fading at edges */}
             <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-slate-100 dark:from-[#030305] to-transparent z-10"></div>
             <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-slate-100 dark:from-[#030305] to-transparent z-10"></div>
-            
-            <motion.div 
+
+            <motion.div
               animate={{ x: ["0%", "-50%"] }}
               transition={{ ease: "linear", duration: 30, repeat: Infinity }}
               className="flex gap-6 px-6 w-max"
@@ -344,7 +377,7 @@ export default function LandingPage() {
               {[...testimonials, ...testimonials].map((t, i) => (
                 <div key={i} className="w-[400px] bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl p-8 hover:bg-slate-50 dark:hover:bg-white/[0.05] transition-colors shrink-0 flex flex-col shadow-lg shadow-slate-200/50 dark:shadow-none">
                   <div className="flex text-cyan-500 dark:text-cyan-400 mb-6">
-                    {[1,2,3,4,5].map(star => <span key={star} className="material-symbols-outlined text-lg">star</span>)}
+                    {[1, 2, 3, 4, 5].map(star => <span key={star} className="material-symbols-outlined text-lg">star</span>)}
                   </div>
                   <p className="text-slate-700 dark:text-slate-300 text-lg font-light leading-relaxed mb-8 flex-grow">"{t.content}"</p>
                   <div className="flex items-center gap-4">
@@ -420,12 +453,12 @@ export default function LandingPage() {
         <div className="px-6 max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex flex-col items-center md:items-start gap-4">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold">I</div>
-              <span className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Indux Tech</span>
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold">B</div>
+              <span className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">BillTea - Indux Technology Product</span>
             </div>
             <p className="text-slate-600 dark:text-slate-500 text-sm max-w-xs text-center md:text-left">Building the future of business management and billing tools.</p>
           </div>
-          
+
           <div className="flex flex-wrap justify-center gap-x-8 gap-y-4">
             {['Privacy Policy', 'Terms of Service', 'Support', 'API Docs'].map(link => (
               <a key={link} href="#" className="text-slate-600 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 text-sm transition-colors">{link}</a>
