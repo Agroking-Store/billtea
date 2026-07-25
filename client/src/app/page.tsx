@@ -29,6 +29,10 @@ export default function LandingPage() {
 
   useEffect(() => {
     setIsUserLoggedIn(isLoggedIn());
+    document.body.classList.add('no-scrollbar');
+    return () => {
+      document.body.classList.remove('no-scrollbar');
+    };
   }, []);
 
   const handleContactSubmit = (e: React.FormEvent) => {

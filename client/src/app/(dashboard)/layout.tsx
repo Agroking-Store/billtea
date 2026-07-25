@@ -16,7 +16,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const { isExpired, daysRemaining, isLoading: isLoadingSub } = useSubscription();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [user, setUser] = useState<{ fullName: string; email: string; role?: string; profilePicture?: string }>({
+  const [user, setUser] = useState<{ fullName: string; email: string; role?: string; profilePicture?: string; company?: { name: string; logo?: string }; companyName?: string; companyLogo?: string }>({
     fullName: 'Sarang Wagh',
     email: 'admin@indux.com',
     role: 'owner',
@@ -82,12 +82,12 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
       `}>
         <div className="flex items-center gap-3 relative border-b border-outline-variant/10 p-4 h-20 shrink-0 overflow-hidden whitespace-nowrap bg-surface-container-lowest/50">
           <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none"></div>
-          <div className="size-10 shrink-0 rounded-full bg-cover bg-center border border-primary/20 shadow-[0_0_15px_rgba(125,211,252,0.15)] z-10 relative">
+          <div className="size-10 shrink-0 rounded-full border border-primary/20 shadow-[0_0_15px_rgba(125,211,252,0.15)] z-10 relative flex items-center justify-center bg-white overflow-hidden">
             <div className="absolute inset-0 bg-primary/20 blur-md rounded-full -z-10"></div>
-            <div className="size-full rounded-full bg-cover bg-center" style={{ backgroundImage: "url('/images/logo.png')" }}></div>
+            <img src={(user.company?.logo || user.companyLogo) ? `${API_BASE.replace('/api/v1', '')}${(user.company?.logo || user.companyLogo)}` : '/images/logo.png'} alt="Company Logo" className="size-full object-cover" />
           </div>
           <div className={`z-10 flex-1 flex flex-col min-w-0 transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
-            <h1 className="text-on-surface font-black text-lg tracking-wide leading-tight truncate font-display">Indux Tech</h1>
+            <h1 className="text-on-surface font-black text-lg tracking-wide leading-tight truncate font-display" title={user.company?.name || user.companyName || 'BillTea'}>{user.company?.name || user.companyName || 'BillTea'}</h1>
             <div className="relative mt-0.5 group w-auto inline-flex items-center">
               {isLoadingBranches ? (
                 <div className="text-primary text-[10px] uppercase tracking-wider font-bold">Loading...</div>
