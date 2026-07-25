@@ -23,6 +23,7 @@ import ProfileHeader from '../../components/ProfileHeader';
 import SettingsItem from '../../components/SettingsItem';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
+import { AppHeader } from '../../components/ui/AppHeader';
 
 const { width } = Dimensions.get('window');
 const isTablet = width > 600;
@@ -86,7 +87,7 @@ export default function SettingsScreen() {
 
       <SafeAreaView style={styles.safeArea}>
         {/* Custom Header Bar */}
-        <View
+         <View
   style={[
     styles.header,
     {
@@ -245,16 +246,6 @@ export default function SettingsScreen() {
               iconColor={colors.tertiary}
               borderColor="rgba(200, 160, 240, 0.15)"
               onPress={() => router.push(('/settings/plan-subscription' as any))}
-            />
-
-            {/* Account Security */}
-            <SettingsItem
-              label="Account Security"
-              subLabel="Password, 2FA"
-              iconName="lock"
-              iconColor={colors.error}
-              borderColor="rgba(255, 107, 107, 0.15)"
-              onPress={() => router.push(('/settings/account-security' as any))}
             />
           </View>
 
@@ -433,20 +424,22 @@ const styles = StyleSheet.create({
 
     marginTop: 24,
   },
-  logoutButton: {
-    paddingVertical: 16,
+ logoutButton: {
+  width: '100%',
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
 
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  paddingVertical: 16,
 
-    alignSelf: 'center',
+  borderRadius: 16,
 
-    backgroundColor: 'transparent',
-  },
-  logoutButtonPressed: {
-    backgroundColor: 'rgba(255, 107, 107, 0.15)',
-  },
+  backgroundColor: 'transparent',
+},
+ logoutButtonPressed: {
+  backgroundColor: 'rgba(255, 107, 107, 0.15)',
+  borderRadius: 16,
+},
   logoutIcon: {
     marginRight: 8,
   },
