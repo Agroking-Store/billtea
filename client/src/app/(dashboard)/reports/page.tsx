@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/auth';
 import { useBranch } from '@/components/BranchProvider';
+import { exportInvoicesPDF, exportInvoicesExcel } from '@/lib/exportUtils';
 
 interface Invoice {
   id: string;
@@ -258,6 +259,63 @@ export default function ReportsPage() {
     }, { totalAmount: 0, totalPaid: 0, totalPending: 0 });
   }, [filteredInvoices]);
 
+  // Export Handlers using active filtered data
+  const handleExportPDF = () => {
+    try {
+      const items = sortedInvoices.map((inv) => ({
+        invoiceNumber: inv.invoiceNumber,
+        date: inv.invoiceDate,
+        customerName: inv.customer?.customerName || '',
+        companyName: inv.customer?.companyName,
+        totalAmount: inv.totals?.grandTotal || 0,
+        paidAmount: inv.amountPaid || 0,
+        pendingAmount: inv.amountDue || 0,
+        status: inv.status === 'UNPAID' ? 'Pending' : (inv.status || 'Pending'),
+      }));
+
+      const customerObj = uniqueCustomers.find(c => c?.id === selectedCustomerId);
+      const filterDetails = {
+        fromDate,
+        toDate,
+        customerName: selectedCustomerId === 'ALL' ? 'All Customers' : (customerObj?.customerName || 'Selected Customer'),
+        status: selectedStatus === 'ALL' ? 'All Status' : (selectedStatus === 'UNPAID' ? 'Pending' : selectedStatus),
+        searchQuery,
+      };
+
+      exportInvoicesPDF(items, { ...stats, totalInvoices: items.length }, filterDetails);
+    } catch (err) {
+      console.error('Export PDF Error:', err);
+    }
+  };
+
+  const handleExportExcel = () => {
+    try {
+      const items = sortedInvoices.map((inv) => ({
+        invoiceNumber: inv.invoiceNumber,
+        date: inv.invoiceDate,
+        customerName: inv.customer?.customerName || '',
+        companyName: inv.customer?.companyName,
+        totalAmount: inv.totals?.grandTotal || 0,
+        paidAmount: inv.amountPaid || 0,
+        pendingAmount: inv.amountDue || 0,
+        status: inv.status === 'UNPAID' ? 'Pending' : (inv.status || 'Pending'),
+      }));
+
+      const customerObj = uniqueCustomers.find(c => c?.id === selectedCustomerId);
+      const filterDetails = {
+        fromDate,
+        toDate,
+        customerName: selectedCustomerId === 'ALL' ? 'All Customers' : (customerObj?.customerName || 'Selected Customer'),
+        status: selectedStatus === 'ALL' ? 'All Status' : (selectedStatus === 'UNPAID' ? 'Pending' : selectedStatus),
+        searchQuery,
+      };
+
+      exportInvoicesExcel(items, { ...stats, totalInvoices: items.length }, filterDetails);
+    } catch (err) {
+      console.error('Export Excel Error:', err);
+    }
+  };
+
   // Get status color
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -394,11 +452,29 @@ export default function ReportsPage() {
                 <h2 className="text-xl font-bold text-on-surface">Filters</h2>
               </div>
               <div className="flex gap-2">
-                <button className="p-2 glass-button-icon rounded-lg hover:bg-primary/10 hover:text-primary transition-colors tooltip cursor-pointer" title="Export PDF">
-                  <span className="material-symbols-outlined">picture_as_pdf</span>
+                <button 
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleExportPDF();
+                  }}
+                  className="p-2 glass-button-icon rounded-lg hover:bg-primary/10 hover:text-primary transition-colors tooltip cursor-pointer" 
+                  title="Export PDF"
+                >
+                  <span className="material-symbols-outlined pointer-events-none">picture_as_pdf</span>
                 </button>
-                <button className="p-2 glass-button-icon rounded-lg hover:bg-primary/10 hover:text-primary transition-colors tooltip cursor-pointer" title="Export Excel">
-                  <span className="material-symbols-outlined">table_view</span>
+                <button 
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleExportExcel();
+                  }}
+                  className="p-2 glass-button-icon rounded-lg hover:bg-primary/10 hover:text-primary transition-colors tooltip cursor-pointer" 
+                  title="Export Excel"
+                >
+                  <span className="material-symbols-outlined pointer-events-none">table_view</span>
                 </button>
               </div>
             </div>
