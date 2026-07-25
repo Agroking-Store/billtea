@@ -26,8 +26,7 @@ function BranchSettingsContent() {
     pincode: "",
     phone: "",
     email: "",
-    tax: 0,
-    taxLabel: "",
+    taxes: [{ label: "", value: 0 }] as { label: string, value: number }[],
     bankName: "",
     accountNumber: "",
     ifscCode: "",
@@ -93,8 +92,7 @@ function BranchSettingsContent() {
       pincode: branch.pincode || "",
       phone: branch.phone || "",
       email: branch.email || "",
-      tax: branch.tax || 0,
-      taxLabel: branch.taxLabel || "",
+      taxes: (Array.isArray(branch.taxes) && branch.taxes.length > 0) ? branch.taxes : [{ label: "", value: 0 }],
       bankName: branch.bankName || "",
       accountNumber: branch.accountNumber || "",
       ifscCode: branch.ifscCode || "",
@@ -111,8 +109,29 @@ function BranchSettingsContent() {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({ 
       ...prev, 
-      [name]: type === 'checkbox' ? checked : (name === 'tax' ? Number(value) : value) 
+      [name]: type === 'checkbox' ? checked : value
     }));
+  };
+
+  const handleTaxChange = (index: number, field: 'label' | 'value', val: string | number) => {
+    const newTaxes = [...formData.taxes];
+    newTaxes[index] = { ...newTaxes[index], [field]: field === 'value' ? Number(val) : val };
+    setFormData(prev => ({ ...prev, taxes: newTaxes }));
+  };
+
+  const addTaxField = () => {
+    if (formData.taxes.length < 5) {
+      setFormData(prev => ({ ...prev, taxes: [...prev.taxes, { label: "", value: 0 }] }));
+    }
+  };
+
+  const removeTaxField = (index: number) => {
+    const newTaxes = [...formData.taxes];
+    newTaxes.splice(index, 1);
+    if (newTaxes.length === 0) {
+       newTaxes.push({ label: "", value: 0 });
+    }
+    setFormData(prev => ({ ...prev, taxes: newTaxes }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -485,27 +504,60 @@ function BranchSettingsContent() {
                         placeholder="e.g. 395007"
                       />
                     </div>
-                    <div className="col-span-1 hidden md:block"></div>
-                    <div>
-                      <label className="block text-sm font-bold text-on-surface mb-2">Tax Label (e.g. GST, VAT)</label>
-                      <input 
-                        type="text" name="taxLabel"
-                        value={formData.taxLabel} onChange={handleInputChange}
-                        className="w-full bg-surface-container border-2 border-transparent rounded-xl px-5 py-4 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all font-medium"
-                        placeholder="e.g. GST"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-on-surface mb-2">Default Tax (%)</label>
-                      <div className="relative">
-                        <input 
-                          type="number" name="tax" min={0} max={100}
-                          value={formData.tax} onChange={handleInputChange}
-                          className="w-full bg-surface-container border-2 border-transparent rounded-xl px-5 py-4 pr-12 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all font-medium"
-                        />
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-surface-container-high rounded-lg flex items-center justify-center">
-                          <span className="text-on-surface-variant font-black text-sm">%</span>
-                        </div>
+                    <div className="md:col-span-2 mt-4 pt-4 border-t border-outline-variant/20">
+                      <div className="flex items-center justify-between mb-4">
+                        <label className="block text-sm font-bold text-on-surface">Tax Settings (Max 5)</label>
+                        {formData.taxes.length < 5 && (
+                          <button 
+                            type="button" 
+                            onClick={addTaxField}
+                            className="text-primary text-sm font-bold flex items-center gap-1 hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">add</span> Add Tax
+                          </button>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-4">
+                        {formData.taxes.map((tax, index) => (
+                          <div key={index} className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
+                            <div className="flex-1 w-full">
+                              <label className="block text-xs font-bold text-on-surface-variant mb-1">Tax Label</label>
+                              <input 
+                                type="text" 
+                                value={tax.label} 
+                                onChange={(e) => handleTaxChange(index, 'label', e.target.value)}
+                                className="w-full bg-surface-container border-2 border-transparent rounded-xl px-4 py-3 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all font-medium text-sm"
+                                placeholder="e.g. CGST @ 9%"
+                              />
+                            </div>
+                            <div className="flex-1 w-full">
+                              <label className="block text-xs font-bold text-on-surface-variant mb-1">Tax Value (%)</label>
+                              <div className="relative">
+                                <input 
+                                  type="number" min={0} max={100} step="0.01"
+                                  value={tax.value} 
+                                  onChange={(e) => handleTaxChange(index, 'value', e.target.value)}
+                                  className="w-full bg-surface-container border-2 border-transparent rounded-xl px-4 py-3 pr-10 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all font-medium text-sm"
+                                  placeholder="0.00"
+                                />
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center opacity-60">
+                                  <span className="font-bold text-sm">%</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="pb-1">
+                              <button 
+                                type="button" 
+                                onClick={() => removeTaxField(index)}
+                                className="w-10 h-10 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-colors shadow-sm"
+                                aria-label="Remove Tax"
+                              >
+                                <span className="material-symbols-outlined text-[20px]">delete</span>
+                              </button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
