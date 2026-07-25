@@ -39,10 +39,15 @@ export default function ThemeSettingsPage() {
   };
 
   const handleColorChange = (key: string, value: string) => {
-    if (theme === "dark") {
+    if (key.startsWith("--quo-")) {
       setDarkThemeData((prev) => ({ ...prev, [key]: value }));
-    } else {
       setLightThemeData((prev) => ({ ...prev, [key]: value }));
+    } else {
+      if (theme === "dark") {
+        setDarkThemeData((prev) => ({ ...prev, [key]: value }));
+      } else {
+        setLightThemeData((prev) => ({ ...prev, [key]: value }));
+      }
     }
   };
 

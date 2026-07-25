@@ -110,10 +110,18 @@ export class PdfService {
     });
     
     let quoTheme: any = {};
-    if (themeSettings && themeSettings.lightTheme) {
+    if (themeSettings) {
+      let light: any = {};
+      let dark: any = {};
       try {
-        quoTheme = typeof themeSettings.lightTheme === 'string' ? JSON.parse(themeSettings.lightTheme) : themeSettings.lightTheme;
+        if (themeSettings.lightTheme) light = typeof themeSettings.lightTheme === 'string' ? JSON.parse(themeSettings.lightTheme) : themeSettings.lightTheme;
       } catch (e) {}
+      try {
+        if (themeSettings.darkTheme) dark = typeof themeSettings.darkTheme === 'string' ? JSON.parse(themeSettings.darkTheme) : themeSettings.darkTheme;
+      } catch (e) {}
+      
+      // Merge dark and light themes so we catch quotation settings regardless of where they were saved
+      quoTheme = { ...dark, ...light };
     }
 
     const getThemeVar = (key: string, defaultVal: string) => quoTheme[key] || defaultVal;
