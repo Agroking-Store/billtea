@@ -12,8 +12,15 @@ export class LoginDto {
     @ApiPropertyOptional({ example: 'john@gmail.com' })
   email?: string;
 
+  @IsOptional()
   @IsString()
   @MinLength(6, { message: 'Password must be at least 6 characters' })
-    @ApiProperty({ example: 'password123' })
-  password: string;
+    @ApiPropertyOptional({ example: 'password123' })
+  password?: string;
+
+  @IsOptional()
+  @IsString()
+    @ApiPropertyOptional({ example: '123456' })
+  otp?: string;
 }
+

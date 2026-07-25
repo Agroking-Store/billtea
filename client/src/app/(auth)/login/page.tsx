@@ -29,7 +29,7 @@ export default function LoginPage() {
     return `+91 ${loginMobileNumber.substring(0, 2)}*** ***${loginMobileNumber.substring(8)}`;
   };
 
-  const handleLoginMobileSubmit = (e: React.FormEvent) => {
+  const handleLoginMobileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginMobileError(null);
     setLoginEmailError(null);
@@ -55,10 +55,18 @@ export default function LoginPage() {
     }
 
     setLoginLoading(true);
-    setTimeout(() => {
+    try {
+      const response = await fetch(`${API_BASE}/auth/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber: loginMobileNumber }),
+      });
+      
+      const data = await response.json();
       setLoginLoading(false);
-      if (loginMobileNumber === '9999999999') {
-        setLoginMobileError('This mobile number has been suspended. Please contact support.');
+
+      if (!response.ok || !data.success) {
+        setLoginMobileError(data.message || 'Failed to send OTP. Please try again.');
         return;
       }
       
@@ -67,7 +75,10 @@ export default function LoginPage() {
         setLoginStep(2);
         setLoginTransitioning(false);
       }, 300);
-    }, 1000);
+    } catch (error) {
+      setLoginLoading(false);
+      setLoginMobileError('Unable to connect to server. Please check your connection.');
+    }
   };
 
   const handleLoginBack = () => {
@@ -154,7 +165,7 @@ export default function LoginPage() {
       return;
     }
 
-    // OTP flow (demo mode)
+    // OTP flow (API mode)
     const enteredOtp = loginOtp.join('');
     if (enteredOtp.length !== 6) {
       setLoginOtpError('Please enter the complete 6-digit verification code.');
@@ -162,32 +173,61 @@ export default function LoginPage() {
     }
 
     setLoginLoading(true);
-    setTimeout(() => {
+    try {
+      const response = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phoneNumber: loginMobileNumber,
+          otp: enteredOtp,
+        }),
+      });
+
+      const data = await response.json();
       setLoginLoading(false);
-      if (enteredOtp !== '123456') {
-        setLoginOtpError('Invalid OTP. Please enter "123456" to log in successfully.');
+
+      if (!response.ok || !data.success) {
+        setLoginOtpError(data.message || 'Login failed. Please try again.');
         return;
       }
 
+      saveAuthData(data.accessToken, data.refreshToken, data.user);
       setLoginSuccess(true);
       setTimeout(() => {
-        router.push('/');
+        router.push('/home');
       }, 2500);
-    }, 1200);
+    } catch (error: any) {
+      setLoginLoading(false);
+      setLoginOtpError('Unable to connect to server. Please check your connection.');
+    }
   };
 
-  const handleLoginResendOtp = () => {
+  const handleLoginResendOtp = async () => {
     setLoginOtpError(null);
     setLoginResendStatus(null);
     setLoginLoading(true);
 
-    setTimeout(() => {
+    try {
+      const response = await fetch(`${API_BASE}/auth/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber: loginMobileNumber }),
+      });
+      
       setLoginLoading(false);
-      setLoginResendStatus('A new 6-digit OTP code has been successfully sent.');
-      setTimeout(() => {
-        setLoginResendStatus(null);
-      }, 4000);
-    }, 800);
+      
+      if (response.ok) {
+        setLoginResendStatus('A new 6-digit OTP code has been successfully sent.');
+        setTimeout(() => {
+          setLoginResendStatus(null);
+        }, 4000);
+      } else {
+        setLoginOtpError('Failed to resend OTP. Please try again.');
+      }
+    } catch (error) {
+      setLoginLoading(false);
+      setLoginOtpError('Unable to connect to server.');
+    }
   };
 
   useEffect(() => {

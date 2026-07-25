@@ -40,14 +40,18 @@ export class AuthService {
   }
 
   async sendOtp(email: string, phoneNumber: string) {
-    const emailOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    const mobileOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const emailOtp = email ? Math.floor(100000 + Math.random() * 900000).toString() : undefined;
+    const mobileOtp = phoneNumber ? Math.floor(100000 + Math.random() * 900000).toString() : undefined;
 
-    this.logger.log(`\n=========================================\n🚨 MOCK OTP GENERATED 🚨\nEmail (${email}): ${emailOtp}\nPhone (${phoneNumber}): ${mobileOtp}\n=========================================`);
+    let logMessage = `\n=========================================\n🚨 MOCK OTP GENERATED 🚨\n`;
+    if (email) logMessage += `Email (${email}): ${emailOtp}\n`;
+    if (phoneNumber) logMessage += `Phone (${phoneNumber}): ${mobileOtp}\n`;
+    logMessage += `=========================================`;
+    this.logger.log(logMessage);
 
     // Store in cache for verification
-    this.otpCache.set(email, emailOtp);
-    this.otpCache.set(phoneNumber, mobileOtp);
+    if (email) this.otpCache.set(email, emailOtp!);
+    if (phoneNumber) this.otpCache.set(phoneNumber, mobileOtp!);
 
     return { success: true, message: 'OTPs sent successfully.' };
   }
@@ -199,6 +203,10 @@ export class AuthService {
       throw new BadRequestException('Phone number or email is required.');
     }
 
+    if (!dto.password && !dto.otp) {
+      throw new BadRequestException('Password or OTP is required.');
+    }
+
     const user = await this.prisma.user.findFirst({
       where: dto.email
         ? { email: dto.email.toLowerCase().trim() }
@@ -214,9 +222,18 @@ export class AuthService {
       throw new ForbiddenException('Your account has been deactivated. Contact your administrator.');
     }
 
-    const isMatch = await bcrypt.compare(dto.password, user.password);
-    if (!isMatch) {
-      throw new UnauthorizedException('Incorrect password. Please try again.');
+    if (dto.password) {
+      const isMatch = await bcrypt.compare(dto.password, user.password);
+      if (!isMatch) {
+        throw new UnauthorizedException('Incorrect password. Please try again.');
+      }
+    } else if (dto.otp) {
+      const target = dto.email ? dto.email.toLowerCase().trim() : dto.phoneNumber;
+      const validOtp = this.otpCache.get(target!);
+      if (!validOtp || validOtp !== dto.otp) {
+        throw new UnauthorizedException('Invalid or expired OTP.');
+      }
+      this.otpCache.delete(target!);
     }
 
     await this.prisma.user.update({
