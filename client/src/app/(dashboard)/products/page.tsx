@@ -397,7 +397,7 @@ export default function ProductsPage() {
 
   return (
     <div
-      className="flex-1 overflow-y-auto p-4 md:p-8 relative overflow-x-hidden selection:bg-primary/30 [&::-webkit-scrollbar]:hidden"
+      className="flex-1 overflow-y-auto p-4 md:p-8 relative overflow-x-hidden selection:bg-primary/30 [&::-webkit-scrollbar]:hidden w-full max-w-full min-w-0"
       style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
     >
       <style dangerouslySetInnerHTML={{
@@ -426,7 +426,7 @@ export default function ProductsPage() {
         <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-secondary/5 blur-[100px]"></div>
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto flex flex-col gap-12 pb-16">
+      <div className="relative z-10 max-w-7xl mx-auto flex flex-col gap-12 pb-16 w-full max-w-full min-w-0">
         {/* Header Section */}
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 animate-fade-slide-up" style={{ animationDelay: '0.1s' }}>
           <div className="max-w-2xl">
@@ -509,31 +509,36 @@ export default function ProductsPage() {
         </div>
 
         {/* Filters Section */}
-        <section className="glass-panel p-6 md:p-8 rounded-3xl relative z-20 overflow-visible animate-fade-slide-up shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]" style={{ animationDelay: '0.25s' }}>
-            
+        <section
+          className="glass-panel rounded-3xl p-6 transition-transform duration-300 hover:-translate-y-1 animate-fade-slide-up relative z-20 overflow-visible shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]"
+          style={{ animationDelay: '0.25s' }}
+        >
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
 
-          <div className="flex items-center justify-between gap-3 mb-6 flex-wrap relative z-10">
+          {/* Header */}
+          <div className="flex items-center justify-between gap-3 mb-6 relative z-10 flex-wrap">
             <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-primary p-2 rounded-lg bg-primary/10">filter_list</span>
+              <span className="material-symbols-outlined text-primary p-2 rounded-lg bg-primary/10">
+                filter_list
+              </span>
               <h2 className="text-xl font-bold text-on-surface">Filters</h2>
-              {activeFilterCount > 0 && (
-                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-on-primary text-[11px] font-bold">
-                  {activeFilterCount}
-                </span>
-              )}
             </div>
-            <div className="flex gap-2">
-            </div>
+            {activeFilterCount > 0 && (
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold">
+                <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                Active
+              </span>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Min Price</label>
+          {/* Filter Controls */}
+          <div className="flex flex-wrap items-end gap-4 lg:gap-5 relative z-10 w-full">
+            <div className="flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[140px] relative">
+              <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">Min Price</label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm font-medium">₹</span>
                 <input
-                  className={`${filterInputClass} pl-8`}
+                  className="glass-input rounded-xl py-2.5 pl-8 pr-4 text-sm font-medium w-full focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface min-h-[42px] border border-outline-variant/30"
                   type="number"
                   min="0"
                   step="0.01"
@@ -543,12 +548,13 @@ export default function ProductsPage() {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Max Price</label>
+
+            <div className="flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[140px] relative">
+              <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">Max Price</label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm font-medium">₹</span>
                 <input
-                  className={`${filterInputClass} pl-8`}
+                  className="glass-input rounded-xl py-2.5 pl-8 pr-4 text-sm font-medium w-full focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface min-h-[42px] border border-outline-variant/30"
                   type="number"
                   min="0"
                   step="0.01"
@@ -558,110 +564,105 @@ export default function ProductsPage() {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Status</label>
-              <div className={`relative ${activeDropdown === 'status' ? 'z-40' : 'z-30'}`}>
+
+            <div className="dropdown-container flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[140px] relative" style={{ zIndex: activeDropdown === 'status' ? 50 : 10 }}>
+              <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">Status</label>
+              <div className="relative">
                 <button
                   type="button"
+                  className="glass-input rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium cursor-pointer w-full focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface text-left flex items-center justify-between min-h-[42px]"
                   onClick={() => setActiveDropdown(activeDropdown === 'status' ? null : 'status')}
-                  className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all flex items-center justify-between font-medium cursor-pointer"
                 >
-                  <span>
+                  <span className="truncate">
                     {statusFilter === 'all' && 'All Status'}
                     {statusFilter === 'active' && 'Active'}
                     {statusFilter === 'inactive' && 'Inactive'}
                   </span>
-                  <span className="material-symbols-outlined text-on-surface-variant text-[18px]">
-                    expand_more
-                  </span>
+                  <span className={`material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary text-[18px] transition-transform duration-200 ${activeDropdown === 'status' ? 'rotate-180' : ''}`}>expand_more</span>
                 </button>
+
                 {activeDropdown === 'status' && (
-                  <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-surface-container-high border border-outline-variant/30 rounded-xl shadow-xl z-50 overflow-hidden py-1 animate-fade-slide-up" style={{ animationDuration: '0.2s' }}>
-                    <button
-                      type="button"
+                  <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
+                    <div
                       onMouseDown={() => { setStatusFilter('all'); setActiveDropdown(null); }}
-                      className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
+                      className={`px-4 py-3 text-sm cursor-pointer transition-colors ${statusFilter === 'all' ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
                     >
                       All Status
-                    </button>
-                    <button
-                      type="button"
+                    </div>
+                    <div
                       onMouseDown={() => { setStatusFilter('active'); setActiveDropdown(null); }}
-                      className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
+                      className={`px-4 py-3 text-sm cursor-pointer transition-colors ${statusFilter === 'active' ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
                     >
                       Active
-                    </button>
-                    <button
-                      type="button"
+                    </div>
+                    <div
                       onMouseDown={() => { setStatusFilter('inactive'); setActiveDropdown(null); }}
-                      className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
+                      className={`px-4 py-3 text-sm cursor-pointer transition-colors ${statusFilter === 'inactive' ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
                     >
                       Inactive
-                    </button>
+                    </div>
                   </div>
                 )}
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">HSN Code</label>
-              <div className={`relative ${activeDropdown === 'hsn' ? 'z-40' : 'z-30'}`}>
+
+            <div className="dropdown-container flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[140px] relative" style={{ zIndex: activeDropdown === 'hsn' ? 50 : 10 }}>
+              <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">HSN Code</label>
+              <div className="relative">
                 <button
                   type="button"
+                  className="glass-input rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium cursor-pointer w-full focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface text-left flex items-center justify-between min-h-[42px]"
                   onClick={() => setActiveDropdown(activeDropdown === 'hsn' ? null : 'hsn')}
-                  className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all flex items-center justify-between font-medium cursor-pointer"
                 >
-                  <span>
+                  <span className="truncate">
                     {hsnFilter === 'all' && 'All Products'}
                     {hsnFilter === 'with' && 'With HSN Code'}
                     {hsnFilter === 'without' && 'Without HSN Code'}
                   </span>
-                  <span className="material-symbols-outlined text-on-surface-variant text-[18px]">
-                    expand_more
-                  </span>
+                  <span className={`material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary text-[18px] transition-transform duration-200 ${activeDropdown === 'hsn' ? 'rotate-180' : ''}`}>expand_more</span>
                 </button>
+
                 {activeDropdown === 'hsn' && (
-                  <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-surface-container-high border border-outline-variant/30 rounded-xl shadow-xl z-50 overflow-hidden py-1 animate-fade-slide-up" style={{ animationDuration: '0.2s' }}>
-                    <button
-                      type="button"
+                  <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
+                    <div
                       onMouseDown={() => { setHsnFilter('all'); setActiveDropdown(null); }}
-                      className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
+                      className={`px-4 py-3 text-sm cursor-pointer transition-colors ${hsnFilter === 'all' ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
                     >
                       All Products
-                    </button>
-                    <button
-                      type="button"
+                    </div>
+                    <div
                       onMouseDown={() => { setHsnFilter('with'); setActiveDropdown(null); }}
-                      className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
+                      className={`px-4 py-3 text-sm cursor-pointer transition-colors ${hsnFilter === 'with' ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
                     >
                       With HSN Code
-                    </button>
-                    <button
-                      type="button"
+                    </div>
+                    <div
                       onMouseDown={() => { setHsnFilter('without'); setActiveDropdown(null); }}
-                      className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
+                      className={`px-4 py-3 text-sm cursor-pointer transition-colors ${hsnFilter === 'without' ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
                     >
                       Without HSN Code
-                    </button>
+                    </div>
                   </div>
                 )}
               </div>
             </div>
-          </div>
 
-          <div className="mt-8 flex flex-wrap gap-4 relative z-10">
-            <button
-              disabled={activeFilterCount === 0}
-              className="w-full sm:w-auto px-6 py-2.5 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface hover:text-on-surface border border-outline-variant/20 hover:border-outline-variant/40 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-on-surface-variant disabled:hover:border-outline-variant/20"
-              onClick={handleClearFilters}
-            >
-              <span className="material-symbols-outlined text-[18px]">undo</span>
-              Reset Filters
-            </button>
+            <div className="w-full lg:w-auto flex justify-end">
+              <button
+                disabled={activeFilterCount === 0}
+                className="glass-button h-[42px] px-6 rounded-xl flex items-center justify-center gap-2 cursor-pointer hover:bg-surface-bright transition-all duration-300 text-sm font-bold text-on-surface hover:text-primary shadow-sm w-full lg:w-auto hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={handleClearFilters}
+                title="Reset Filters"
+              >
+                <span className="material-symbols-outlined text-[18px]">undo</span>
+                Reset
+              </button>
+            </div>
           </div>
         </section>
 
         {/* Glassmorphic Data Table Container */}
-        <div className="glass-panel rounded-3xl overflow-hidden relative z-10 animate-fade-slide-up shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]" style={{ animationDelay: '0.3s' }}>
+        <div className="glass-panel rounded-3xl overflow-hidden relative z-10 animate-fade-slide-up shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)] w-full max-w-full min-w-0" style={{ animationDelay: '0.3s' }}>
           {/* Glow Accent */}
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
 
@@ -710,18 +711,20 @@ export default function ProductsPage() {
           </div>
 
           {/* High-Fidelity Data Table */}
-          <div className="overflow-x-auto w-full">
-            <table className="min-w-[700px] text-left border-separate border-spacing-0">
-              <thead>
-                <tr className="bg-surface-container-low/50 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider border-b border-primary/10">
-                  <th className="px-4 py-3 w-[200px] sm:w-1/4">Product Details</th>
-                  <th className="px-4 py-3 w-[120px] sm:w-1/6">SKU</th>
-                  <th className="px-4 py-3 w-[120px] sm:w-1/6">HSN/Price</th>
-                  <th className="px-4 py-3 w-[100px] sm:w-1/6">Status</th>
-                  <th className="px-4 py-3 w-[100px] sm:w-1/6">Action</th>
+          <div className="hidden md:block overflow-x-auto w-full max-w-full">
+            <table className="w-full text-left text-sm whitespace-nowrap border-separate border-spacing-0">
+              <thead className="text-xs text-on-surface-variant uppercase bg-surface-container-low/50 border-b border-primary/10">
+                <tr>
+                  {renderSortableHeader('Product Details', 'name')}
+                  {renderSortableHeader('SKU', 'sku')}
+                  {renderSortableHeader('HSN/Price', 'price')}
+                  {renderSortableHeader('Status', 'status')}
+                  <th className="px-6 py-4 font-semibold tracking-wider text-right pr-8" scope="col">
+                    Action
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-primary/5 text-xs sm:text-sm break-words">
+              <tbody className="divide-y divide-primary/5">
                 {isLoadingBranches || loading ? (
                   <tr>
                     <td colSpan={5} className="px-4 py-8 text-center text-on-surface-variant">
@@ -743,7 +746,7 @@ export default function ProductsPage() {
                 ) : (
                   paginatedProducts.map((product) => (
                     <tr key={product.id} className="hover:bg-primary/5 transition-colors duration-200 group">
-                      <td className="px-4 py-4 align-middle">
+                      <td className="px-6 py-4 align-middle">
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="relative w-10 h-10 rounded-xl bg-surface border border-outline-variant/30 flex items-center justify-center text-on-surface-variant/40 shadow-sm overflow-hidden shrink-0 group-hover:border-primary/30 transition-all">
                             {product.image ? (
@@ -760,16 +763,16 @@ export default function ProductsPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-4 align-middle truncate font-medium">
+                      <td className="px-6 py-4 align-middle truncate font-medium">
                         {product.skuNumber || <span className="text-on-surface-variant/40 italic">N/A</span>}
                       </td>
-                      <td className="px-4 py-4 align-middle">
+                      <td className="px-6 py-4 align-middle">
                         <div className="flex flex-col">
                           <span className="font-bold text-on-surface">₹ {product.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                           {product.hsnNumber && <span className="text-[11px] text-on-surface-variant/70 mt-0.5">HSN: {product.hsnNumber}</span>}
                         </div>
                       </td>
-                      <td className="px-4 py-4 align-middle">
+                      <td className="px-6 py-4 align-middle">
                         {product.isActive ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border bg-emerald-400/10 text-emerald-400 border-emerald-400/20">
                             Active
@@ -780,8 +783,8 @@ export default function ProductsPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-4 align-middle">
-                        <div className="flex items-center gap-2">
+                      <td className="px-6 py-4 align-middle text-right pr-8">
+                        <div className="flex items-center justify-end gap-2">
                           <button onClick={() => handleOpenEditModal(product)} className="glass-button-icon p-1.5 rounded-lg transition-all hover:text-primary hover:border-primary/30 hover:bg-primary/10 cursor-pointer" title="Edit">
                             <span className="material-symbols-outlined text-[16px]">edit</span>
                           </button>
