@@ -206,6 +206,7 @@ export default function LoginPage() {
     setLoginOtpError(null);
     setLoginResendStatus(null);
     setLoginLoading(true);
+    setLoginOtp(Array(6).fill(''));
 
     try {
       const response = await fetch(`${API_BASE}/auth/send-otp`, {
@@ -218,6 +219,7 @@ export default function LoginPage() {
       
       if (response.ok) {
         setLoginResendStatus('A new 6-digit OTP code has been successfully sent.');
+        otpRefs.current[0]?.focus();
         setTimeout(() => {
           setLoginResendStatus(null);
         }, 4000);
