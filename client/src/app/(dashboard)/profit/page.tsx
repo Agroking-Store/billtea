@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/auth';
 import { useBranch } from '@/components/BranchProvider';
+import { exportProfitPDF, exportProfitExcel } from '@/lib/exportUtils';
 
 interface Invoice {
   invoiceDate: string;
@@ -220,6 +221,61 @@ export default function ProfitReportPage() {
     ? Math.max(0, Math.min((netProfit / totalIncome) * 100, 100))
     : 0;
 
+  // Export handlers using active filtered data
+  const handleExportPDF = () => {
+    try {
+      const items = sortedRows.map((r) => ({
+        date: r.date,
+        income: r.income,
+        expense: r.expense,
+        profit: r.income - r.expense,
+      }));
+
+      const totals = {
+        totalIncome,
+        totalExpense,
+        netProfit,
+      };
+
+      const filterDetails = {
+        fromDate,
+        toDate,
+        searchQuery,
+      };
+
+      exportProfitPDF(items, totals, filterDetails);
+    } catch (err) {
+      console.error('Export Profit PDF Error:', err);
+    }
+  };
+
+  const handleExportExcel = () => {
+    try {
+      const items = sortedRows.map((r) => ({
+        date: r.date,
+        income: r.income,
+        expense: r.expense,
+        profit: r.income - r.expense,
+      }));
+
+      const totals = {
+        totalIncome,
+        totalExpense,
+        netProfit,
+      };
+
+      const filterDetails = {
+        fromDate,
+        toDate,
+        searchQuery,
+      };
+
+      exportProfitExcel(items, totals, filterDetails);
+    } catch (err) {
+      console.error('Export Profit Excel Error:', err);
+    }
+  };
+
   // ---- Search (by formatted date string) ----
   const searchedRows = useMemo(() => {
     if (!searchQuery) return groupedRows;
@@ -377,16 +433,6 @@ export default function ProfitReportPage() {
                 Financial performance and net earnings analysis. Monitor your income and expenses over time.
               </p>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <button className="group relative h-12 px-6 rounded-2xl bg-surface text-on-surface font-bold flex items-center gap-2 overflow-hidden shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 border border-outline-variant/30 hover:border-primary/30 hover:text-primary">
-                <span className="material-symbols-outlined text-[20px]">picture_as_pdf</span>
-                <span>Export PDF</span>
-              </button>
-              <button className="group relative h-12 px-6 rounded-2xl bg-surface text-on-surface font-bold flex items-center gap-2 overflow-hidden shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 border border-outline-variant/30 hover:border-primary/30 hover:text-primary">
-                <span className="material-symbols-outlined text-[20px]">table_view</span>
-                <span>Export Excel</span>
-              </button>
-            </div>
           </header>
 
           {/* Summary Grid */}
@@ -439,11 +485,39 @@ export default function ProfitReportPage() {
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
 
             {/* Header */}
-            <div className="flex items-center gap-3 mb-6 relative z-10">
-              <span className="material-symbols-outlined text-primary p-2 rounded-lg bg-primary/10">
-                filter_list
-              </span>
-              <h2 className="text-xl font-bold text-on-surface">Filters</h2>
+            <div className="flex items-center justify-between gap-3 mb-6 flex-wrap relative z-10">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary p-2 rounded-lg bg-primary/10">
+                  filter_list
+                </span>
+                <h2 className="text-xl font-bold text-on-surface">Filters</h2>
+              </div>
+              <div className="flex gap-2">
+                <button 
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleExportPDF();
+                  }}
+                  className="p-2 glass-button-icon rounded-lg hover:bg-primary/10 hover:text-primary transition-colors tooltip cursor-pointer" 
+                  title="Export PDF"
+                >
+                  <span className="material-symbols-outlined pointer-events-none">picture_as_pdf</span>
+                </button>
+                <button 
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleExportExcel();
+                  }}
+                  className="p-2 glass-button-icon rounded-lg hover:bg-primary/10 hover:text-primary transition-colors tooltip cursor-pointer" 
+                  title="Export Excel"
+                >
+                  <span className="material-symbols-outlined pointer-events-none">table_view</span>
+                </button>
+              </div>
             </div>
 
             {/* Filter Controls */}
