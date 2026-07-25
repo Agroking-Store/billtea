@@ -243,15 +243,15 @@ export default function LoginPage() {
       <div className="w-full max-w-md animate-fade-in">
         {/* Mobile Logo */}
         <div className="flex lg:hidden items-center justify-center space-x-3 text-on-surface mb-10">
-          <img className="h-9 w-9 rounded-xl object-contain border border-primary/20" alt="Indux Logo" src="/logo.jpg" />
-          <span className="text-2xl font-display font-semibold text-glow">Indux Technology</span>
+          <img className="h-9 w-9 rounded-xl object-contain border border-primary/20" alt="BillTea Logo" src="/logo.jpg" />
+          <span className="text-2xl font-display font-semibold text-glow">BillTea</span>
         </div>
 
         <div className="glass-panel-elevated rounded-3xl p-8 sm:p-10 relative overflow-hidden transition-all duration-300">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-70"></div>
           <div className="text-left mb-8">
             <h2 className="font-headline text-3xl font-bold text-on-surface mb-2 tracking-tight">Welcome Back</h2>
-            <p className="text-on-surface-variant text-base">Secure access to your Indux portal</p>
+            <p className="text-on-surface-variant text-base">Secure access to your BillTea portal</p>
           </div>
 
           {/* Step 1: Mobile or Email Input View */}

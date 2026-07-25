@@ -40,10 +40,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <div className="relative z-10 flex items-center space-x-3 text-on-surface pt-8">
             <img 
               className="h-10 w-10 rounded-xl object-contain shadow-lg shadow-primary/10 border border-primary/20" 
-              alt="Indux Logo" 
+              alt="BillTea Logo" 
               src="/logo.jpg" 
             />
-            <span className="text-3xl font-display font-semibold tracking-tight text-glow">Indux Technology</span>
+            <span className="text-3xl font-display font-semibold tracking-tight text-glow">BillTea</span>
           </div>
 
           {/* Dynamic Tagline Paragraph based on active view */}
