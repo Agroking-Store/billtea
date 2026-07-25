@@ -26,6 +26,7 @@ import ProfileHeader from '../../components/ProfileHeader';
 import SettingsItem from '../../components/SettingsItem';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
+import { AppHeader } from '../../components/ui/AppHeader';
 
 const { width } = Dimensions.get('window');
 const isTablet = width > 600;
@@ -100,65 +101,8 @@ export default function SettingsScreen() {
 
       <SafeAreaView style={styles.safeArea}>
         {/* Custom Header Bar */}
-        <View
-          style={[
-            styles.header,
-            {
-              backgroundColor: isDark
-                ? 'rgba(15,21,36,0.65)'
-                : 'rgba(255,255,255,0.95)',
-              borderBottomColor: isDark
-                ? 'rgba(125,211,252,0.12)'
-                : 'rgba(0,0,0,0.08)',
-            },
-          ]}
-        >
-          {Platform.OS === 'ios' && (
-            <BlurView
-              intensity={35}
-              tint={isDark ? 'dark' : 'light'}
-              style={StyleSheet.absoluteFill}
-            />
-          )}
-          <View style={styles.headerContent}>
-            {/* Left Action Button */}
-            <Pressable
-              onPress={() => router.push('/dashboard' as any)}
-              style={({ pressed }) => [
-                styles.headerButton,
-                pressed && styles.headerButtonPressed,
-              ]}
-            >
-              <Home size={24} color={colors.primary} />
-            </Pressable>
-
-            {/* Centered Title */}
-            <View style={styles.titleContainer} pointerEvents="none">
-              <Text style={[styles.headerTitle, { color: colors.primary }]}>BillTea</Text>
-            </View>
-
-            {/* Right Action: Theme Switcher */}
-            <View style={[styles.themeToggle, { backgroundColor: colors.glassBackground, borderColor: colors.glassBorder }]}>
-              {(['System', 'Light', 'Dark'] as const).map((m) => {
-                const isActive = mode === m;
-                return (
-                  <Pressable
-                    key={m}
-                    onPress={() => setMode(m)}
-                    style={[
-                      styles.themeBtn,
-                      isActive && [styles.themeBtnActive, { backgroundColor: colors.surfaceVariant, borderColor: colors.primary + '2E' }]
-                    ]}
-                  >
-                    {m === 'System' && <Laptop size={15} color={isActive ? colors.primary : colors.textSecondary} />}
-                    {m === 'Dark' && <Moon size={15} color={isActive ? colors.primary : colors.textSecondary} />}
-                    {m === 'Light' && <Sun size={15} color={isActive ? colors.primary : colors.textSecondary} />}
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-        </View>
+        
+        <AppHeader title="BILLTEA" />
 
         {/* Scrollable Content */}
         <ScrollView
@@ -179,37 +123,112 @@ export default function SettingsScreen() {
 
           {/* Active Branch Picker Section */}
           <View style={styles.branchWrapper}>
-            <Text style={[styles.branchLabel, { color: colors.textSecondary }]}>
-              ACTIVE BRANCH
-            </Text>
+  <Text style={[styles.branchLabel, { color: colors.textSecondary }]}>
+    ACTIVE BRANCH
+  </Text>
 
-            {isLoadingBranches ? (
-              <ActivityIndicator size="small" color={colors.primary} style={{ alignSelf: 'flex-start', marginVertical: 8 }} />
-            ) : (
-              <Pressable
-                onPress={() => setBranchDropdownOpen(true)}
-                style={({ pressed }) => [
-                  styles.branchBtn,
-                  {
-                    backgroundColor: colors.glassBackground || 'rgba(15, 21, 36, 0.6)',
-                    borderColor: colors.glassBorder || 'rgba(125, 211, 252, 0.15)',
-                  },
-                  pressed && { backgroundColor: 'rgba(125, 211, 252, 0.08)' },
-                ]}
-              >
-                <Text
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                  style={[styles.branchBtnText, { color: colors.primary }]}
-                >
-                  {getDisplayBranchName()}
-                </Text>
+  {isLoadingBranches ? (
+    <ActivityIndicator
+      size="small"
+      color={colors.primary}
+      style={{ alignSelf: 'flex-start', marginVertical: 8 }}
+    />
+  ) : (
+    <View style={styles.branchRow}>
 
-                <ChevronDown size={16} color={colors.primary} />
-              </Pressable>
-            )}
-          </View>
+      {/* Branch Dropdown */}
+      <Pressable
+        onPress={() => setBranchDropdownOpen(true)}
+        style={({ pressed }) => [
+          styles.branchBtn,
+          {
+            backgroundColor:
+              colors.glassBackground || 'rgba(15, 21, 36, 0.6)',
+            borderColor:
+              colors.glassBorder || 'rgba(125, 211, 252, 0.15)',
+          },
+          pressed && {
+            backgroundColor: 'rgba(125, 211, 252, 0.08)',
+          },
+        ]}
+      >
+        <Text
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          style={[styles.branchBtnText, { color: colors.primary }]}
+        >
+          {getDisplayBranchName()}
+        </Text>
 
+        <ChevronDown size={16} color={colors.primary} />
+      </Pressable>
+
+
+      {/* Theme Switcher */}
+      <View
+        style={[
+          styles.themeToggle,
+          {
+            backgroundColor: colors.glassBackground,
+            borderColor: colors.glassBorder,
+          },
+        ]}
+      >
+        {(['System', 'Light', 'Dark'] as const).map((m) => {
+          const isActive = mode === m;
+
+          return (
+            <Pressable
+              key={m}
+              onPress={() => setMode(m)}
+              style={[
+                styles.themeBtn,
+                isActive && {
+                  backgroundColor: colors.surfaceVariant,
+                  borderColor: colors.primary + '2E',
+                },
+              ]}
+            >
+              {m === 'System' && (
+                <Laptop
+                  size={15}
+                  color={
+                    isActive
+                      ? colors.primary
+                      : colors.textSecondary
+                  }
+                />
+              )}
+
+              {m === 'Light' && (
+                <Sun
+                  size={15}
+                  color={
+                    isActive
+                      ? colors.primary
+                      : colors.textSecondary
+                  }
+                />
+              )}
+
+              {m === 'Dark' && (
+                <Moon
+                  size={15}
+                  color={
+                    isActive
+                      ? colors.primary
+                      : colors.textSecondary
+                  }
+                />
+              )}
+            </Pressable>
+          );
+        })}
+      </View>
+
+    </View>
+  )}
+</View>
           {/* 1. Business Settings */}
           <View style={styles.sectionContainer}>
             <Text style={[styles.sectionHeader, { color: colors.text }]}>Business Settings</Text>
@@ -288,14 +307,7 @@ export default function SettingsScreen() {
               borderColor="rgba(200, 160, 240, 0.15)"
               onPress={() => router.push('/settings/plan-subscription' as any)}
             />
-            <SettingsItem
-              label="Account Security"
-              subLabel="Password, 2FA"
-              iconName="lock"
-              iconColor={colors.error}
-              borderColor="rgba(255, 107, 107, 0.15)"
-              onPress={() => router.push('/settings/account-security' as any)}
-            />
+            
           </View>
 
           {/* 5. Preferences & Support */}
@@ -320,13 +332,16 @@ export default function SettingsScreen() {
             />
 
             {/* Logout */}
-            <Animated.View style={[styles.logoutWrapper, { transform: [{ scale: logoutScaleAnim }] }]}>
+            <Animated.View style={[ { transform: [{ scale: logoutScaleAnim }] }]}>
               <Pressable
-                onPress={handleLogout}
-                onPressIn={handleLogoutPressIn}
-                onPressOut={handleLogoutPressOut}
-                style={({ pressed }) => [styles.logoutButton, pressed && styles.logoutButtonPressed]}
-              >
+  onPress={handleLogout}
+  onPressIn={handleLogoutPressIn}
+  onPressOut={handleLogoutPressOut}
+  style={({ pressed }) => [
+    styles.logoutButton,
+    pressed && styles.logoutButtonPressed
+  ]}
+>
                 <MaterialIcons name="logout" size={20} color={colors.error} style={styles.logoutIcon} />
                 <Text style={[styles.logoutText, { color: colors.error }]}>Log Out</Text>
               </Pressable>
@@ -437,7 +452,7 @@ const styles = StyleSheet.create({
   themeToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 20,
+    borderRadius: 8,
     borderWidth: 1,
     padding: 2,
     gap: 2,
@@ -446,7 +461,7 @@ const styles = StyleSheet.create({
   themeBtn: {
     width: 30,
     height: 30,
-    borderRadius: 15,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -476,16 +491,22 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     textTransform: 'uppercase',
   },
-  branchBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    width: '100%',
-  },
+ branchBtn: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  paddingHorizontal: 14,
+  paddingVertical: 12,
+  borderRadius: 12,
+  borderWidth: 1,
+  flex: 1,
+},
+branchRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 10,
+},
   branchBtnText: {
     fontSize: 11,
     fontWeight: '800',
@@ -503,22 +524,19 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     opacity: 0.6,
   },
-  logoutWrapper: {
-    width: '100%',
-    minHeight: 60,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,107,107,0.25)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  logoutButton: {
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+ 
+ logoutButton: {
+  width: '100%',
+  minHeight: 60,
+  borderRadius: 16,
+  borderWidth: 1,
+  borderColor: 'rgba(255,107,107,0.25)',
+  paddingVertical: 16,
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginTop: 24,
+},
   logoutButtonPressed: { backgroundColor: 'rgba(255, 107, 107, 0.15)' },
   logoutIcon: { marginRight: 8 },
   logoutText: {
@@ -576,3 +594,4 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
 });
+
