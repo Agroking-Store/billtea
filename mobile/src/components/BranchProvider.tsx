@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { initAuthStore, subscribeAuth } from '../lib/auth';
+import { apiFetch, initAuthStore, subscribeAuth } from '../lib/auth';
 import { useAuthStore } from '../store/authStore';
 import { apiClient } from '../api/client';
 
@@ -44,40 +44,23 @@ export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const fetchBranches = useCallback(async () => {
     setIsLoadingBranches(true);
     try {
-      // 1. Try retrieving token from Zustand auth store first, then fallback to persistent storage
-      const authState = useAuthStore.getState() as any;
-      let token = authState?.token || authState?.accessToken;
-
-      if (!token) {
-        token = await initAuthStore();
+      let resData: any = null;
+      try {
+        const response = await apiClient.get('/branches?all=true');
+        if (response.status === 200) {
+          resData = response.data;
+        }
+      } catch (err) {
+        console.warn('BranchProvider: apiClient failed, trying apiFetch fallback...', err);
       }
 
-      if (!token) {
-        console.log('BranchProvider: No token found. Branches empty.');
-        setBranches([]);
-        setSelectedBranchIdState(null);
-        setIsLoadingBranches(false);
-        return;
+      if (!resData) {
+        const res = await apiFetch('/branches?all=true');
+        if (res.ok) {
+          resData = await res.json();
+        }
       }
 
-      console.log('BranchProvider: Fetching with token:', token.slice(0, 10) + '...');
-      // 2. Fetch branches using the global axios client
-      const response = await apiClient.get('/branches');
-      console.log('BranchProvider: Response Status:', response.status);
-
-      if (response.status === 401) {
-        console.warn('BranchProvider: Unauthorized response from /branches');
-        setBranches([]);
-        setSelectedBranchIdState(null);
-        setIsLoadingBranches(false);
-        return;
-      }
-
-      if (response.status !== 200) {
-        throw new Error(`HTTP error ${response.status}: ${response.statusText}`);
-      }
-
-      const resData = response.data;
       console.log('Branch Response Received:', resData);
 
       // Robust extraction matching all standard backend response formats

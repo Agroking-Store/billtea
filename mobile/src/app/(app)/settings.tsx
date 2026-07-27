@@ -123,112 +123,111 @@ export default function SettingsScreen() {
 
           {/* Active Branch Picker Section */}
           <View style={styles.branchWrapper}>
-  <Text style={[styles.branchLabel, { color: colors.textSecondary }]}>
-    ACTIVE BRANCH
-  </Text>
+            <Text style={[styles.branchLabel, { color: colors.textSecondary }]}>
+              ACTIVE BRANCH
+            </Text>
 
-  {isLoadingBranches ? (
-    <ActivityIndicator
-      size="small"
-      color={colors.primary}
-      style={{ alignSelf: 'flex-start', marginVertical: 8 }}
-    />
-  ) : (
-    <View style={styles.branchRow}>
+            <View style={styles.branchRow}>
 
-      {/* Branch Dropdown */}
-      <Pressable
-        onPress={() => setBranchDropdownOpen(true)}
-        style={({ pressed }) => [
-          styles.branchBtn,
-          {
-            backgroundColor:
-              colors.glassBackground || 'rgba(15, 21, 36, 0.6)',
-            borderColor:
-              colors.glassBorder || 'rgba(125, 211, 252, 0.15)',
-          },
-          pressed && {
-            backgroundColor: 'rgba(125, 211, 252, 0.08)',
-          },
-        ]}
-      >
-        <Text
-          numberOfLines={1}
-          ellipsizeMode="tail"
-          style={[styles.branchBtnText, { color: colors.primary }]}
-        >
-          {getDisplayBranchName()}
-        </Text>
+              {/* Branch Dropdown */}
+              <Pressable
+                onPress={() => {
+                  refreshBranches();
+                  setBranchDropdownOpen(true);
+                }}
+                style={({ pressed }) => [
+                  styles.branchBtn,
+                  {
+                    backgroundColor:
+                      colors.glassBackground || 'rgba(15, 21, 36, 0.6)',
+                    borderColor:
+                      colors.glassBorder || 'rgba(125, 211, 252, 0.15)',
+                  },
+                  pressed && {
+                    backgroundColor: 'rgba(125, 211, 252, 0.08)',
+                  },
+                ]}
+              >
+                {isLoadingBranches ? (
+                  <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 6 }} />
+                ) : (
+                  <Text
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                    style={[styles.branchBtnText, { color: colors.primary }]}
+                  >
+                    {getDisplayBranchName()}
+                  </Text>
+                )}
 
-        <ChevronDown size={16} color={colors.primary} />
-      </Pressable>
+                <ChevronDown size={16} color={colors.primary} />
+              </Pressable>
 
 
-      {/* Theme Switcher */}
-      <View
-        style={[
-          styles.themeToggle,
-          {
-            backgroundColor: colors.glassBackground,
-            borderColor: colors.glassBorder,
-          },
-        ]}
-      >
-        {(['System', 'Light', 'Dark'] as const).map((m) => {
-          const isActive = mode === m;
+              {/* Theme Switcher */}
+              <View
+                style={[
+                  styles.themeToggle,
+                  {
+                    backgroundColor: colors.glassBackground,
+                    borderColor: colors.glassBorder,
+                  },
+                ]}
+              >
+                {(['System', 'Light', 'Dark'] as const).map((m) => {
+                  const isActive = mode === m;
 
-          return (
-            <Pressable
-              key={m}
-              onPress={() => setMode(m)}
-              style={[
-                styles.themeBtn,
-                isActive && {
-                  backgroundColor: colors.surfaceVariant,
-                  borderColor: colors.primary + '2E',
-                },
-              ]}
-            >
-              {m === 'System' && (
-                <Laptop
-                  size={15}
-                  color={
-                    isActive
-                      ? colors.primary
-                      : colors.textSecondary
-                  }
-                />
-              )}
+                  return (
+                    <Pressable
+                      key={m}
+                      onPress={() => setMode(m)}
+                      style={[
+                        styles.themeBtn,
+                        isActive && {
+                          backgroundColor: colors.surfaceVariant,
+                          borderColor: colors.primary + '2E',
+                        },
+                      ]}
+                    >
+                      {m === 'System' && (
+                        <Laptop
+                          size={18}
+                          color={
+                            isActive
+                              ? colors.primary
+                              : colors.textSecondary
+                          }
+                        />
+                      )}
 
-              {m === 'Light' && (
-                <Sun
-                  size={15}
-                  color={
-                    isActive
-                      ? colors.primary
-                      : colors.textSecondary
-                  }
-                />
-              )}
+                      {m === 'Light' && (
+                        <Sun
+                          size={18}
+                          color={
+                            isActive
+                              ? colors.primary
+                              : colors.textSecondary
+                          }
+                        />
+                      )}
 
-              {m === 'Dark' && (
-                <Moon
-                  size={15}
-                  color={
-                    isActive
-                      ? colors.primary
-                      : colors.textSecondary
-                  }
-                />
-              )}
-            </Pressable>
-          );
-        })}
-      </View>
+                      {m === 'Dark' && (
+                        <Moon
+                          size={18}
+                          color={
+                            isActive
+                              ? colors.primary
+                              : colors.textSecondary
+                          }
+                        />
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </View>
 
-    </View>
-  )}
-</View>
+            </View>
+          </View>
           {/* 1. Business Settings */}
           <View style={styles.sectionContainer}>
             <Text style={[styles.sectionHeader, { color: colors.text }]}>Business Settings</Text>
@@ -358,7 +357,7 @@ export default function SettingsScreen() {
         onRequestClose={() => setBranchDropdownOpen(false)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => setBranchDropdownOpen(false)}>
-          <View style={[styles.modalCard, { backgroundColor: '#0F172A', borderColor: 'rgba(125, 211, 252, 0.25)' }]}>
+          <Pressable style={[styles.modalCard, { backgroundColor: '#0F172A', borderColor: 'rgba(125, 211, 252, 0.25)' }]} onPress={(e) => e.stopPropagation?.()}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>Select Branch</Text>
               <Pressable onPress={() => setBranchDropdownOpen(false)}>
@@ -367,33 +366,52 @@ export default function SettingsScreen() {
             </View>
 
             <ScrollView style={{ maxHeight: 250 }}>
-              {branches?.map((b: Branch) => {
-                const isSelected = String(b.id) === String(selectedBranchId || (branches.length > 0 ? branches[0].id : ''));
-                return (
-                  <Pressable
-                    key={b.id}
-                    onPress={async () => {
-                      await setSelectedBranchId(b.id);
-                      setBranchDropdownOpen(false);
-                    }}
-                    style={({ pressed }) => [
-                      styles.dropdownItem,
-                      isSelected && styles.dropdownItemSelected,
-                      pressed && { backgroundColor: 'rgba(125, 211, 252, 0.15)' },
-                    ]}
-                  >
-                    <Text
-                      numberOfLines={1}
-                      style={[styles.dropdownItemText, { color: isSelected ? colors.primary : colors.text || '#FFFFFF' }]}
+              {isLoadingBranches ? (
+                <View style={{ padding: 20, alignItems: 'center' }}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                </View>
+              ) : branches && branches.length > 0 ? (
+                branches.map((b: Branch) => {
+                  const isSelected = String(b.id) === String(selectedBranchId || (branches.length > 0 ? branches[0].id : ''));
+                  return (
+                    <Pressable
+                      key={b.id}
+                      onPress={async () => {
+                        await setSelectedBranchId(b.id);
+                        setBranchDropdownOpen(false);
+                      }}
+                      style={({ pressed }) => [
+                        styles.dropdownItem,
+                        isSelected && styles.dropdownItemSelected,
+                        pressed && { backgroundColor: 'rgba(125, 211, 252, 0.15)' },
+                      ]}
                     >
-                      {b.name}
-                    </Text>
-                    {isSelected && <Check size={16} color={colors.primary} />}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                        <MaterialIcons name="store" size={18} color={isSelected ? colors.primary : colors.textSecondary} />
+                        <Text
+                          numberOfLines={1}
+                          style={[styles.dropdownItemText, { color: isSelected ? colors.primary : colors.text || '#FFFFFF' }]}
+                        >
+                          {b.name}
+                        </Text>
+                      </View>
+                      {isSelected && <Check size={16} color={colors.primary} />}
+                    </Pressable>
+                  );
+                })
+              ) : (
+                <View style={{ padding: 20, alignItems: 'center' }}>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 8 }}>No branches found in database</Text>
+                  <Pressable
+                    onPress={() => refreshBranches()}
+                    style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: 'rgba(125, 211, 252, 0.15)', borderRadius: 6 }}
+                  >
+                    <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>Retry Loading</Text>
                   </Pressable>
-                );
-              })}
+                </View>
+              )}
             </ScrollView>
-          </View>
+          </Pressable>
         </Pressable>
       </Modal>
     </View>
@@ -452,16 +470,16 @@ const styles = StyleSheet.create({
   themeToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    padding: 2,
-    gap: 2,
+    padding: 3,
+    gap: 3,
     zIndex: 10,
   },
   themeBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 6,
+    width: 36,
+    height: 36,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -491,26 +509,26 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     textTransform: 'uppercase',
   },
- branchBtn: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  paddingHorizontal: 14,
-  paddingVertical: 12,
-  borderRadius: 12,
-  borderWidth: 1,
-  flex: 1,
-},
-branchRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: 10,
-},
+  branchBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    flex: 1,
+  },
+  branchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
   branchBtnText: {
     fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
     flexShrink: 1,
   },
