@@ -166,38 +166,38 @@ export default function BranchSettingsScreen() {
     }
   };
 
-  const handleDeleteBranch = (branch: Branch) => {
+  const handleDeactivateBranch = (branch: Branch) => {
     if (branch.isMainBranch) {
-      Alert.alert('Action Denied', 'Main branch cannot be deleted.');
+      Alert.alert('Action Denied', 'Main branch cannot be deactivated.');
       return;
     }
 
-    const performDelete = async () => {
+    const performDeactivate = async () => {
       try {
         const res = await apiClient.delete(`/branches/${branch.id}`);
         if (res.status === 200 || res.data?.success) {
           await loadBranches();
           await refreshGlobalBranches();
         } else {
-          Alert.alert('Error', res.data?.message || 'Failed to delete branch.');
+          Alert.alert('Error', res.data?.message || 'Failed to deactivate branch.');
         }
       } catch (err: any) {
-        console.error('Delete Branch Error:', err);
-        Alert.alert('Error', err?.response?.data?.message || 'Failed to delete branch.');
+        console.error('Deactivate Branch Error:', err);
+        Alert.alert('Error', err?.response?.data?.message || 'Failed to deactivate branch.');
       }
     };
 
     if (Platform.OS === 'web') {
-      if (window.confirm(`Are you sure you want to delete "${branch.name}"?`)) {
-        performDelete();
+      if (window.confirm(`Are you sure you want to deactivate "${branch.name}"?`)) {
+        performDeactivate();
       }
     } else {
       Alert.alert(
-        'Delete Branch',
-        `Are you sure you want to delete "${branch.name}"?`,
+        'Deactivate Branch',
+        `Are you sure you want to deactivate "${branch.name}"?`,
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: performDelete },
+          { text: 'Deactivate', style: 'destructive', onPress: performDeactivate },
         ]
       );
     }
@@ -315,10 +315,10 @@ export default function BranchSettingsScreen() {
                       <Edit2 color={colors.textSecondary} size={18} />
                     </TouchableOpacity>
 
-                    {/* Delete Branch */}
-                    {!branch.isMainBranch && (
+                    {/* Deactivate Branch */}
+                    {!branch.isMainBranch && branch.isActive && (
                       <TouchableOpacity
-                        onPress={() => handleDeleteBranch(branch)}
+                        onPress={() => handleDeactivateBranch(branch)}
                         style={[styles.actionBtn, { backgroundColor: colors.surfaceVariant + '80' }]}
                       >
                         <Trash2 color={colors.error} size={18} />

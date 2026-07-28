@@ -76,9 +76,11 @@ export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         branchList = resData.data.branches;
       }
 
-      setBranches(branchList);
+      // Filter active branches for selection
+      const activeBranchList = branchList.filter((b: any) => b.isActive !== false);
+      setBranches(activeBranchList.length > 0 ? activeBranchList : branchList);
 
-      if (branchList.length > 0) {
+      if (activeBranchList.length > 0) {
         let savedId: string | null = null;
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
           savedId = localStorage.getItem('selectedBranchId');

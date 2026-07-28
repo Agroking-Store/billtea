@@ -157,21 +157,14 @@ export class BranchesService {
       throw new BadRequestException('Main branch cannot be deleted.');
     }
 
-    try {
-      await this.prisma.branch.delete({
-        where: { id: branchId },
-      });
-    } catch (error) {
-      // Fallback to soft delete if foreign key constraints exist
-      await this.prisma.branch.update({
-        where: { id: branchId },
-        data: { isActive: false },
-      });
-    }
+    await this.prisma.branch.update({
+      where: { id: branchId },
+      data: { isActive: false },
+    });
 
     return {
       success: true,
-      message: 'Branch deleted successfully.',
+      message: 'Branch deactivated successfully.',
     };
   }
 }
