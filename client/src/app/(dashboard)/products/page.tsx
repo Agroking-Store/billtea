@@ -948,23 +948,22 @@ export default function ProductsPage() {
 
       {/* Product Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-background/80 backdrop-blur-md animate-fade-slide-up" style={{ animationDuration: '0.3s' }}>
-          <div className="bg-surface w-full max-w-2xl rounded-[2rem] border border-outline-variant/20 shadow-2xl flex flex-col max-h-[90vh] relative overflow-hidden">
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 sm:p-6 bg-background/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="glass-panel w-full max-w-2xl rounded-3xl border border-primary/20 shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300 relative overflow-hidden">
             {/* Modal Ambient Glow */}
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent"></div>
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-32 bg-primary/5 rounded-full blur-[60px] pointer-events-none"></div>
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-32 bg-primary/10 rounded-full blur-[60px] pointer-events-none"></div>
 
-            <div className="p-4 sm:p-6 sm:px-8 sm:pt-8 sm:pb-6 border-b border-outline-variant/20 flex justify-between items-center relative z-10 bg-surface-container-lowest">
+            <div className="p-6 sm:px-8 sm:pt-8 sm:pb-6 border-b border-primary/10 flex justify-between items-center relative z-10">
               <div>
                 <h2 className="text-2xl font-bold text-on-surface tracking-tight">{editProductId ? 'Edit Product' : 'New Product'}</h2>
                 <p className="text-sm text-on-surface-variant/80 mt-1">{editProductId ? 'Update inventory item details.' : 'Add a new item to your branch inventory.'}</p>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-on-surface transition-all group cursor-pointer border border-outline-variant/30">
+              <button type="button" onClick={() => setIsModalOpen(false)} className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container hover:bg-error/10 text-on-surface-variant hover:text-error transition-all group cursor-pointer">
                 <span className="material-symbols-outlined text-[20px] group-hover:rotate-90 transition-transform">close</span>
               </button>
             </div>
 
-            <div className="p-4 sm:p-6 sm:px-8 overflow-y-auto custom-scrollbar relative z-10 bg-surface">
+            <div className="p-6 sm:px-8 overflow-y-auto custom-scrollbar relative z-10">
               {error && (
                 <div className="mb-6 p-4 bg-error/10 border border-error/20 text-error rounded-xl text-sm flex items-start gap-3 animate-in slide-in-from-top-2">
                   <span className="material-symbols-outlined text-[20px] shrink-0">error</span>
@@ -975,24 +974,24 @@ export default function ProductsPage() {
               <form id="productForm" onSubmit={handleSaveProduct} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2 md:col-span-2">
-                    <label className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                    <label className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-[16px]">inventory_2</span> Product Name *
                     </label>
-                    <input required name="name" value={formData.name} onChange={handleInputChange} className="w-full bg-surface-container border border-outline-variant/30 px-4 py-3 rounded-xl text-sm font-medium text-on-surface placeholder-on-surface-variant/60 focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all" placeholder="e.g. Premium Widget" />
+                    <input required name="name" value={formData.name} onChange={handleInputChange} className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container" placeholder="e.g. Premium Widget" />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                    <label className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-[16px]">payments</span> Selling Price *
                     </label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm font-medium">₹</span>
-                      <input required type="number" step="0.01" min="0" name="price" value={formData.price} onChange={handleInputChange} className="w-full bg-surface-container border border-outline-variant/30 pl-8 pr-4 py-3 rounded-xl text-sm font-medium text-on-surface placeholder-on-surface-variant/60 focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all" placeholder="0.00" />
+                      <input required type="number" step="0.01" min="0" name="price" value={formData.price} onChange={handleInputChange} className="glass-input w-full pl-8 pr-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container" placeholder="0.00" />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                    <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-[16px]">image</span> Default Product Image
                     </label>
                     {editProductId && products.find(p => p.id === editProductId)?.image && (
@@ -1004,40 +1003,40 @@ export default function ProductsPage() {
                         </div>
                       </div>
                     )}
-                    <input type="file" accept="image/*" onChange={handleFileChange} className="w-full text-sm text-on-surface-variant file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-all file:cursor-pointer cursor-pointer border border-outline-variant/30 rounded-xl bg-surface-container" />
+                    <input type="file" accept="image/*" onChange={handleFileChange} className="glass-input w-full text-sm text-on-surface-variant file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-all file:cursor-pointer cursor-pointer border border-outline-variant/30 bg-surface-container/50 hover:bg-surface-container p-2" />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                    <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-[16px]">qr_code_2</span> SKU Number
                     </label>
-                    <input name="skuNumber" value={formData.skuNumber} onChange={handleInputChange} className="w-full bg-surface-container border border-outline-variant/30 px-4 py-3 rounded-xl text-sm font-medium text-on-surface placeholder-on-surface-variant/60 focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all" placeholder="e.g. WDGT-001" />
+                    <input name="skuNumber" value={formData.skuNumber} onChange={handleInputChange} className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container" placeholder="e.g. WDGT-001" />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                    <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-[16px]">account_balance</span> HSN / SAC Code
                     </label>
-                    <input name="hsnNumber" value={formData.hsnNumber} onChange={handleInputChange} className="w-full bg-surface-container border border-outline-variant/30 px-4 py-3 rounded-xl text-sm font-medium text-on-surface placeholder-on-surface-variant/60 focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all" placeholder="e.g. 84439990" />
+                    <input name="hsnNumber" value={formData.hsnNumber} onChange={handleInputChange} className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container" placeholder="e.g. 84439990" />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
                     <span className="material-symbols-outlined text-[16px]">notes</span> Description
                   </label>
-                  <textarea name="description" value={formData.description} onChange={handleInputChange} rows={3} className="w-full bg-surface-container border border-outline-variant/30 px-4 py-3 rounded-xl text-sm font-medium text-on-surface placeholder-on-surface-variant/60 focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all resize-none custom-scrollbar" placeholder="Detailed product description..."></textarea>
+                  <textarea name="description" value={formData.description} onChange={handleInputChange} rows={3} className="glass-input w-full px-4 py-3 rounded-xl text-sm resize-none custom-scrollbar border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container" placeholder="Detailed product description..."></textarea>
                 </div>
               </form>
             </div>
 
-            <div className="p-4 sm:p-6 sm:px-8 border-t border-outline-variant/20 bg-surface-container-lowest flex flex-col sm:flex-row justify-end gap-3 relative z-10">
-              <button type="button" onClick={() => setIsModalOpen(false)} className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-surface-container text-sm font-semibold text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer border border-outline-variant/30 text-center">
+            <div className="p-6 sm:px-8 border-t border-primary/10 flex justify-end gap-4 bg-surface-container/30 relative z-10">
+              <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl glass-button text-sm font-semibold text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer">
                 Cancel
               </button>
-              <button type="submit" form="productForm" disabled={saving} className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-primary text-white text-sm font-bold shadow-[0_0_15px_rgba(125,211,252,0.4)] hover:shadow-[0_0_25px_rgba(125,211,252,0.6)] hover:-translate-y-0.5 transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer">
+              <button type="submit" form="productForm" disabled={saving} className="px-6 py-2.5 rounded-xl bg-primary text-white text-sm font-bold shadow-[0_0_15px_rgba(125,211,252,0.4)] hover:shadow-[0_0_25px_rgba(125,211,252,0.6)] hover:brightness-110 hover:-translate-y-0.5 transition-all disabled:opacity-50 flex items-center gap-2 cursor-pointer">
                 {saving ? (
-                  <><span className="material-symbols-outlined animate-spin text-[18px]">refresh</span> Saving...</>
+                  <><span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> Saving...</>
                 ) : (
                   <><span className="material-symbols-outlined text-[18px]">check_circle</span> Save Product</>
                 )}

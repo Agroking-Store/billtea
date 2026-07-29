@@ -379,25 +379,22 @@ function UserManagementContent() {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-background/80 backdrop-blur-md animate-fade-slide-up" style={{ animationDuration: '0.4s' }}>
-          <div className="bg-surface w-full max-w-3xl max-h-[90vh] flex flex-col rounded-[2rem] relative shadow-2xl shadow-primary/10 border border-outline-variant/20 overflow-hidden">
-            
-            <div className="px-6 py-5 sm:px-8 sm:py-6 border-b border-outline-variant/20 flex justify-between items-center bg-surface-container-lowest">
-              <div className="flex items-center gap-5">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary flex items-center justify-center border border-primary/20 shadow-inner shrink-0">
-                  <span className="material-symbols-outlined text-[24px] sm:text-[28px]">{modalMode === 'create' ? 'person_add' : 'manage_accounts'}</span>
-                </div>
-                <div>
-                  <h2 className="text-xl md:text-3xl font-black text-on-surface tracking-tight">{modalMode === 'create' ? 'Add New Staff' : 'Manage Staff Profile'}</h2>
-                  <p className="text-xs sm:text-sm text-on-surface-variant mt-1 font-medium">{modalMode === 'create' ? 'Create a manager account and assign branches.' : 'Update credentials, status, or branch assignments.'}</p>
-                </div>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 sm:p-6 bg-background/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="glass-panel w-full max-w-3xl rounded-3xl border border-primary/20 shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300 relative overflow-hidden">
+            {/* Modal Ambient Glow */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-32 bg-primary/10 rounded-full blur-[60px] pointer-events-none"></div>
+
+            <div className="p-6 sm:px-8 sm:pt-8 sm:pb-6 border-b border-primary/10 flex justify-between items-center relative z-10">
+              <div>
+                <h2 className="text-2xl font-bold text-on-surface tracking-tight">{modalMode === 'create' ? 'Add New Staff' : 'Manage Staff Profile'}</h2>
+                <p className="text-sm text-on-surface-variant/80 mt-1">{modalMode === 'create' ? 'Create a manager account and assign branches.' : 'Update credentials, status, or branch assignments.'}</p>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full transition-all">
-                <span className="material-symbols-outlined">close</span>
+              <button type="button" onClick={() => setIsModalOpen(false)} className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container hover:bg-error/10 text-on-surface-variant hover:text-error transition-all group cursor-pointer">
+                <span className="material-symbols-outlined text-[20px] group-hover:rotate-90 transition-transform">close</span>
               </button>
             </div>
 
-            <div className="p-6 sm:p-8 overflow-y-auto bg-surface">
+            <div className="p-6 sm:px-8 overflow-y-auto custom-scrollbar relative z-10">
               {formError && (
                 <div className="mb-8 p-5 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 flex items-start gap-4">
                   <span className="material-symbols-outlined mt-0.5 bg-red-500/20 p-1 rounded-full">error</span>
@@ -447,23 +444,23 @@ function UserManagementContent() {
                     </div>
 
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-bold text-on-surface mb-2">Full Name <span className="text-red-500">*</span></label>
-                      <input type="text" name="fullName" required value={formData.fullName} onChange={handleInputChange} className="w-full bg-surface-container border-2 border-transparent rounded-xl px-5 py-4 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all font-medium" placeholder="John Doe" />
+                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2 block">Full Name *</label>
+                      <input type="text" name="fullName" required value={formData.fullName} onChange={handleInputChange} className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container" placeholder="John Doe" />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-on-surface mb-2">Email <span className="text-red-500">*</span></label>
-                      <input type="email" name="email" required value={formData.email} onChange={handleInputChange} className="w-full bg-surface-container border-2 border-transparent rounded-xl px-5 py-4 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all font-medium" placeholder="john@example.com" />
+                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2 block">Email *</label>
+                      <input type="email" name="email" required value={formData.email} onChange={handleInputChange} className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container" placeholder="john@example.com" />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-on-surface mb-2">Phone Number <span className="text-red-500">*</span></label>
-                      <input type="text" name="phoneNumber" required value={formData.phoneNumber} onChange={handleInputChange} className="w-full bg-surface-container border-2 border-transparent rounded-xl px-5 py-4 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all font-medium" placeholder="9876543210" />
+                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2 block">Phone Number *</label>
+                      <input type="text" name="phoneNumber" required value={formData.phoneNumber} onChange={handleInputChange} className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container" placeholder="9876543210" />
                     </div>
                     
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-bold text-on-surface mb-2">
+                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2 block">
                         {modalMode === 'create' ? 'Password *' : 'Reset Password (Leave blank to keep current)'}
                       </label>
-                      <input type="text" name="password" required={modalMode === 'create'} minLength={6} value={formData.password} onChange={handleInputChange} className="w-full bg-surface-container border-2 border-transparent rounded-xl px-5 py-4 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all font-medium" placeholder={modalMode === 'create' ? "Set initial password" : "New password"} />
+                      <input type="text" name="password" required={modalMode === 'create'} minLength={6} value={formData.password} onChange={handleInputChange} className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container" placeholder={modalMode === 'create' ? "Set initial password" : "New password"} />
                     </div>
                   </div>
                 </section>
@@ -496,24 +493,37 @@ function UserManagementContent() {
               </form>
             </div>
 
-            <div className="px-6 py-4 sm:px-8 sm:py-6 border-t border-outline-variant/20 bg-surface-container-lowest flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="p-6 sm:px-8 border-t border-primary/10 flex justify-between items-center gap-4 bg-surface-container/30 relative z-10">
               <div>
                 {modalMode === 'edit' && (
-                  <button type="button" onClick={handleDelete} className="w-full sm:w-auto px-6 py-4 rounded-xl text-base font-bold text-red-500 hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2">
-                    <span className="material-symbols-outlined text-[20px]">delete</span> Delete
+                  <button
+                    type="button"
+                    onClick={() => selectedUserId && handleDeactivate(selectedUserId)}
+                    className="px-6 py-2.5 rounded-xl text-sm font-bold text-error hover:bg-error/10 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">{formData.isActive ? 'block' : 'check_circle'}</span>
+                    {formData.isActive ? 'Deactivate' : 'Activate'}
                   </button>
                 )}
               </div>
-              <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto justify-end">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="w-full sm:w-auto px-8 py-4 rounded-xl text-base font-bold text-on-surface hover:bg-surface-container-high transition-colors">
+              <div className="flex gap-4">
+                <button 
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-6 py-2.5 rounded-xl glass-button text-sm font-semibold text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+                >
                   Cancel
                 </button>
-                <button type="submit" form="staff-form" disabled={isSubmitting} className="w-full sm:w-auto bg-primary text-on-primary px-10 py-4 rounded-xl text-base font-bold transition-all shadow-lg shadow-primary/30 hover:-translate-y-1 hover:shadow-primary/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-3 relative overflow-hidden group">
-                  <div className="absolute inset-0 w-full h-full bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out" />
+                <button 
+                  type="submit"
+                  form="staff-form"
+                  disabled={isSubmitting}
+                  className="px-6 py-2.5 rounded-xl bg-primary text-white text-sm font-bold shadow-[0_0_15px_rgba(125,211,252,0.4)] hover:shadow-[0_0_25px_rgba(125,211,252,0.6)] hover:brightness-110 hover:-translate-y-0.5 transition-all disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                >
                   {isSubmitting ? (
-                    <><span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span> Saving...</>
+                    <><span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> Saving...</>
                   ) : (
-                    <><span className="material-symbols-outlined text-[20px]">save</span> Save Profile</>
+                    <><span className="material-symbols-outlined text-[18px]">check_circle</span> {modalMode === 'create' ? 'Add Staff' : 'Save Changes'}</>
                   )}
                 </button>
               </div>
