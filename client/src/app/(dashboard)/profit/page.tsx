@@ -391,7 +391,7 @@ export default function ProfitReportPage() {
 
   return (
     <>
-      
+
       <div
         className="flex-1 overflow-y-auto p-4 md:p-8 relative overflow-x-hidden selection:bg-primary/30 [&::-webkit-scrollbar]:hidden"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
@@ -479,40 +479,46 @@ export default function ProfitReportPage() {
 
           {/* Filters Section */}
           <section
-            className="glass-panel rounded-3xl p-6 transition-transform duration-300 hover:-translate-y-1 animate-fade-slide-up relative overflow-hidden shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]"
+            className="glass-panel rounded-3xl p-6 transition-transform duration-300 hover:-translate-y-1 animate-fade-slide-up relative z-20 overflow-visible shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]"
             style={{ animationDelay: '0.15s' }}
           >
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
 
             {/* Header */}
-            <div className="flex items-center justify-between gap-3 mb-6 flex-wrap relative z-10">
+            <div className="flex items-center justify-between gap-3 mb-6 relative z-10 flex-wrap">
               <div className="flex items-center gap-3">
                 <span className="material-symbols-outlined text-primary p-2 rounded-lg bg-primary/10">
                   filter_list
                 </span>
                 <h2 className="text-xl font-bold text-on-surface">Filters</h2>
+                {hasActiveFilters && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold">
+                    <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                    Active
+                  </span>
+                )}
               </div>
               <div className="flex gap-2">
-                <button 
+                <button
                   type="button"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     handleExportPDF();
                   }}
-                  className="p-2 glass-button-icon rounded-lg hover:bg-primary/10 hover:text-primary transition-colors tooltip cursor-pointer" 
+                  className="p-2 glass-button-icon rounded-lg hover:bg-primary/10 hover:text-primary transition-colors tooltip cursor-pointer"
                   title="Export PDF"
                 >
                   <span className="material-symbols-outlined pointer-events-none">picture_as_pdf</span>
                 </button>
-                <button 
+                <button
                   type="button"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     handleExportExcel();
                   }}
-                  className="p-2 glass-button-icon rounded-lg hover:bg-primary/10 hover:text-primary transition-colors tooltip cursor-pointer" 
+                  className="p-2 glass-button-icon rounded-lg hover:bg-primary/10 hover:text-primary transition-colors tooltip cursor-pointer"
                   title="Export Excel"
                 >
                   <span className="material-symbols-outlined pointer-events-none">table_view</span>
@@ -521,39 +527,42 @@ export default function ProfitReportPage() {
             </div>
 
             {/* Filter Controls */}
-            <div className="flex flex-wrap items-end gap-6 relative z-10">
-              <div className="flex-1 min-w-[200px]">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-on-surface-variant mb-2 ml-1">
+            <div className="flex flex-wrap items-end gap-4 lg:gap-5 relative z-10 w-full">
+              <div className="flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[140px] relative">
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">
                   From Date
                 </label>
                 <input
-                  className="w-full glass-input rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                  className="glass-input rounded-xl py-2.5 px-4 text-sm font-medium w-full focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface min-h-[42px] border border-outline-variant/30 text-on-surface"
                   type="date"
                   value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
+                  onChange={(e) => { setFromDate(e.target.value); setCurrentPage(1); }}
                 />
               </div>
 
-              <div className="flex-1 min-w-[200px]">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-on-surface-variant mb-2 ml-1">
+              <div className="flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[140px] relative">
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">
                   To Date
                 </label>
                 <input
-                  className="w-full glass-input rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                  className="glass-input rounded-xl py-2.5 px-4 text-sm font-medium w-full focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface min-h-[42px] border border-outline-variant/30 text-on-surface"
                   type="date"
                   value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
+                  onChange={(e) => { setToDate(e.target.value); setCurrentPage(1); }}
                 />
               </div>
 
-              <button
-                onClick={handleResetFilters}
-                disabled={!hasActiveFilters}
-                className="h-[46px] px-6 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface hover:text-on-surface border border-outline-variant/20 hover:border-outline-variant/40 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-on-surface-variant disabled:hover:border-outline-variant/20"
-              >
-                <span className="material-symbols-outlined text-[18px]">undo</span>
-                Reset Filters
-              </button>
+              <div className="w-full lg:w-auto flex justify-end">
+                <button
+                  disabled={!hasActiveFilters}
+                  className="glass-button h-[42px] px-6 rounded-xl flex items-center justify-center gap-2 cursor-pointer hover:bg-surface-bright transition-all duration-300 text-sm font-bold text-on-surface hover:text-primary shadow-sm w-full lg:w-auto hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
+                  onClick={handleResetFilters}
+                  title="Reset Filters"
+                >
+                  <span className="material-symbols-outlined text-[18px]">undo</span>
+                  Reset
+                </button>
+              </div>
             </div>
           </section>
 
