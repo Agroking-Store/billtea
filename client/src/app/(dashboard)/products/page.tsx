@@ -774,13 +774,14 @@ export default function ProductsPage() {
           </div>
 
           {/* High-Fidelity Data Table */}
-          <div className="hidden md:block overflow-x-auto w-full max-w-full">
-            <table className="w-full text-left text-sm whitespace-nowrap border-separate border-spacing-0">
+          <div className="overflow-x-auto w-full max-w-full">
+            <table className="min-w-[800px] w-full text-left text-sm whitespace-nowrap border-separate border-spacing-0">
               <thead className="text-xs text-on-surface-variant uppercase bg-surface-container-low/50 border-b border-primary/10">
                 <tr>
                   {renderSortableHeader('Product Details', 'name')}
                   {renderSortableHeader('SKU', 'sku')}
-                  {renderSortableHeader('HSN/Price', 'price')}
+                  {renderSortableHeader('HSN Code', 'hsn')}
+                  {renderSortableHeader('Price', 'price')}
                   {renderSortableHeader('Status', 'status')}
                   <th className="px-6 py-4 font-semibold tracking-wider text-right pr-8" scope="col">
                     Action
@@ -790,7 +791,7 @@ export default function ProductsPage() {
               <tbody className="divide-y divide-primary/5">
                 {isLoadingBranches || loading ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-on-surface-variant">
+                    <td colSpan={6} className="px-4 py-8 text-center text-on-surface-variant">
                       <div className="flex justify-center items-center gap-2">
                         <span className="material-symbols-outlined animate-spin">refresh</span> Loading products...
                       </div>
@@ -798,7 +799,7 @@ export default function ProductsPage() {
                   </tr>
                 ) : paginatedProducts.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-24 text-center">
+                    <td colSpan={6} className="px-4 py-24 text-center">
                       <div className="w-20 h-20 rounded-full bg-surface-container flex items-center justify-center mx-auto mb-6">
                         <span className="material-symbols-outlined text-4xl text-on-surface-variant opacity-60">inventory_2</span>
                       </div>
@@ -829,11 +830,11 @@ export default function ProductsPage() {
                       <td className="px-6 py-4 align-middle truncate font-medium">
                         {product.skuNumber || <span className="text-on-surface-variant/40 italic">N/A</span>}
                       </td>
+                      <td className="px-6 py-4 align-middle font-medium">
+                        {product.hsnNumber || <span className="text-on-surface-variant/40 italic">N/A</span>}
+                      </td>
                       <td className="px-6 py-4 align-middle">
-                        <div className="flex flex-col">
-                          <span className="font-bold text-on-surface">₹ {product.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                          {product.hsnNumber && <span className="text-[11px] text-on-surface-variant/70 mt-0.5">HSN: {product.hsnNumber}</span>}
-                        </div>
+                        <span className="font-bold text-on-surface">₹ {product.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                       </td>
                       <td className="px-6 py-4 align-middle">
                         {product.isActive ? (
