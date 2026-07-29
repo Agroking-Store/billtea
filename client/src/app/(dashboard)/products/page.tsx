@@ -42,9 +42,11 @@ export default function ProductsPage() {
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [activeDropdown]);
-  const closeDropdowns = useCallback(() => {
-    setActiveDropdown(null);
-  }, []);
+
+  const toggleDropdown = (name: 'status' | 'hsn' | 'entries') => {
+    setActiveDropdown(prev => prev === name ? null : name);
+  };
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -410,14 +412,68 @@ export default function ProductsPage() {
           opacity: 0;
           animation: fadeSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
         }
+        .no-scrollbar {
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+          width: 0;
+          height: 0;
+        }
       `}} />
-
-      {activeDropdown && (
-        <div
-          className="fixed inset-0 z-40 bg-transparent"
-          onClick={closeDropdowns}
-        />
-      )}
+      <style jsx global>{`
+  * {
+    -webkit-tap-highlight-color: transparent !important;
+  }
+  button, th, select, input, a, tr, td, span, div, [role='button'] {
+    -webkit-tap-highlight-color: transparent !important;
+    -webkit-touch-callout: none !important;
+    outline: none !important;
+  }
+  th::selection, th *::selection,
+  button::selection, button *::selection,
+  span::selection {
+    background: transparent !important;
+  }
+  button::-moz-focus-inner {
+    border: 0 !important;
+  }
+  button,
+  button:focus,
+  button:focus-visible,
+  button:active,
+  th,
+  th:focus,
+  th:focus-visible,
+  th:active,
+  select,
+  select:focus,
+  select:focus-visible,
+  select:active,
+  a,
+  a:focus,
+  a:focus-visible,
+  a:active,
+  tr,
+  tr:focus,
+  tr:active,
+  td,
+  td:focus,
+  td:active,
+  span,
+  span:focus,
+  span:active,
+  [role='button'],
+  [role='button']:focus,
+  [role='button']:focus-visible,
+  [role='button']:active {
+    outline: none !important;
+    box-shadow: none !important;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+`}</style>
 
       {/* Premium Background */}
       <div className="fixed inset-0 bg-surface pointer-events-none">
@@ -571,7 +627,7 @@ export default function ProductsPage() {
                 <button
                   type="button"
                   className="glass-input rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium cursor-pointer w-full focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface text-left flex items-center justify-between min-h-[42px]"
-                  onClick={() => setActiveDropdown(activeDropdown === 'status' ? null : 'status')}
+                  onClick={() => toggleDropdown('status')}
                 >
                   <span className="truncate">
                     {statusFilter === 'all' && 'All Status'}
@@ -612,7 +668,7 @@ export default function ProductsPage() {
                 <button
                   type="button"
                   className="glass-input rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium cursor-pointer w-full focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface text-left flex items-center justify-between min-h-[42px]"
-                  onClick={() => setActiveDropdown(activeDropdown === 'hsn' ? null : 'hsn')}
+                  onClick={() => toggleDropdown('hsn')}
                 >
                   <span className="truncate">
                     {hsnFilter === 'all' && 'All Products'}
@@ -668,31 +724,38 @@ export default function ProductsPage() {
 
           {/* Table Controls */}
           <div className="p-6 border-b border-outline-variant/20 flex flex-col sm:flex-row justify-between items-center gap-4 bg-surface-container-lowest">
-            <div className="flex items-center gap-3 text-sm font-medium text-on-surface-variant">
+            <div className="dropdown-container flex items-center gap-3 text-sm font-medium text-on-surface-variant relative" style={{ zIndex: activeDropdown === 'entries' ? 50 : 10 }}>
               <span>Show</span>
-              <div className={`relative ${activeDropdown === 'entries' ? 'z-40' : 'z-30'}`}>
+              <div className="relative">
                 <button
                   type="button"
-                  onClick={() => setActiveDropdown(activeDropdown === 'entries' ? null : 'entries')}
-                  className="bg-surface-container border border-outline-variant/30 rounded-xl py-2 px-4 pr-10 text-on-surface focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 text-sm cursor-pointer hover:bg-surface-container-high transition-all font-semibold flex items-center justify-between min-w-[70px]"
+                  className="glass-input text-sm pl-3 pr-9 py-1.5 rounded-lg text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/50 cursor-pointer bg-surface flex items-center justify-between min-w-[70px]"
+                  onClick={() => toggleDropdown('entries')}
                 >
                   <span>{entriesPerPage}</span>
-                  <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
-                    expand_more
-                  </span>
+                  <span className={`material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant text-[16px] transition-transform duration-200 ${activeDropdown === 'entries' ? 'rotate-180' : ''}`}>expand_more</span>
                 </button>
+
                 {activeDropdown === 'entries' && (
-                  <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-surface-container-high border border-outline-variant/30 rounded-xl shadow-xl z-50 overflow-hidden py-1 animate-fade-slide-up" style={{ animationDuration: '0.2s' }}>
-                    {[10, 25, 50].map((n) => (
-                      <button
-                        key={n}
-                        type="button"
-                        onMouseDown={() => { handleEntriesPerPageChange(n); setActiveDropdown(null); }}
-                        className="w-full px-4 py-2 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
-                      >
-                        {n}
-                      </button>
-                    ))}
+                  <div className="absolute top-full left-0 mt-1 z-[60] bg-surface rounded-lg border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 min-w-[70px]">
+                    <div
+                      onMouseDown={() => { handleEntriesPerPageChange(10); setActiveDropdown(null); }}
+                      className={`px-3 py-2 text-sm cursor-pointer transition-colors ${entriesPerPage === 10 ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
+                    >
+                      10
+                    </div>
+                    <div
+                      onMouseDown={() => { handleEntriesPerPageChange(25); setActiveDropdown(null); }}
+                      className={`px-3 py-2 text-sm cursor-pointer transition-colors ${entriesPerPage === 25 ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
+                    >
+                      25
+                    </div>
+                    <div
+                      onMouseDown={() => { handleEntriesPerPageChange(50); setActiveDropdown(null); }}
+                      className={`px-3 py-2 text-sm cursor-pointer transition-colors ${entriesPerPage === 50 ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
+                    >
+                      50
+                    </div>
                   </div>
                 )}
               </div>
