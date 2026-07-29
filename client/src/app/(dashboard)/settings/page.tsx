@@ -1,78 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import { useBranch } from '../../../components/BranchProvider';
-import { apiFetch } from '../../../lib/auth';
 
 export default function SettingsPage() {
-  const { selectedBranchId } = useBranch();
-  const [showQuotationSettings, setShowQuotationSettings] = useState(false);
-  const [quotationTheme, setQuotationTheme] = useState('INDUX_MODERN');
-  const [themeColor, setThemeColor] = useState('#0ea5e9');
-  const [isSaving, setIsSaving] = useState(false);
-  const [isLoadingSettings, setIsLoadingSettings] = useState(false);
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const toggleDropdown = (name: string) => {
-    setActiveDropdown(prev => prev === name ? null : name);
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('.dropdown-container')) {
-        setActiveDropdown(null);
-      }
-    };
-    if (activeDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [activeDropdown]);
-
-  // Fetch branch details when modal opens
-  useEffect(() => {
-    if (showQuotationSettings && selectedBranchId) {
-      setIsLoadingSettings(true);
-      apiFetch('/branches')
-        .then(res => res.json())
-        .then(data => {
-          if (data.success && data.branches) {
-            const branch = data.branches.find((b: any) => b.id === selectedBranchId);
-            if (branch) {
-              if (branch.quotationTheme) setQuotationTheme(branch.quotationTheme);
-              if (branch.themeColor) setThemeColor(branch.themeColor);
-            }
-          }
-        })
-        .finally(() => setIsLoadingSettings(false));
-    }
-  }, [showQuotationSettings, selectedBranchId]);
-
-  const handleSaveQuotationSettings = async () => {
-    if (!selectedBranchId) return;
-    setIsSaving(true);
-    try {
-      const res = await apiFetch(`/branches/${selectedBranchId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          quotationTheme,
-          themeColor
-        })
-      });
-      if (res.ok) {
-        setShowQuotationSettings(false);
-      } else {
-        alert('Failed to save settings');
-      }
-    } catch (err) {
-      alert('Error saving settings');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   return (
     <>
       
@@ -259,14 +190,14 @@ export default function SettingsPage() {
                   <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform bg-amber-500/10 shadow-[0_0_15px_rgba(245,158,11,0.1)] border border-amber-500/20">
                     <span className="material-symbols-outlined text-3xl">request_quote</span>
                   </div>
-                  <button
-                    onClick={() => setShowQuotationSettings(true)}
-                    className="p-2 rounded-xl text-amber-500 bg-amber-500/10 hover:bg-amber-500/20 transition-colors tooltip tooltip-left"
-                    data-tip="Quick Theme Setup"
-                    title="Quick Theme Setup"
+                  <Link
+                    href="/settings/theme"
+                    className="p-2 rounded-xl text-amber-500 bg-amber-500/10 hover:bg-amber-500/20 transition-colors tooltip tooltip-left cursor-pointer"
+                    data-tip="Quotation Theme Setup"
+                    title="Quotation Theme Setup"
                   >
                     <span className="material-symbols-outlined">brush</span>
-                  </button>
+                  </Link>
                 </div>
                 <h3 className="text-xl font-bold text-on-surface mb-3">Quotation Settings</h3>
                 <p className="text-on-surface-variant text-sm leading-relaxed mb-8 flex-grow">
@@ -327,125 +258,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Quotation Settings Modal - Refined */}
-      {showQuotationSettings && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-fade-slide-up" style={{ animationDuration: '0.3s' }}>
-          <div className="glass-elevated w-full max-w-lg p-6 sm:p-8 rounded-3xl relative border border-primary/20 shadow-[0_0_50px_rgba(125,211,252,0.2)]">
-            <button
-              onClick={() => setShowQuotationSettings(false)}
-              className="absolute top-6 right-6 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high p-2 rounded-full transition-all"
-            >
-              <span className="material-symbols-outlined">close</span>
-            </button>
 
-            <div className="flex items-center gap-4 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                <span className="material-symbols-outlined text-xl">palette</span>
-              </div>
-              <h2 className="text-2xl font-bold text-on-surface">Quotation Theme</h2>
-            </div>
-
-            <p className="text-on-surface-variant text-sm mb-8">Personalize the appearance of your generated Quotation PDFs to match your brand identity.</p>
-
-            {isLoadingSettings ? (
-              <div className="flex justify-center py-12">
-                <span className="material-symbols-outlined animate-spin text-primary text-4xl">progress_activity</span>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-bold text-on-surface mb-2">Layout Layout</label>
-                  <div className="dropdown-container relative w-full" style={{ zIndex: activeDropdown === 'quotationTheme' ? 50 : 10 }}>
-                    <button
-                      type="button"
-                      className="w-full bg-surface-container/50 border border-outline-variant/30 rounded-xl px-4 py-3.5 text-on-surface focus:outline-none focus:border-primary/60 focus:ring-4 focus:ring-primary/10 transition-all cursor-pointer font-medium flex items-center justify-between"
-                      onClick={() => toggleDropdown('quotationTheme')}
-                    >
-                      <span>
-                        {quotationTheme === 'INDUX_MODERN' ? 'Indux Modern (Recommended)' :
-                         quotationTheme === 'CLASSIC' ? 'Classic Corporate' :
-                         quotationTheme === 'MINIMAL' ? 'Minimalist' : 'Select Layout'}
-                      </span>
-                      <span className={`material-symbols-outlined text-on-surface-variant text-[20px] transition-transform duration-200 ${activeDropdown === 'quotationTheme' ? 'rotate-180' : ''}`}>expand_more</span>
-                    </button>
-                    
-                    {activeDropdown === 'quotationTheme' && (
-                      <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-surface rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
-                        {[
-                          { value: 'INDUX_MODERN', label: 'Indux Modern (Recommended)' },
-                          { value: 'CLASSIC', label: 'Classic Corporate' },
-                          { value: 'MINIMAL', label: 'Minimalist' }
-                        ].map(theme => (
-                          <div 
-                            key={theme.value}
-                            onMouseDown={() => { setQuotationTheme(theme.value); setActiveDropdown(null); }} 
-                            className={`px-4 py-3 text-sm cursor-pointer transition-colors ${quotationTheme === theme.value ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
-                          >
-                            {theme.label}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-on-surface mb-2">Brand Accent Color</label>
-                  <div className="flex gap-3 items-center group">
-                    <div className="relative w-14 h-14 rounded-xl overflow-hidden shadow-inner border border-outline-variant/50 cursor-pointer hover:scale-105 transition-transform">
-                      <input
-                        type="color"
-                        value={themeColor}
-                        onChange={(e) => setThemeColor(e.target.value)}
-                        className="absolute inset-[-10px] w-[200%] h-[200%] cursor-pointer bg-transparent border-0 p-0"
-                      />
-                    </div>
-                    <input
-                      type="text"
-                      value={themeColor}
-                      onChange={(e) => setThemeColor(e.target.value)}
-                      className="flex-1 bg-surface-container/50 border border-outline-variant/30 rounded-xl px-4 py-3.5 text-on-surface focus:outline-none focus:border-primary/60 focus:ring-4 focus:ring-primary/10 transition-all uppercase font-mono tracking-wider font-semibold"
-                      placeholder="#0ea5e9"
-                    />
-                  </div>
-                </div>
-
-                {/* Live Preview Sample */}
-                <div className="mt-8 p-6 border border-outline-variant/30 rounded-2xl bg-surface-container/30 relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: themeColor }}></div>
-                  <div className="flex justify-between items-end border-b-2 pb-3 mb-4" style={{ borderColor: themeColor }}>
-                    <div style={{ color: themeColor }} className="text-2xl font-black tracking-widest">QUOTATION</div>
-                    <div className="text-xs text-on-surface-variant font-medium">Prepared For: <span className="text-on-surface">Client Name</span></div>
-                  </div>
-                  <div className="p-3 rounded-lg text-sm font-medium border" style={{ backgroundColor: `${themeColor}10`, color: themeColor, borderColor: `${themeColor}30` }}>
-                    Sample block reflecting your selected accent color.
-                  </div>
-                </div>
-
-                <div className="pt-6 mt-6 flex justify-end gap-3 border-t border-outline-variant/20">
-                  <button
-                    onClick={() => setShowQuotationSettings(false)}
-                    className="px-6 py-3 rounded-xl text-sm font-semibold text-on-surface hover:bg-surface-container-high transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSaveQuotationSettings}
-                    disabled={isSaving}
-                    className="bg-primary hover:bg-primary/90 text-on-primary px-8 py-3 rounded-xl text-sm font-bold transition-all shadow-[0_8px_20px_rgba(3,105,161,0.3)] hover:shadow-[0_12px_25px_rgba(3,105,161,0.4)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 hover:-translate-y-0.5"
-                  >
-                    {isSaving ? (
-                      <><span className="material-symbols-outlined animate-spin text-sm">progress_activity</span> Saving...</>
-                    ) : (
-                      'Save Changes'
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Footer Decoration */}
       <footer className="relative z-10 max-w-7xl mx-auto px-8 pb-8 opacity-40 text-center flex items-center justify-center gap-4">
