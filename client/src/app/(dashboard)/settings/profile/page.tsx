@@ -201,7 +201,8 @@ export default function ProfilePage() {
 
   return (
     <div className="flex-1 overflow-y-auto relative bg-background selection:bg-primary/30">
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @keyframes fadeSlideUp {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
@@ -254,7 +255,7 @@ export default function ProfilePage() {
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   onClick={handleSaveProfile}
                   disabled={saving}
                   className="group relative h-14 px-8 rounded-2xl bg-primary text-on-primary font-bold flex items-center gap-3 overflow-hidden shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none cursor-pointer"
@@ -268,7 +269,7 @@ export default function ProfilePage() {
                 </button>
               </div>
             ) : (
-              <button 
+              <button
                 onClick={() => setEditing(true)}
                 className="group relative h-14 px-8 rounded-2xl bg-primary text-on-primary font-bold flex items-center gap-3 overflow-hidden shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5 cursor-pointer"
               >
@@ -296,7 +297,7 @@ export default function ProfilePage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-slide-up" style={{ animationDelay: '0.2s' }}>
-          
+
           {/* Profile Header Card */}
           <div className="lg:col-span-4 group relative bg-surface border border-outline-variant/30 rounded-[2rem] p-1 overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 h-full order-1">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -457,7 +458,7 @@ export default function ProfilePage() {
                 </div>
                 Organization Details
               </h3>
-              
+
               <div className="space-y-8">
                 {company ? (
                   <div>
@@ -529,9 +530,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Footer */}
-        <div className="mt-16 text-center text-on-surface-variant text-xs opacity-40 uppercase tracking-[0.3em] font-bold">
-          © 2026 Indux Technology • Secure Environment
-        </div>
+
       </div>
     </div>
   );
