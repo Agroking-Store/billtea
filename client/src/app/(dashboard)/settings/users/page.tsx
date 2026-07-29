@@ -498,7 +498,7 @@ function UserManagementContent() {
                 {modalMode === 'edit' && (
                   <button
                     type="button"
-                    onClick={() => selectedUserId && handleDeactivate(selectedUserId)}
+                    onClick={handleDelete}
                     className="px-6 py-2.5 rounded-xl text-sm font-bold text-error hover:bg-error/10 transition-colors flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[18px]">{formData.isActive ? 'block' : 'check_circle'}</span>
