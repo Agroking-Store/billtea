@@ -546,7 +546,7 @@ export default function CreateQuotationScreen() {
             </View>
             
             {showCustomerDropdown && (
-              <ScrollView nestedScrollEnabled style={[styles.dropdownList, { backgroundColor: colors.surfaceVariant, borderColor: colors.glassBorder }]}>
+              <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={[styles.dropdownList, { backgroundColor: colors.surfaceVariant, borderColor: colors.glassBorder }]}>
                 {customerResults.length === 0 ? (
                   <Text style={{ padding: 16, color: colors.textSecondary, textAlign: 'center' }}>No customers found</Text>
                 ) : (
@@ -787,7 +787,7 @@ export default function CreateQuotationScreen() {
                 {/* Product Search Dropdown */}
                 {activeProductSearchIdx === item.id && productSearchRows[item.id]?.show && (
                   <View style={[styles.productSearchDropdown, { backgroundColor: colors.surfaceVariant, borderColor: colors.glassBorder, elevation: 10 }]}>
-                    <ScrollView nestedScrollEnabled style={{ maxHeight: 180 }}>
+                    <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={{ maxHeight: 180 }}>
                       {!(productSearchRows[item.id]?.results?.length > 0) ? (
                         <Text style={{ padding: 16, color: colors.textSecondary, textAlign: 'center' }}>No products found</Text>
                       ) : (
@@ -843,12 +843,26 @@ export default function CreateQuotationScreen() {
 
               <View style={styles.calcInputBlock}>
                 <Text style={[styles.calcLabel, { color: colors.textSecondary }]}>Qty</Text>
-                <TextInput
-                  value={String(item.quantity)}
-                  onChangeText={(val) => updateItem(item.id, 'quantity', parseInt(val) || 1)}
-                  keyboardType="numeric"
-                  style={[styles.calcInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background + '50' }]}
-                />
+                <View style={[styles.qtyCounterContainer, { borderColor: colors.primary + '33', backgroundColor: colors.background + '50' }]}>
+                  <TouchableOpacity 
+                    style={styles.qtyBtn}
+                    onPress={() => updateItem(item.id, 'quantity', Math.max(1, item.quantity - 1))}
+                  >
+                    <Text style={[styles.qtyBtnText, { color: colors.textSecondary }]}>-</Text>
+                  </TouchableOpacity>
+                  <TextInput
+                    value={String(item.quantity)}
+                    onChangeText={(val) => updateItem(item.id, 'quantity', parseInt(val) || 1)}
+                    keyboardType="numeric"
+                    style={[styles.qtyInput, { color: colors.text }]}
+                  />
+                  <TouchableOpacity 
+                    style={styles.qtyBtn}
+                    onPress={() => updateItem(item.id, 'quantity', item.quantity + 1)}
+                  >
+                    <Text style={[styles.qtyBtnText, { color: colors.textSecondary }]}>+</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <View style={styles.calcTotalBlock}>
@@ -1379,6 +1393,33 @@ const styles = StyleSheet.create({
     fontSize: 15,
     paddingHorizontal: 4,
     paddingVertical: 0,
+  },
+  qtyCounterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 8,
+    height: 44,
+    overflow: 'hidden',
+  },
+  qtyBtn: {
+    width: 32,
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  qtyBtnText: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  qtyInput: {
+    flex: 1,
+    height: '100%',
+    textAlign: 'center',
+    fontSize: 15,
+    fontWeight: '600',
+    padding: 0,
   },
   calcTotalText: {
     fontSize: 16,
