@@ -559,6 +559,7 @@ export class InvoiceService {
     return this.prisma.customer.findMany({
       where: {
         companyId,
+        isActive: true,
         ...(branchId ? { branchId } : {}),
         ...queryFilter
       },

@@ -99,19 +99,28 @@ export default function ExpensesPage() {
 
   useEffect(() => {
     if (selectedBranchId) {
-      fetchExpenses();
-      fetchCategories();
+      setLoading(true);
+      Promise.all([fetchExpenses(), fetchCategories()]).finally(() => {
+        setLoading(false);
+      });
     } else {
       setExpenses([]);
       setCategories([]);
+      setLoading(false);
     }
-  }, [selectedBranchId]); // dependencies only
+  }, [selectedBranchId]);
 
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      // Close category autocomplete dropdown in modal
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowCategoryDropdown(false);
+      }
+      
+      // Close any active table/filter dropdowns if clicking outside
+      if (!(event.target as Element).closest('.dropdown-container')) {
+        setActiveDropdown(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -141,7 +150,7 @@ export default function ExpensesPage() {
       return;
     }
     try {
-      const res = await apiFetch(`/categories?branch=${selectedBranchId}`);
+      const res = await apiFetch(`/expense-categories?branchId=${selectedBranchId}`);
       if (res.ok) {
         const data = await res.json();
         setCategories(data || []);
@@ -491,17 +500,11 @@ export default function ExpensesPage() {
   }
 `}</style>
       <div
-        className="flex-1 overflow-y-auto p-4 md:p-8 z-0 relative overflow-x-hidden selection:bg-primary/30 [&::-webkit-scrollbar]:hidden"
+        className="flex-1 overflow-y-auto p-4 md:p-8 relative overflow-x-hidden selection:bg-primary/30 [&::-webkit-scrollbar]:hidden"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        {activeDropdown && (
-          <div
-            className="fixed inset-0 z-40 bg-transparent"
-            onClick={closeDropdowns}
-          />
-        )}
         {/* Premium Background */}
-        <div className="fixed inset-0 z-0 bg-surface pointer-events-none">
+        <div className="fixed inset-0 bg-surface pointer-events-none">
           <div className="absolute top-[-10%] left-[-5%] w-[50%] h-[50%] rounded-full bg-primary/5 blur-[120px]"></div>
           <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] rounded-full bg-tertiary/10 blur-[120px]"></div>
           <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-secondary/5 blur-[100px]"></div>
@@ -530,9 +533,9 @@ export default function ExpensesPage() {
               <button
                 onClick={openNewModal}
                 disabled={!selectedBranchId}
-                className="w-full md:w-auto group relative h-14 px-8 rounded-2xl bg-surface border border-primary/20 text-primary font-bold flex items-center justify-center gap-3 overflow-hidden shadow-[0_0_15px_rgba(125,211,252,0.1)] hover:shadow-[0_0_25px_rgba(125,211,252,0.3)] transition-all hover:-translate-y-0.5 hover:border-primary/40 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full md:w-auto group relative h-14 px-8 rounded-2xl bg-primary text-on-primary font-bold flex items-center justify-center gap-3 overflow-hidden shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <div className="absolute inset-0 w-full h-full bg-primary/5 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out" />
+                <div className="absolute inset-0 w-full h-full bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out" />
                 <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">add</span>
                 <span>Add Expense</span>
               </button>
@@ -585,121 +588,140 @@ export default function ExpensesPage() {
           </div>
 
           {/* Filters Section */}
-          <section className="glass-panel p-6 md:p-8 rounded-3xl relative overflow-visible animate-fade-slide-up shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)] z-20" style={{ animationDelay: '0.2s' }}>
+          <section
+            className="glass-panel rounded-3xl p-6 transition-transform duration-300 hover:-translate-y-1 animate-fade-slide-up relative z-20 overflow-visible shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]"
+            style={{ animationDelay: '0.15s' }}
+          >
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-5 flex-wrap">
-                <div className="flex items-center gap-3">
-                  <span className="material-symbols-outlined text-primary p-2 rounded-lg bg-primary/10 text-[20px]">filter_list</span>
-                  <h2 className="text-xl font-bold text-on-surface">Filters</h2>
-                  {activeFilterCount > 0 && (
-                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-on-primary text-[11px] font-bold">
-                      {activeFilterCount}
+            
+            {/* Header */}
+            <div className="flex items-center justify-between gap-3 mb-6 relative z-10 flex-wrap">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary p-2 rounded-lg bg-primary/10">
+                  filter_list
+                </span>
+                <h2 className="text-xl font-bold text-on-surface">Filters</h2>
+              </div>
+              {activeFilterCount > 0 && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold">
+                  <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                  Active
+                </span>
+              )}
+            </div>
+
+            {/* Filter Controls */}
+            <div className="flex flex-wrap items-end gap-4 lg:gap-5 relative z-10 w-full">
+              
+              <div className="dropdown-container flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[160px] relative" style={{ zIndex: activeDropdown === 'category' ? 50 : 10 }}>
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">
+                  Category
+                </label>
+                <div className="relative">
+                  <button
+                    type="button"
+                    className="glass-input rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium cursor-pointer w-full focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface text-left flex items-center justify-between min-h-[42px]"
+                    onClick={() => setActiveDropdown(activeDropdown === 'category' ? null : 'category')}
+                  >
+                    <span className="truncate">
+                      {filterCategory || 'All categories'}
                     </span>
+                    <span className={`material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary text-[18px] transition-transform duration-200 ${activeDropdown === 'category' ? 'rotate-180' : ''}`}>expand_more</span>
+                  </button>
+
+                  {activeDropdown === 'category' && (
+                    <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
+                      <div
+                        onMouseDown={() => { setFilterCategory(''); setActiveDropdown(null); }}
+                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${filterCategory === '' ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
+                      >
+                        All categories
+                      </div>
+                      {categories.map((c) => (
+                        <div
+                          key={c.id}
+                          onMouseDown={() => { setFilterCategory(c.name); setActiveDropdown(null); }}
+                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${filterCategory === c.name ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
+                        >
+                          {c.name}
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Category</label>
-                  <div className={`relative ${activeDropdown === 'category' ? 'z-40' : 'z-30'}`}>
-                    <button
-                      type="button"
-                      onClick={() => setActiveDropdown(activeDropdown === 'category' ? null : 'category')}
-                      className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all flex items-center justify-between font-medium cursor-pointer"
-                    >
-                      <span>{filterCategory || 'All categories'}</span>
-                      <span className="material-symbols-outlined text-on-surface-variant text-[18px]">expand_more</span>
-                    </button>
-                    {activeDropdown === 'category' && (
-                      <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-surface-container-high border border-outline-variant/30 rounded-xl shadow-xl z-50 overflow-hidden py-1 max-h-60 overflow-y-auto animate-fade-slide-up" style={{ animationDuration: '0.2s' }}>
-                        <button
-                          type="button"
-                          onMouseDown={() => { setFilterCategory(''); setActiveDropdown(null); }}
-                          className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
-                        >
-                          All categories
-                        </button>
-                        {categories.map((c) => (
-                          <button
-                            key={c.id}
-                            type="button"
-                            onMouseDown={() => { setFilterCategory(c.name); setActiveDropdown(null); }}
-                            className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
-                          >
-                            {c.name}
-                          </button>
-                        ))}
+              <div className="dropdown-container flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[160px] relative" style={{ zIndex: activeDropdown === 'method' ? 50 : 10 }}>
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">
+                  Payment Method
+                </label>
+                <div className="relative">
+                  <button
+                    type="button"
+                    className="glass-input rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium cursor-pointer w-full focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface text-left flex items-center justify-between min-h-[42px]"
+                    onClick={() => setActiveDropdown(activeDropdown === 'method' ? null : 'method')}
+                  >
+                    <span className="truncate">
+                      {filterPaymentMethod || 'All methods'}
+                    </span>
+                    <span className={`material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary text-[18px] transition-transform duration-200 ${activeDropdown === 'method' ? 'rotate-180' : ''}`}>expand_more</span>
+                  </button>
+
+                  {activeDropdown === 'method' && (
+                    <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
+                      <div
+                        onMouseDown={() => { setFilterPaymentMethod(''); setActiveDropdown(null); }}
+                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${filterPaymentMethod === '' ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
+                      >
+                        All methods
                       </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Payment Method</label>
-                  <div className={`relative ${activeDropdown === 'method' ? 'z-40' : 'z-30'}`}>
-                    <button
-                      type="button"
-                      onClick={() => setActiveDropdown(activeDropdown === 'method' ? null : 'method')}
-                      className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all flex items-center justify-between font-medium cursor-pointer"
-                    >
-                      <span>{filterPaymentMethod || 'All methods'}</span>
-                      <span className="material-symbols-outlined text-on-surface-variant text-[18px]">expand_more</span>
-                    </button>
-                    {activeDropdown === 'method' && (
-                      <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-surface-container-high border border-outline-variant/30 rounded-xl shadow-xl z-50 overflow-hidden py-1 animate-fade-slide-up" style={{ animationDuration: '0.2s' }}>
-                        <button
-                          type="button"
-                          onMouseDown={() => { setFilterPaymentMethod(''); setActiveDropdown(null); }}
-                          className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
+                      {['Cash', 'UPI', 'Bank Transfer', 'Cheque'].map((method) => (
+                        <div
+                          key={method}
+                          onMouseDown={() => { setFilterPaymentMethod(method); setActiveDropdown(null); }}
+                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${filterPaymentMethod === method ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
                         >
-                          All methods
-                        </button>
-                        {['Cash', 'UPI', 'Bank Transfer', 'Cheque'].map((method) => (
-                          <button
-                            key={method}
-                            type="button"
-                            onMouseDown={() => { setFilterPaymentMethod(method); setActiveDropdown(null); }}
-                            className="w-full px-4 py-3 text-left text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
-                          >
-                            {method}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2 relative">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">From Date</label>
-                  <input
-                    type="date"
-                    value={filterDateFrom}
-                    onChange={(e) => setFilterDateFrom(e.target.value)}
-                    className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                  />
-                </div>
-
-                <div className="space-y-2 relative">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">To Date</label>
-                  <input
-                    type="date"
-                    value={filterDateTo}
-                    onChange={(e) => setFilterDateTo(e.target.value)}
-                    className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                  />
+                          {method}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="mt-8 flex flex-wrap gap-4 relative z-10">
+              <div className="flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[140px]">
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">
+                  From Date
+                </label>
+                <input
+                  className="glass-input rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface w-full min-h-[42px]"
+                  type="date"
+                  value={filterDateFrom}
+                  onChange={(e) => setFilterDateFrom(e.target.value)}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[140px]">
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">
+                  To Date
+                </label>
+                <input
+                  className="glass-input rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface w-full min-h-[42px]"
+                  type="date"
+                  value={filterDateTo}
+                  onChange={(e) => setFilterDateTo(e.target.value)}
+                />
+              </div>
+
+              <div className="w-full lg:w-auto flex justify-end">
                 <button
                   disabled={activeFilterCount === 0}
+                  className="glass-button h-[42px] px-6 rounded-xl flex items-center justify-center gap-2 cursor-pointer hover:bg-surface-bright transition-all duration-300 text-sm font-bold text-on-surface hover:text-primary shadow-sm w-full lg:w-auto hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
                   onClick={clearFilters}
-                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface hover:text-on-surface border border-outline-variant/20 hover:border-outline-variant/40 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-on-surface-variant disabled:hover:border-outline-variant/20"
+                  title="Reset Filters"
                 >
                   <span className="material-symbols-outlined text-[18px]">undo</span>
-                  Reset Filters
+                  Reset
                 </button>
               </div>
             </div>
@@ -714,7 +736,7 @@ export default function ExpensesPage() {
               <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
                 <div className="flex items-center gap-2 text-sm text-on-surface-variant">
                   <span>Show</span>
-                  <div className={`relative ${activeDropdown === 'entries' ? 'z-40' : 'z-30'}`}>
+                  <div className={`dropdown-container relative ${activeDropdown === 'entries' ? 'z-40' : 'z-30'}`}>
                     <button
                       type="button"
                       onClick={() => setActiveDropdown(activeDropdown === 'entries' ? null : 'entries')}
@@ -798,7 +820,86 @@ export default function ExpensesPage() {
                 </thead>
 
                 <tbody className="divide-y divide-primary/5 text-xs sm:text-sm break-words">
-                  {/* keep your loading, empty, and expense rows here unchanged */}
+                  {isLoadingBranches || loading ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-8 text-center text-on-surface-variant">
+                        <div className="flex justify-center items-center gap-2">
+                          <span className="material-symbols-outlined animate-spin">refresh</span> Loading expenses...
+                        </div>
+                      </td>
+                    </tr>
+                  ) : paginatedExpenses.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-24 text-center">
+                        <div className="w-24 h-24 rounded-full bg-surface-container flex items-center justify-center mx-auto mb-6">
+                          <span className="material-symbols-outlined text-5xl text-on-surface-variant opacity-60">search_off</span>
+                        </div>
+                        <h3 className="text-2xl text-on-surface font-bold mb-3">No expenses found</h3>
+                        <p className="text-on-surface-variant max-w-md mx-auto text-lg">Try adjusting your filters or adding a new expense.</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedExpenses.map((expense) => (
+                      <tr key={expense.id} className="hover:bg-primary/5 transition-colors duration-200">
+                        <td className="px-2 py-2 sm:px-4 sm:py-3 text-on-surface-variant font-medium">
+                          {new Date(expense.date).toLocaleDateString('en-IN', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </td>
+                        <td className="px-2 py-2 sm:px-4 sm:py-3 font-bold text-on-surface">
+                          ₹ {expense.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="px-2 py-2 sm:px-4 sm:py-3">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide bg-surface border border-outline-variant/30 text-on-surface-variant">
+                            {expense.paymentMethod}
+                          </span>
+                        </td>
+                        <td className="px-2 py-2 sm:px-4 sm:py-3 max-w-[200px]">
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-primary">{expense.category?.name || 'Uncategorized'}</span>
+                            {expense.note && (
+                              <span className="text-[11px] text-on-surface-variant/70 truncate mt-0.5" title={expense.note}>
+                                {expense.note}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-2 py-2 sm:px-6 sm:py-4 text-center">
+                          {expense.attachment ? (
+                            <button
+                              onClick={() => setViewerAttachment(expense.attachment)}
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-surface border border-primary/20 text-primary hover:bg-primary hover:text-on-primary transition-colors tooltip cursor-pointer"
+                              title="View Attachment"
+                            >
+                              <span className="material-symbols-outlined text-[18px]">visibility</span>
+                            </button>
+                          ) : (
+                            <span className="text-on-surface-variant/40 italic text-[11px]">No File</span>
+                          )}
+                        </td>
+                        <td className="px-2 py-2 sm:px-6 sm:py-4 text-right pr-4 sm:pr-8">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => openEditModal(expense)}
+                              className="glass-button-icon p-1.5 rounded-lg transition-all hover:text-primary hover:border-primary/30 hover:bg-primary/10 cursor-pointer"
+                              title="Edit"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">edit</span>
+                            </button>
+                            <button
+                              onClick={() => handleDelete(expense.id)}
+                              className="glass-button-icon p-1.5 rounded-lg transition-all hover:text-error hover:border-error/30 hover:bg-error/10 cursor-pointer"
+                              title="Delete"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">delete</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -849,17 +950,22 @@ export default function ExpensesPage() {
 
       {/* Main Expense Form Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-background/80 backdrop-blur-md animate-fade-slide-up" style={{ animationDuration: '0.3s' }}>
-          <div className="absolute inset-0 bg-transparent" onClick={closeModal}></div>
-          <div className="bg-surface rounded-3xl shadow-2xl w-full max-w-lg overflow-visible relative z-10 animate-in fade-in zoom-in-95 duration-200 border border-outline-variant/20 flex flex-col max-h-[90vh]">
-            <div className="px-6 py-5 border-b border-outline-variant/20 flex items-center justify-between bg-surface-container-lowest rounded-t-3xl shrink-0">
-              <h2 className="text-xl font-bold text-on-surface">{isEditMode ? 'Edit Expense' : 'Add New Expense'}</h2>
-              <button onClick={closeModal} className="w-8 h-8 rounded-full hover:bg-surface-container flex items-center justify-center text-on-surface-variant transition-colors">
-                <span className="material-symbols-outlined text-[20px]">close</span>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 sm:p-6 bg-background/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="glass-panel w-full max-w-2xl rounded-3xl border border-primary/20 shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300 relative overflow-hidden">
+            {/* Modal Ambient Glow */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-32 bg-primary/10 rounded-full blur-[60px] pointer-events-none"></div>
+
+            <div className="p-6 sm:px-8 sm:pt-8 sm:pb-6 border-b border-primary/10 flex justify-between items-center relative z-10">
+              <div>
+                <h2 className="text-2xl font-bold text-on-surface tracking-tight">{isEditMode ? 'Edit Expense' : 'New Expense'}</h2>
+                <p className="text-sm text-on-surface-variant/80 mt-1">{isEditMode ? 'Update this expense entry.' : 'Log a new expense for this branch.'}</p>
+              </div>
+              <button type="button" onClick={closeModal} className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container hover:bg-error/10 text-on-surface-variant hover:text-error transition-all group cursor-pointer">
+                <span className="material-symbols-outlined text-[20px] group-hover:rotate-90 transition-transform">close</span>
               </button>
             </div>
 
-            <div className="overflow-y-auto custom-scrollbar flex-1 p-6">
+            <div className="p-6 sm:px-8 overflow-y-auto custom-scrollbar relative z-10">
               {error && (
                 <div className="mb-6 p-4 rounded-2xl bg-error/10 border border-error/20 flex items-start gap-3">
                   <span className="material-symbols-outlined text-error mt-0.5">error</span>
@@ -871,18 +977,24 @@ export default function ExpensesPage() {
                 <div className="space-y-5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Amount (₹) *</label>
-                      <input type="number" step="0.01" name="amount" required value={formData.amount} onChange={handleInputChange} className="w-full px-4 py-2.5 rounded-xl border border-outline-variant/30 bg-surface focus:bg-surface-container-lowest focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-sm font-semibold" placeholder="0.00" />
+                      <label className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[16px]">payments</span> Amount (₹) *
+                      </label>
+                      <input type="number" step="0.01" name="amount" required value={formData.amount} onChange={handleInputChange} className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container" placeholder="0.00" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Date *</label>
-                      <input type="date" name="date" required value={formData.date} onChange={handleInputChange} className="w-full px-4 py-2.5 rounded-xl border border-outline-variant/30 bg-surface focus:bg-surface-container-lowest focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-sm font-semibold" />
+                      <label className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[16px]">calendar_today</span> Date *
+                      </label>
+                      <input type="date" name="date" required value={formData.date} onChange={handleInputChange} className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container" />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2 relative" ref={dropdownRef}>
-                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Category *</label>
+                      <label className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[16px]">category</span> Category *
+                      </label>
                       <input
                         type="text"
                         name="category"
@@ -894,7 +1006,7 @@ export default function ExpensesPage() {
                           setShowCategoryDropdown(true);
                         }}
                         onFocus={() => setShowCategoryDropdown(true)}
-                        className="w-full px-4 py-2.5 rounded-xl border border-outline-variant/30 bg-surface focus:bg-surface-container-lowest focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-sm font-semibold"
+                        className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container"
                         placeholder="e.g. Travel, Office"
                         autoComplete="off"
                       />
@@ -937,12 +1049,14 @@ export default function ExpensesPage() {
                       )}
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Payment Method *</label>
-                      <div className={`relative ${activeDropdown === 'modalMethod' ? 'z-50' : 'z-30'}`}>
+                      <label className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[16px]">account_balance_wallet</span> Payment Method *
+                      </label>
+                      <div className={`dropdown-container relative ${activeDropdown === 'modalMethod' ? 'z-50' : 'z-30'}`}>
                         <button
                           type="button"
                           onClick={() => setActiveDropdown(activeDropdown === 'modalMethod' ? null : 'modalMethod')}
-                          className="w-full px-4 py-2.5 rounded-xl border border-outline-variant/30 bg-surface focus:bg-surface-container-lowest focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-sm font-semibold flex items-center justify-between cursor-pointer text-left h-[42px]"
+                          className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container flex items-center justify-between cursor-pointer text-left"
                         >
                           <span>{formData.paymentMethod}</span>
                           <span className="material-symbols-outlined text-on-surface-variant text-[18px]">expand_more</span>
@@ -969,8 +1083,10 @@ export default function ExpensesPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Note (Optional)</label>
-                    <textarea name="note" value={formData.note} onChange={handleInputChange} className="w-full px-4 py-2.5 rounded-xl border border-outline-variant/30 bg-surface focus:bg-surface-container-lowest focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-sm min-h-[80px] resize-none" placeholder="Details about this expense..." />
+                    <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[16px]">notes</span> Note (Optional)
+                    </label>
+                    <textarea name="note" value={formData.note} onChange={handleInputChange} className="glass-input w-full px-4 py-3 rounded-xl text-sm resize-none custom-scrollbar border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container" placeholder="Details about this expense..." />
                   </div>
 
                   <div className="space-y-2">
@@ -989,21 +1105,21 @@ export default function ExpensesPage() {
                         <button type="button" onClick={() => setViewerAttachment(expenses.find(e => e.id === editExpenseId)?.attachment!)} className="text-primary hover:underline text-xs font-bold bg-transparent border-none cursor-pointer">View</button>
                       </div>
                     )}
-                    <input type="file" accept="image/*,application/pdf" onChange={handleFileChange} className="w-full text-sm text-on-surface-variant file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-all file:cursor-pointer cursor-pointer border border-outline-variant/30 rounded-xl bg-surface-container/50" />
+                    <input type="file" accept="image/*,application/pdf" onChange={handleFileChange} className="glass-input w-full text-sm text-on-surface-variant file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-all file:cursor-pointer cursor-pointer border border-outline-variant/30 rounded-xl bg-surface-container/50 hover:bg-surface-container p-2" />
                   </div>
                 </div>
               </form>
             </div>
 
-            <div className="p-4 sm:p-6 border-t border-outline-variant/20 bg-surface-container-lowest flex flex-col sm:flex-row items-center justify-end gap-3 rounded-b-3xl shrink-0">
-              <button type="button" onClick={closeModal} className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-semibold text-on-surface-variant hover:bg-surface-container transition-colors text-sm text-center">
+            <div className="p-6 sm:px-8 border-t border-primary/10 flex justify-end gap-4 bg-surface-container/30 relative z-10">
+              <button type="button" onClick={closeModal} className="px-6 py-2.5 rounded-xl glass-button text-sm font-semibold text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer">
                 Cancel
               </button>
-              <button type="submit" form="expenseForm" disabled={submitting} className="w-full sm:w-auto px-6 py-2.5 bg-primary text-on-primary rounded-xl font-semibold hover:shadow-md hover:shadow-primary/20 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+              <button type="submit" form="expenseForm" disabled={submitting} className="px-6 py-2.5 rounded-xl bg-primary text-white text-sm font-bold shadow-[0_0_15px_rgba(125,211,252,0.4)] hover:shadow-[0_0_25px_rgba(125,211,252,0.6)] hover:brightness-110 hover:-translate-y-0.5 transition-all disabled:opacity-50 flex items-center gap-2 cursor-pointer">
                 {submitting ? (
-                  <><span className="material-symbols-outlined animate-spin text-[18px]">refresh</span> Saving...</>
+                  <><span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> Saving...</>
                 ) : (
-                  <><span className="material-symbols-outlined text-[18px]">save</span> {isEditMode ? 'Save Changes' : 'Save Expense'}</>
+                  <><span className="material-symbols-outlined text-[18px]">check_circle</span> {isEditMode ? 'Save Changes' : 'Save Expense'}</>
                 )}
               </button>
             </div>

@@ -3,9 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from 'next/navigation';
 
-// Removed hardcoded colors, using global Tailwind theme variables instead
-
-// ---- Toggle switch (custom, matches .toggle-checkbox / .toggle-label) ----
+// ---- Toggle switch ----
 function Toggle({
   id,
   checked,
@@ -16,16 +14,24 @@ function Toggle({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <label className="relative inline-flex items-center cursor-pointer shrink-0">
+    <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in mt-1">
       <input
         type="checkbox"
-        id={id}
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="sr-only peer"
+        className={`absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer z-10 top-0.5 transition-all duration-300 ${checked ? 'border-primary' : 'border-outline-variant'}`}
+        style={{
+          left: checked ? "auto" : "2px",
+          right: checked ? "2px" : "auto",
+        }}
+        id={id}
+        name={id}
       />
-      <div className="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-[20px] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary border border-outline-variant/30" />
-    </label>
+      <label
+        className={`block overflow-hidden h-6 rounded-full border cursor-pointer transition-colors duration-300 ${checked ? 'bg-primary/20 border-primary shadow-[0_0_8px_var(--color-primary)]' : 'bg-surface-variant border-outline-variant'}`}
+        htmlFor={id}
+      />
+    </div>
   );
 }
 
@@ -52,43 +58,128 @@ export default function QuotationConfigurationPage() {
   const router = useRouter();
   const [hsn, setHsn] = useState(true);
   const [sku, setSku] = useState(false);
-
   const [personalName, setPersonalName] = useState(false);
 
   const [prefix, setPrefix] = useState("QT-");
   const [startingNumber, setStartingNumber] = useState("1001");
-  const [topMessage, setTopMessage] = useState(
-    "Thank you for considering Glacier Corp for your enterprise needs. The following estimate is valid for 30 days."
-  );
-  const [bottomMessage, setBottomMessage] = useState(
-    "If you have any questions regarding this quotation, please contact our support team at support@glacier.corp."
-  );
-  const [terms, setTerms] = useState(
-    `1. VALIDITY: This quotation is valid for 30 days from the date of issue.
-2. PAYMENT TERMS: 50% advance along with Purchase Order, 50% prior to delivery.
-3. TAXES: All applicable taxes are exclusive and will be charged extra as per government regulations at the time of billing.
-4. DELIVERY: 4-6 weeks from receipt of firm order and advance payment.`
-  );
+  const [topMessage, setTopMessage] = useState("");
+  const [bottomMessage, setBottomMessage] = useState("");
+  const [terms, setTerms] = useState("");
+
+  useEffect(() => {
+    if (!selectedBranchId) return;
+
+    const fetchSettings = async () => {
+      setLoading(true);
+      try {
+        const res = await apiFetch(`/document-settings/${selectedBranchId}?type=QUOTATION`);
+        const data = await res.json();
+        if (data && data.settings) {
+          setHsn(data.settings.showHsn);
+          setSku(data.settings.showSku);
+          setPersonalName(data.settings.showPersonalName || false);
+          setPrefix(data.settings.prefix || "QT-");
+          setStartingNumber(data.settings.nextNumber?.toString() || "1001");
+          setTopMessage(data.settings.topMessage || "");
+          setBottomMessage(data.settings.bottomMessage || "");
+          setTerms(data.settings.terms || "");
+        }
+      } catch (error) {
+        alert('Failed to load settings');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSettings();
+  }, [selectedBranchId]);
+
+  const handleSave = async () => {
+    if (!selectedBranchId) {
+      alert('No branch selected');
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await apiFetch(`/document-settings/${selectedBranchId}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          type: "QUOTATION",
+          prefix,
+          nextNumber: parseInt(startingNumber) || 1001,
+          topMessage,
+          bottomMessage,
+          terms,
+          showSku: sku,
+          showHsn: hsn,
+          showPersonalName: personalName
+        }),
+      });
+      if (!res.ok) throw new Error("Failed");
+    } catch (error) {
+      alert('Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
-    // FIX 1: use a fixed-height (h-screen) flex frame instead of `minHeight: 100vh` + `overflow-hidden`.
-    // The old combo let the outer box grow past the viewport while still clipping (overflow-hidden),
-    // which is what made the bottom of the page look like it was "cut off" mid-scroll.
-    // With h-screen + overflow-hidden, the outer box is a true fixed viewport frame, and the
-    // <main> below becomes the only scrollable region, so it scrolls all the way to its real end.
-    <div
-      className="flex h-screen overflow-hidden bg-background text-on-surface"
-      style={{
-        backgroundImage:
-          "radial-gradient(at 0% 0%, color-mix(in srgb, var(--primary) 5%, transparent) 0px, transparent 50%), radial-gradient(at 100% 100%, color-mix(in srgb, var(--primary) 3%, transparent) 0px, transparent 50%)",
-      }}
-    >
-      {/* SideNavBar placeholder — original mock left this empty */}
+    <div className="flex-1 overflow-y-auto relative bg-background">
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes fadeSlideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-slide-up {
+          opacity: 0;
+          animation: fadeSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+        .glass-card {
+          background: linear-gradient(145deg, rgba(var(--surface-container-rgb), 0.4) 0%, rgba(var(--surface-container-rgb), 0.1) 100%);
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(var(--outline-variant-rgb), 0.2);
+        }
+        .glass-input {
+          background: rgba(255, 255, 255, 0.7);
+          border: 1px solid rgba(3, 105, 161, 0.15);
+          color: var(--on-surface);
+          transition: all 0.3s ease;
+        }
+        .glass-input:focus {
+          outline: none;
+          border-color: rgba(3, 105, 161, 0.3);
+          box-shadow: 0 0 15px rgba(3, 105, 161, 0.1);
+          background: rgba(255, 255, 255, 0.9);
+        }
+        .dark .glass-input {
+          background: rgba(15, 21, 36, 0.4);
+          border: 1px solid rgba(125, 211, 252, 0.1);
+        }
+        .dark .glass-input:focus {
+          background: rgba(15, 21, 36, 0.6);
+          border-color: rgba(125, 211, 252, 0.4);
+          box-shadow: 0 0 15px rgba(125, 211, 252, 0.1);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(137, 146, 152, 0.2);
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(197, 234, 255, 0.3);
+        }
+      `}} />
 
-      {/* Main Content Area */}
-      {/* FIX: h-full (not min-h-screen) so this column matches the fixed parent height exactly */}
-      <div className="flex-1 flex flex-col h-full min-w-0">
-        {/* TopNavBar */}
+      {/* Decorative Background */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/10 blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-tertiary/10 blur-[120px]" />
+      </div>
 
         {/* Canvas */}
         {/* FIX 2: widened max-w-5xl -> max-w-[1600px] and reduced side padding so content
@@ -122,62 +213,107 @@ export default function QuotationConfigurationPage() {
                 messaging for all newly generated quotes.
               </p>
             </div>
+            <button 
+              onClick={handleSave}
+              disabled={saving || loading}
+              className="group relative h-14 px-8 rounded-2xl bg-primary text-on-primary font-bold flex items-center gap-3 overflow-hidden shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none cursor-pointer"
+            >
+              <div className="absolute inset-0 w-full h-full bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out" />
+              {saving ? (
+                <><span className="material-symbols-outlined animate-spin">progress_activity</span><span>Saving...</span></>
+              ) : (
+                <><span className="material-symbols-outlined">save</span><span>Save Settings</span></>
+              )}
+            </button>
+          </div>
+        </div>
 
-            {/* Bento Grid Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column (Wider) */}
-              <div className="lg:col-span-2 space-y-6">
-                {/* General Configuration Panel */}
-                <GlassPanel>
-                  <PanelHeader icon="tune" title="General Configuration" />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Loading State */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-32 animate-fade-slide-up">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+            </div>
+            <p className="mt-6 text-on-surface-variant font-medium tracking-wide">Loading configuration...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-slide-up" style={{ animationDelay: '0.2s' }}>
+            
+            {/* Left Column */}
+            <div className="lg:col-span-2 space-y-6">
+              
+              {/* General Configuration */}
+              <div className="bg-surface border border-outline-variant/30 rounded-[2rem] p-1">
+                <div className="relative h-full bg-surface-container-lowest rounded-[1.8rem] p-6 sm:p-8">
+                  <div className="flex items-center justify-between mb-8 pb-4 border-b border-outline-variant/20">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
+                        <span className="material-symbols-outlined text-[24px]">tune</span>
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-black text-on-surface tracking-tight">General Configuration</h3>
+                        <p className="text-sm text-on-surface-variant font-medium">Format and numbering defaults</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-2">
-                      <FieldLabel>Quotation Prefix</FieldLabel>
+                      <label className="block text-sm font-bold text-on-surface">Quotation Prefix</label>
                       <div className="relative">
-                        <Icon
-                          name="tag"
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-primary/50"
-                        />
                         <input
-                          className="w-full pl-9 pr-4 py-3 rounded-lg font-mono focus:ring-0 focus:outline-none glass-input"
                           type="text"
                           value={prefix}
                           onChange={(e) => setPrefix(e.target.value)}
+                          placeholder="QT-"
+                          className="w-full glass-input rounded-xl pl-12 pr-5 py-4 text-on-surface font-mono transition-all"
                         />
+                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary/50 text-[20px]">tag</span>
                       </div>
-                      <p className="text-[12px] text-on-surface-variant/70">
-                        Appears before the quotation number (e.g., QT-001).
+                      <p className="text-[12px] text-on-surface-variant/70 mt-1 font-medium">
+                        Appears before the quotation number (e.g., QT-1001).
                       </p>
                     </div>
+
                     <div className="space-y-2">
-                      <FieldLabel>Starting Number</FieldLabel>
+                      <label className="block text-sm font-bold text-on-surface">Starting Number</label>
                       <div className="relative">
-                        <Icon
-                          name="numbers"
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-primary/50"
-                        />
                         <input
-                          className="w-full pl-9 pr-4 py-3 rounded-lg font-mono focus:ring-0 focus:outline-none glass-input"
                           type="number"
                           value={startingNumber}
                           onChange={(e) => setStartingNumber(e.target.value)}
+                          className="w-full glass-input rounded-xl pl-12 pr-5 py-4 text-on-surface font-mono transition-all"
                         />
+                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-primary/50 text-[20px]">numbers</span>
                       </div>
-                      <p className="text-[12px] text-on-surface-variant/70">
+                      <p className="text-[12px] text-on-surface-variant/70 mt-1 font-medium">
                         The next generated quotation will use this number.
                       </p>
                     </div>
                   </div>
-                </GlassPanel>
+                </div>
+              </div>
 
-                {/* Messaging Panel */}
-                <GlassPanel>
-                  <PanelHeader icon="chat_bubble" title="Standard Messaging" />
-                  <div className="space-y-4">
+              {/* Standard Messaging */}
+              <div className="bg-surface border border-outline-variant/30 rounded-[2rem] p-1">
+                <div className="relative h-full bg-surface-container-lowest rounded-[1.8rem] p-6 sm:p-8">
+                  <div className="flex items-center justify-between mb-8 pb-4 border-b border-outline-variant/20">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-secondary/10 text-secondary flex items-center justify-center border border-secondary/20">
+                        <span className="material-symbols-outlined text-[24px]">chat_bubble</span>
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-black text-on-surface tracking-tight">Standard Messaging</h3>
+                        <p className="text-sm text-on-surface-variant font-medium">Automated text for PDFs</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
                     <div className="space-y-2">
-                      <FieldLabel>Top Message (Header)</FieldLabel>
+                      <label className="block text-sm font-bold text-on-surface">Top Message (Header)</label>
                       <textarea
-                        className="w-full p-4 rounded-lg resize-none focus:ring-0 focus:outline-none glass-input"
+                        className="w-full glass-input rounded-xl p-5 text-on-surface transition-all resize-none"
                         placeholder="Thank you for your inquiry. Please find our quotation attached below..."
                         rows={3}
                         value={topMessage}
@@ -185,9 +321,9 @@ export default function QuotationConfigurationPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <FieldLabel>Bottom Message (Footer)</FieldLabel>
+                      <label className="block text-sm font-bold text-on-surface">Bottom Message (Footer)</label>
                       <textarea
-                        className="w-full p-4 rounded-lg resize-none focus:ring-0 focus:outline-none glass-input"
+                        className="w-full glass-input rounded-xl p-5 text-on-surface transition-all resize-none"
                         placeholder="We appreciate your business..."
                         rows={3}
                         value={bottomMessage}
@@ -195,169 +331,91 @@ export default function QuotationConfigurationPage() {
                       />
                     </div>
                   </div>
-                </GlassPanel>
-
-                {/* Legal Panel */}
-                <GlassPanel className="relative overflow-hidden group">
-                  <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors duration-500" />
-                  <div className="flex items-center justify-between pb-4 mb-4 relative z-10 border-b border-primary/10">
-                    <div className="flex items-center gap-2">
-                      <Icon name="gavel" className="text-primary" />
-                      <h3 className="font-semibold text-xl text-on-surface">
-                        Legal
-                      </h3>
+                </div>
+              </div>
+              
+              {/* Legal Panel */}
+              <div className="group bg-surface border border-outline-variant/30 rounded-[2rem] p-1 overflow-hidden relative">
+                <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors duration-500 pointer-events-none" />
+                <div className="relative h-full bg-surface-container-lowest rounded-[1.8rem] p-6 sm:p-8">
+                  <div className="flex items-center justify-between mb-8 pb-4 border-b border-outline-variant/20 relative z-10">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-tertiary/10 text-tertiary flex items-center justify-center border border-tertiary/20">
+                        <span className="material-symbols-outlined text-[24px]">gavel</span>
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-black text-on-surface tracking-tight">Legal</h3>
+                        <p className="text-sm text-on-surface-variant font-medium">Terms &amp; conditions</p>
+                      </div>
                     </div>
                   </div>
+
                   <div className="space-y-2 relative z-10">
-                    <FieldLabel>Terms &amp; Conditions</FieldLabel>
+                    <label className="block text-sm font-bold text-on-surface">Terms &amp; Conditions</label>
                     <textarea
-                      className="w-full p-4 rounded-lg text-sm font-mono leading-relaxed focus:ring-0 focus:outline-none glass-input"
+                      className="w-full glass-input rounded-xl p-5 text-on-surface font-mono transition-all leading-relaxed resize-none text-sm"
                       rows={6}
                       value={terms}
                       onChange={(e) => setTerms(e.target.value)}
                     />
                   </div>
-                </GlassPanel>
+                </div>
               </div>
 
-              {/* Right Column (Narrower) */}
-              <div className="space-y-6">
-                {/* Display Preferences Panel */}
-                <GlassPanel>
-                  <PanelHeader icon="visibility" title="Display Preferences" />
-                  <div className="space-y-6">
-                    <PreferenceRow
-                      title="Show HSN Code"
-                      description="Display HSN codes for items."
-                      checked={hsn}
-                      onChange={setHsn}
-                      id="toggle_hsn"
-                    />
-                    <PreferenceRow
-                      title="Show SKU"
-                      description="Include internal Stock Keeping Unit identifiers."
-                      checked={sku}
-                      onChange={setSku}
-                      id="toggle_sku"
-                    />
+            </div>
 
-                    <PreferenceRow
-                      title="Display Personal Name"
-                      description="Show the generating agent's name instead of just the company."
-                      checked={personalName}
-                      onChange={setPersonalName}
-                      id="toggle_name"
-                    />
+            {/* Right Column */}
+            <div className="space-y-6">
+              
+              {/* Display Preferences Panel */}
+              <div className="bg-surface border border-outline-variant/30 rounded-[2rem] p-1">
+                <div className="relative h-full bg-surface-container-lowest rounded-[1.8rem] p-6 sm:p-8">
+                  <div className="flex items-center justify-between mb-8 pb-4 border-b border-outline-variant/20">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-orange-500/10 text-orange-500 flex items-center justify-center border border-orange-500/20">
+                        <span className="material-symbols-outlined text-[24px]">visibility</span>
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-black text-on-surface tracking-tight">Display</h3>
+                        <p className="text-sm text-on-surface-variant font-medium">Column preferences</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-2 p-4 bg-surface-container-low rounded-lg border border-outline-variant/30 flex gap-3 items-start">
-                    <span className="material-symbols-outlined text-secondary-fixed text-lg">info</span>
+
+                  <div className="space-y-6">
+                    <div className="flex items-start justify-between">
+                      <div className="pr-4">
+                        <h4 className="text-sm font-bold text-on-surface">Show HSN Code</h4>
+                        <p className="text-[12px] mt-1 text-on-surface-variant font-medium">Display HSN codes for items in generated PDFs.</p>
+                      </div>
+                      <Toggle id="toggle_hsn" checked={hsn} onChange={setHsn} />
+                    </div>
+                    
+                    <div className="flex items-start justify-between">
+                      <div className="pr-4">
+                        <h4 className="text-sm font-bold text-on-surface">Show SKU</h4>
+                        <p className="text-[12px] mt-1 text-on-surface-variant font-medium">Include internal Stock Keeping Unit identifiers.</p>
+                      </div>
+                      <Toggle id="toggle_sku" checked={sku} onChange={setSku} />
+                    </div>
+
+                  </div>
+
+                  <div className="mt-8 p-4 bg-surface-container-low rounded-xl border border-outline-variant/30 flex gap-3 items-start">
+                    <span className="material-symbols-outlined text-secondary text-lg">info</span>
                     <p className="text-xs text-on-surface-variant leading-relaxed">
-                      Changes to these display settings will only affect invoices generated after
-                      saving. Historical invoices retain their original format.
+                      Changes to these display settings will only affect quotations generated after
+                      saving. Historical quotations retain their original format.
                     </p>
                   </div>
                 </GlassPanel>
 
               </div>
-            </div>
 
-            {/* Action Bar */}
-            <div className="pt-6 flex flex-col sm:flex-row justify-end gap-3 mt-8 border-t border-primary/10">
-              <button className="w-full sm:w-auto px-6 py-3 rounded-lg font-medium text-sm transition-colors text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest/50 text-center">
-                Discard Changes
-              </button>
-              <button className="w-full sm:w-auto px-8 py-3 rounded-lg font-medium text-sm transition-all relative overflow-hidden group glass-button-primary btn-login-glow text-center flex items-center justify-center">
-                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                Save Configuration
-              </button>
             </div>
           </div>
-        </main>
+        )}
       </div>
-
-      <style>{`
-        @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap");
-
-        .material-symbols-outlined {
-          font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 8px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(137, 146, 152, 0.2);
-          border-radius: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(197, 234, 255, 0.3);
-        }
-      `}</style>
-    </div>
-  );
-}
-
-// ---- Reusable pieces ----
-function GlassPanel({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <section className={`rounded-xl p-6 glass-panel ${className}`}>
-      {children}
-    </section>
-  );
-}
-
-function PanelHeader({ icon, title }: { icon: string; title: string }) {
-  return (
-    <div className="flex items-center gap-2 pb-4 mb-4 border-b border-primary/10">
-      <Icon name={icon} className="text-primary" />
-      <h3 className="font-semibold text-xl text-on-surface">
-        {title}
-      </h3>
-    </div>
-  );
-}
-
-function FieldLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <label className="block text-sm font-medium text-on-surface-variant">
-      {children}
-    </label>
-  );
-}
-
-function PreferenceRow({
-  title,
-  description,
-  checked,
-  onChange,
-  id,
-}: {
-  title: string;
-  description: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  id: string;
-}) {
-  return (
-    <div className="flex items-start justify-between">
-      <div className="pr-4">
-        <h4 className="text-sm font-medium text-on-surface">
-          {title}
-        </h4>
-        <p className="text-[12px] mt-1 text-on-surface-variant">
-          {description}
-        </p>
-      </div>
-      <Toggle id={id} checked={checked} onChange={onChange} />
     </div>
   );
 }

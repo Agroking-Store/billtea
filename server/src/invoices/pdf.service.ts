@@ -291,7 +291,7 @@ export class PdfService {
                                                 if (Array.isArray((tncRaw as any).terms)) {
                                                     tncList = (tncRaw as any).terms;
                                                 } else if (typeof (tncRaw as any).text === 'string') {
-                                                    tncList = (tncRaw as any).text.split(/\n|\\n/).filter((t: string) => t.trim() !== '');
+                                                    tncList = (tncRaw as any).text.split(/\r?\n|\\n/).filter((t: string) => t.trim() !== '');
                                                 } else {
                                                     tncList = Object.values(tncRaw).filter(v => typeof v === 'string');
                                                 }
@@ -300,11 +300,11 @@ export class PdfService {
                                                     const parsed = JSON.parse(tncRaw);
                                                     if (Array.isArray(parsed)) tncList = parsed;
                                                     else if (parsed && Array.isArray(parsed.terms)) tncList = parsed.terms;
-                                                    else if (parsed && typeof parsed.text === 'string') tncList = parsed.text.split(/\n|\\n/).filter((t: string) => t.trim() !== '');
+                                                    else if (parsed && typeof parsed.text === 'string') tncList = parsed.text.split(/\r?\n|\\n/).filter((t: string) => t.trim() !== '');
                                                     else if (parsed && typeof parsed === 'object') tncList = Object.values(parsed).filter(v => typeof v === 'string');
-                                                    else tncList = tncRaw.split(/\n|\\n/).filter(t => t.trim() !== '');
+                                                    else tncList = tncRaw.split(/\r?\n|\\n/).filter(t => t.trim() !== '');
                                                 } catch (e) {
-                                                    tncList = tncRaw.split(/\n|\\n/).filter(t => t.trim() !== '');
+                                                    tncList = tncRaw.split(/\r?\n|\\n/).filter(t => t.trim() !== '');
                                                 }
                                             }
                                             return tncList.map((t: string) => `<p>• ${t}</p>`).join('');

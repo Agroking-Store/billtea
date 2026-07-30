@@ -1,41 +1,216 @@
-import React from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity, 
-  Image, 
-  Platform 
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  TextInput,
+  Platform,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { 
-  ArrowLeft, 
-  Building2, 
-  Edit2, 
-  Store, 
-  Users, 
-  IdCard, 
-  ClipboardList, 
-  User, 
-  Save 
+import {
+  ArrowLeft,
+  Building2,
+  Edit2,
+  X,
+  Store,
+  Users,
+  IdCard,
+  Package,
+  ClipboardList,
+  User,
+  Save,
+  Lock,
+  Camera,
+  MapPin,
+  Briefcase,
 } from 'lucide-react-native';
 import { useTheme } from '../../../hooks/useTheme';
 import { GlassPanel } from '../../../components/ui/GlassPanel';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
+import * as ImagePicker from 'expo-image-picker';
+import { apiClient } from '@/api/client';
+import { ENV } from '@/config/env';
 
-const HEADER_HEIGHT = 56;
+// Same logic as web's getImageUrl — turns a relative "/uploads/..." path
+// into a full URL pointing at the backend server.
+function getImageUrl(url?: string | null) {
+  if (!url || url === 'null' || url === 'undefined') return '';
+  const baseUrl = ENV.API_URL.replace('/api/v1', '');
+  if (url.startsWith('/uploads')) return `${baseUrl}${url}`;
+  if (url.startsWith('uploads/')) return `${baseUrl}/${url}`;
+  return url;
+}
+
+interface Identifier {
+  label?: string;
+  key?: string;
+  value: string;
+}
+
+interface Company {
+  id: string;
+  name: string;
+  logo?: string;
+  identifiers?: Identifier[];
+  createdBy?: { fullName: string };
+  branches?: { city: string; state: string }[];
+  _count?: { branches: number; customers: number; users: number; products: number };
+  subscription?: { status: string };
+}
 
 export default function CompanySettingsScreen() {
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
+  const [company, setCompany] = useState<Company | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [editName, setEditName] = useState('');
+  const [editLogo, setEditLogo] = useState<string | null>(null); // base64 data URI, or "" to remove
+  const [editTagline, setEditTagline] = useState('');
+  const [editUniqueIdName, setEditUniqueIdName] = useState('');
+  const [editUniqueIdValue, setEditUniqueIdValue] = useState('');
+
+  useEffect(() => {
+    fetchCompany();
+  }, []);
+
+  const fetchCompany = async () => {
+    setIsLoading(true);
+    try {
+      const res = await apiClient.get('/company');
+      if (res.status === 200 && res.data?.company) {
+        const c: Company = res.data.company;
+        setCompany(c);
+        setEditName(c.name || '');
+
+        const ids = c.identifiers || [];
+        const taglineObj = ids.find((i) => i.label === 'TAGLINE' || i.key === 'TAGLINE');
+        setEditTagline(taglineObj ? taglineObj.value : '');
+
+        const uniqueIdObj = ids.find(
+          (i) => (i.label || i.key) && i.label !== 'TAGLINE' && i.key !== 'TAGLINE'
+        );
+        if (uniqueIdObj) {
+          setEditUniqueIdName(uniqueIdObj.label || uniqueIdObj.key || '');
+          setEditUniqueIdValue(uniqueIdObj.value || '');
+        } else {
+          setEditUniqueIdName('');
+          setEditUniqueIdValue('');
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch company:', err);
+      Alert.alert('Error', 'Could not load company details.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePickLogo = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return;
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.7,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets?.[0]?.base64) {
+      const asset = result.assets[0];
+      const mime = asset.mimeType || 'image/jpeg';
+      setEditLogo(`data:${mime};base64,${asset.base64}`);
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setEditLogo('');
+    if (company) setCompany({ ...company, logo: '' });
+  };
+
+  const handleToggleEdit = () => {
+    if (isEditing) {
+      // Cancelling — reset back to the last loaded values
+      setEditName(company?.name || '');
+    }
+    setIsEditing((prev) => !prev);
+  };
+
+  const handleSave = async () => {
+    if (!editName.trim()) {
+      Alert.alert('Required', 'Company name cannot be empty.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const newIdentifiers: Identifier[] = [];
+      if (editTagline.trim()) {
+        newIdentifiers.push({ label: 'TAGLINE', value: editTagline.trim() });
+      }
+      if (editUniqueIdName.trim() && editUniqueIdValue.trim()) {
+        newIdentifiers.push({ label: editUniqueIdName.trim(), value: editUniqueIdValue.trim() });
+      }
+
+      const payload: any = { name: editName, identifiers: newIdentifiers };
+      if (editLogo !== null) payload.logo = editLogo;
+
+      const res = await apiClient.put('/company', payload);
+
+      if (res.status === 200) {
+        setIsEditing(false);
+        setEditLogo(null);
+        fetchCompany();
+        Alert.alert('Success', 'Company details updated.');
+      }
+    } catch (err: any) {
+      const status = err?.response?.status;
+      if (status === 403) {
+        Alert.alert(
+          'Permission Denied',
+          'Only the company Owner can update these details.'
+        );
+      } else if (status === 413) {
+        Alert.alert('Image Too Large', 'Please choose a smaller logo image.');
+      } else {
+        Alert.alert(
+          'Error',
+          err?.response?.data?.message || 'Failed to save changes.'
+        );
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const location = company?.branches?.[0]
+    ? `${company.branches[0].city}, ${company.branches[0].state}`
+    : 'Location Not Set';
+
+  const displayTagline =
+    company?.identifiers?.find((i) => i.label === 'TAGLINE' || i.key === 'TAGLINE')?.value || '';
+  const displayIdentifiers =
+    company?.identifiers?.filter((i) => i.label !== 'TAGLINE' && i.key !== 'TAGLINE') || [];
+
+  const isActive =
+    company?.subscription?.status === 'ACTIVE' || company?.subscription?.status === 'TRIAL';
+
+  const logoSource = editLogo || (company?.logo ? getImageUrl(company.logo) : '');
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      
+
       {/* Background Gradient */}
       <LinearGradient
         colors={isDark ? ['#081326', '#111b2f'] : [colors.background, colors.surface]}
@@ -66,12 +241,12 @@ export default function CompanySettingsScreen() {
 
       {/* Custom Header */}
       <View style={[styles.header, { paddingTop: insets.top, borderBottomColor: colors.glassBorder }]}>
-        <BlurView intensity={70} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+        <BlurView intensity={70} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.glassBackground }]} />
-        
+
         <View style={styles.headerContent}>
-          <TouchableOpacity 
-            onPress={() => router.back()} 
+          <TouchableOpacity
+            onPress={() => router.back()}
             style={[styles.backButton, { backgroundColor: colors.primary + '1A', borderColor: colors.primary + '33' }]}
             activeOpacity={0.7}
           >
@@ -81,150 +256,268 @@ export default function CompanySettingsScreen() {
         </View>
       </View>
 
-      {/* Content ScrollView */}
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          {
-            paddingTop: insets.top + HEADER_HEIGHT,
-            paddingBottom: insets.bottom + 140,
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
+      {isLoading ? (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: insets.top + 76, paddingBottom: insets.bottom + 140 },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Company Profile Section */}
+          <GlassPanel style={styles.profileCard}>
+            <View style={styles.profileAccentLine}>
+              <LinearGradient colors={[colors.primary + '80', 'transparent']} style={StyleSheet.absoluteFill} />
+            </View>
 
-        
-        {/* Company Profile Section */}
-        <GlassPanel style={styles.profileCard}>
-          <View style={styles.profileAccentLine}>
-            <LinearGradient
-              colors={[colors.primary + '80', 'transparent']}
-              style={StyleSheet.absoluteFill}
-            />
+            <TouchableOpacity style={styles.profileEditBtn} activeOpacity={0.7} onPress={handleToggleEdit}>
+              {isEditing ? (
+                <X color={colors.textSecondary} size={18} />
+              ) : (
+                <Edit2 color={colors.textSecondary} size={18} />
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.profileContent}>
+              {/* Avatar image with glow + upload */}
+              <TouchableOpacity
+                style={styles.avatarWrapper}
+                activeOpacity={0.8}
+                onPress={handlePickLogo}
+              >
+                <View style={[styles.avatarGlow, { backgroundColor: colors.primary, opacity: 0.15 }]} />
+                {logoSource ? (
+                  <Image
+                    source={{ uri: logoSource }}
+                    style={[styles.avatarImage, { borderColor: colors.primary + '4D' }]}
+                  />
+                ) : (
+                  <View
+                    style={[
+                      styles.avatarImage,
+                      styles.avatarPlaceholder,
+                      { borderColor: colors.primary + '4D', backgroundColor: colors.surfaceVariant },
+                    ]}
+                  >
+                    <Building2 color={colors.primary} size={32} opacity={0.5} />
+                  </View>
+                )}
+                <View style={[styles.avatarCameraBadge, { backgroundColor: colors.primary }]}>
+                  <Camera color={isDark ? '#001f2e' : '#ffffff'} size={12} />
+                </View>
+                {logoSource ? (
+                  <TouchableOpacity
+                    style={styles.avatarRemoveBadge}
+                    onPress={handleRemoveLogo}
+                  >
+                    <X color="#ffffff" size={12} />
+                  </TouchableOpacity>
+                ) : null}
+              </TouchableOpacity>
+
+              <View style={styles.nameRow}>
+                {isEditing ? (
+                  <TextInput
+                    value={editName}
+                    onChangeText={setEditName}
+                    style={[
+                      styles.companyNameInput,
+                      { color: colors.text, borderColor: colors.primary + '66', backgroundColor: colors.surfaceVariant + '40' },
+                    ]}
+                    autoFocus
+                  />
+                ) : (
+                  <Text style={[styles.companyName, { color: colors.text }]}>{company?.name || 'Company Name'}</Text>
+                )}
+
+                {/* Active Status Badge — same row as the name, matching web */}
+                <View
+                  style={[
+                    styles.statusBadge,
+                    isActive
+                      ? { backgroundColor: '#4ade8022', borderColor: '#4ade8044' }
+                      : { backgroundColor: colors.error + '22', borderColor: colors.error + '44' },
+                  ]}
+                >
+                  <View style={[styles.statusDot, { backgroundColor: isActive ? '#4ade80' : colors.error }]} />
+                  <Text style={[styles.statusBadgeText, { color: isActive ? '#4ade80' : colors.error }]}>
+                    {isActive ? 'ACTIVE' : 'INACTIVE'}
+                  </Text>
+                </View>
+              </View>
+
+              {isEditing ? (
+                <View style={styles.taglineEditWrap}>
+                  <TextInput
+                    value={editTagline}
+                    onChangeText={setEditTagline}
+                    maxLength={100}
+                    placeholder="Company Tagline (e.g. Smart Billing Solutions)"
+                    placeholderTextColor={colors.textSecondary + '80'}
+                    style={[
+                      styles.taglineInput,
+                      { color: colors.text, borderColor: colors.primary + '66', backgroundColor: colors.surfaceVariant + '40' },
+                    ]}
+                  />
+                  <Text style={[styles.taglineCounter, { color: colors.textSecondary }]}>
+                    {editTagline.length}/100 characters
+                  </Text>
+                </View>
+              ) : (
+                displayTagline ? (
+                  <Text style={[styles.domainText, { color: colors.textSecondary, fontStyle: 'italic', marginBottom: 8 }]}>
+                    "{displayTagline}"
+                  </Text>
+                ) : null
+              )}
+
+              {/* Location + Business Account — combined row matching web */}
+              <View style={styles.domainRow}>
+                <MapPin color={colors.primary} size={14} style={{ marginRight: 4 }} />
+                <Text style={[styles.domainText, { color: colors.textSecondary }]}>{location}</Text>
+                <View style={[styles.domainDot, { backgroundColor: colors.border }]} />
+                <Briefcase color={colors.secondary} size={14} style={{ marginRight: 4 }} />
+                <Text style={[styles.domainText, { color: colors.textSecondary }]}>Business Account</Text>
+              </View>
+            </View>
+          </GlassPanel>
+
+          {/* Stats Bento Grid stacked vertically */}
+          <View style={styles.statsGrid}>
+            <GlassPanel style={styles.statCard}>
+              <View style={styles.statHeader}>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>TOTAL BRANCHES</Text>
+                <Store color={colors.primary} size={18} opacity={0.7} />
+              </View>
+              <Text style={[styles.statValue, { color: colors.text }]}>{company?._count?.branches ?? 0}</Text>
+            </GlassPanel>
+
+            <GlassPanel style={styles.statCard}>
+              <View style={styles.statHeader}>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>TOTAL CUSTOMERS</Text>
+                <Users color={colors.primary} size={18} opacity={0.7} />
+              </View>
+              <Text style={[styles.statValue, { color: colors.text }]}>{company?._count?.customers ?? 0}</Text>
+            </GlassPanel>
+
+            <GlassPanel style={styles.statCard}>
+              <View style={styles.statHeader}>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>TOTAL STAFF</Text>
+                <IdCard color={colors.primary} size={18} opacity={0.7} />
+              </View>
+              <Text style={[styles.statValue, { color: colors.text }]}>{company?._count?.users ?? 0}</Text>
+            </GlassPanel>
+
+            <GlassPanel style={styles.statCard}>
+              <View style={styles.statHeader}>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>TOTAL PRODUCTS</Text>
+                <Package color={colors.primary} size={18} opacity={0.7} />
+              </View>
+              <Text style={[styles.statValue, { color: colors.text }]}>{company?._count?.products ?? 0}</Text>
+            </GlassPanel>
           </View>
 
-          <TouchableOpacity style={styles.profileEditBtn} activeOpacity={0.7}>
-            <Edit2 color={colors.textSecondary} size={18} />
-          </TouchableOpacity>
+          {/* Business Details Form Section */}
+          <GlassPanel style={styles.detailsCard}>
+            <View style={styles.detailsHeader}>
+              <ClipboardList color={colors.primary} size={20} style={{ marginRight: 8 }} />
+              <Text style={[styles.detailsTitle, { color: colors.text }]}>Business Details</Text>
+            </View>
 
-          <View style={styles.profileContent}>
-            {/* Avatar image with glow */}
-            <View style={styles.avatarWrapper}>
-              <View style={[styles.avatarGlow, { backgroundColor: colors.primary, opacity: 0.15 }]} />
-              <Image 
-                source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDomVgL2a5ZiZgRYKaFu7uX873ViwvEEGmF9TBnIQOYhJApXJb7W4z07hH4p7cvDqaRadY5nq3s4jfr8CqbWLJ6x8kMv-deL-lxhBAr7U4_wv8L4KcbHD3X3uzf-J1Rct4ZSwMwtk9log0-U3GHRnQM-FL1MyUiY5jCbV1gYMDb0haWmY2Vt4K0yGl0LbfM3c3UdnKHCgXNdVVvV91vvtdfNp4yate73hHsPQ_HTAk-3aJa5arWP2p5' }} 
-                style={[styles.avatarImage, { borderColor: colors.primary + '4D' }]} 
+            <View style={styles.fieldsContainer}>
+              <BusinessField label="Company ID" value={company?.id || ''} isMono locked />
+
+              <BusinessField
+                label="Created By"
+                value={company?.createdBy?.fullName || ''}
+                rightIcon={<User color={colors.textSecondary} size={14} opacity={0.6} />}
               />
-            </View>
 
-            <Text style={[styles.companyName, { color: colors.text }]}>Indux Tech</Text>
-            
-            <View style={styles.domainRow}>
-              <Building2 color={colors.textSecondary} size={14} style={{ marginRight: 4 }} />
-              <Text style={[styles.domainText, { color: colors.textSecondary }]}>Technology & Software</Text>
+              {isEditing ? (
+                <>
+                  <EditableField
+                    label="Unique ID Name"
+                    value={editUniqueIdName}
+                    onChangeText={setEditUniqueIdName}
+                    placeholder="e.g. GSTIN, Registration No."
+                  />
+                  <EditableField
+                    label="Unique ID Number"
+                    value={editUniqueIdValue}
+                    onChangeText={setEditUniqueIdValue}
+                    placeholder="e.g. 29ABCDE1234F1Z5"
+                    isMono
+                  />
+                </>
+              ) : (
+                displayIdentifiers.length > 0 ? (
+                  displayIdentifiers.map((ident, idx) => (
+                    <BusinessField
+                      key={idx}
+                      label={(ident.label || ident.key || '').replace(/_/g, ' ')}
+                      value={ident.value}
+                      isMono
+                      locked
+                    />
+                  ))
+                ) : (
+                  <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
+                    No business identifiers added yet.
+                  </Text>
+                )
+              )}
             </View>
-
-            {/* Active Status Badge */}
-            <View style={[styles.statusBadge, { backgroundColor: colors.primary + '1A', borderColor: colors.primary + '33' }]}>
-              <View style={styles.statusDot} />
-              <Text style={styles.statusBadgeText}>ACTIVE</Text>
-            </View>
-          </View>
-        </GlassPanel>
-
-        {/* Stats Bento Grid stacked vertically */}
-        <View style={styles.statsGrid}>
-          
-          <GlassPanel style={styles.statCard}>
-            <View style={styles.statHeader}>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>TOTAL BRANCHES</Text>
-              <Store color={colors.primary} size={18} opacity={0.7} />
-            </View>
-            <Text style={[styles.statValue, { color: colors.text }]}>4</Text>
           </GlassPanel>
 
-          <GlassPanel style={styles.statCard}>
-            <View style={styles.statHeader}>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>TOTAL CUSTOMERS</Text>
-              <Users color={colors.primary} size={18} opacity={0.7} />
-            </View>
-            <Text style={[styles.statValue, { color: colors.text }]}>1,092</Text>
-          </GlassPanel>
-
-          <GlassPanel style={styles.statCard}>
-            <View style={styles.statHeader}>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>TOTAL STAFF</Text>
-              <IdCard color={colors.primary} size={18} opacity={0.7} />
-            </View>
-            <Text style={[styles.statValue, { color: colors.text }]}>28</Text>
-          </GlassPanel>
-
-        </View>
-
-        {/* Business Details Form Section */}
-        <GlassPanel style={styles.detailsCard}>
-          <View style={styles.detailsHeader}>
-            <ClipboardList color={colors.primary} size={20} style={{ marginRight: 8 }} />
-            <Text style={[styles.detailsTitle, { color: colors.text }]}>Business Details</Text>
-          </View>
-
-          <View style={styles.fieldsContainer}>
-            
-            <BusinessField 
-              label="Business Unique ID" 
-              value="IDX-9982-BT" 
-              isMono={true}
-            />
-            
-            <BusinessField 
-              label="Label Name" 
-              value="GST No" 
-            />
-            
-            <BusinessField 
-              label="Label Value" 
-              value="32SAHADDU32" 
-              isMono={true}
-            />
-
-            <BusinessField 
-              label="Owner" 
-              value="Sarang Wagh" 
-              icon={<User color={colors.tertiary} size={16} style={{ marginRight: 6 }} />}
-            />
-
-          </View>
-        </GlassPanel>
-
-        {/* Save Button (Placed OUTSIDE the card, centered at the bottom of the scroll view) */}
-        <View style={styles.saveBtnContainer}>
-          <TouchableOpacity style={styles.saveBtn} activeOpacity={0.8}>
-            <LinearGradient
-              colors={isDark ? ['#7dd3fc', '#0284c7'] : [colors.primary, colors.secondary]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.saveBtnGradient}
+          {/* Save Button */}
+          <View style={styles.saveBtnContainer}>
+            <TouchableOpacity
+              style={styles.saveBtn}
+              activeOpacity={0.8}
+              onPress={handleSave}
+              disabled={isSaving || (!isEditing && editLogo === null)}
             >
-              <Save color={isDark ? '#001f2e' : '#ffffff'} size={18} style={{ marginRight: 8 }} />
-              <Text style={[styles.saveBtnText, { color: isDark ? '#001f2e' : '#ffffff' }]}>Save Changes</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-
-      </ScrollView>
+              <LinearGradient
+                colors={isDark ? ['#7dd3fc', '#0284c7'] : [colors.primary, colors.secondary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[
+                  styles.saveBtnGradient,
+                  isSaving || (!isEditing && editLogo === null) ? { opacity: 0.6 } : null,
+                ]}
+              >
+                {isSaving ? (
+                  <ActivityIndicator color={isDark ? '#001f2e' : '#ffffff'} />
+                ) : (
+                  <>
+                    <Save color={isDark ? '#001f2e' : '#ffffff'} size={18} style={{ marginRight: 8 }} />
+                    <Text style={[styles.saveBtnText, { color: isDark ? '#001f2e' : '#ffffff' }]}>Save Changes</Text>
+                  </>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      )}
     </View>
   );
 }
 
-// Sub-component for individual read-only static fields
+// Read-only field (Company ID, Created By, saved identifiers)
 interface BusinessFieldProps {
   label: string;
   value: string;
   icon?: React.ReactNode;
   isMono?: boolean;
+  locked?: boolean;
+  rightIcon?: React.ReactNode;
 }
 
-function BusinessField({ label, value, icon, isMono = false }: BusinessFieldProps) {
+function BusinessField({ label, value, icon, isMono = false, locked = false, rightIcon }: BusinessFieldProps) {
   const { colors } = useTheme();
 
   return (
@@ -235,18 +528,55 @@ function BusinessField({ label, value, icon, isMono = false }: BusinessFieldProp
       </View>
       <View style={[styles.inputGlass, { backgroundColor: colors.surfaceVariant + '22', borderColor: colors.glassBorder }]}>
         <Text
-          style={[
-            styles.inputText, 
-            { color: colors.text },
-            isMono && styles.fontMono
-          ]}
+          style={[styles.inputText, { color: colors.text }, isMono && styles.fontMono]}
+          numberOfLines={1}
         >
           {value}
         </Text>
-        <View style={styles.inputEditBtn}>
-          <Edit2 color={colors.textSecondary} size={14} />
-        </View>
+        {rightIcon ? (
+          <View style={styles.inputEditBtn}>{rightIcon}</View>
+        ) : (
+          locked && (
+            <View style={styles.inputEditBtn}>
+              <Lock color={colors.textSecondary} size={14} opacity={0.5} />
+            </View>
+          )
+        )}
       </View>
+    </View>
+  );
+}
+
+// Editable field, used only while isEditing is true
+interface EditableFieldProps {
+  label: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder?: string;
+  isMono?: boolean;
+}
+
+function EditableField({ label, value, onChangeText, placeholder, isMono = false }: EditableFieldProps) {
+  const { colors } = useTheme();
+
+  return (
+    <View style={styles.fieldRow}>
+      <View style={styles.labelRow}>
+        <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>{label}</Text>
+      </View>
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={colors.textSecondary + '80'}
+        autoCapitalize={isMono ? 'characters' : 'sentences'}
+        style={[
+          styles.inputGlass,
+          styles.editableInput,
+          { color: colors.text, backgroundColor: colors.surfaceVariant + '40', borderColor: colors.primary + '66' },
+          isMono && styles.fontMono,
+        ]}
+      />
     </View>
   );
 }
@@ -254,6 +584,11 @@ function BusinessField({ label, value, icon, isMono = false }: BusinessFieldProp
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   glowCircle1: {
     position: 'absolute',
@@ -349,6 +684,41 @@ const styles = StyleSheet.create({
     borderRadius: 48,
     borderWidth: 1.5,
   },
+  avatarPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarCameraBadge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#00000000',
+  },
+  avatarRemoveBadge: {
+    position: 'absolute',
+    top: -2,
+    left: -2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#ef4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 4,
+  },
   companyName: {
     fontSize: 22,
     fontWeight: '700',
@@ -364,12 +734,40 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     marginBottom: 8,
     textAlign: 'center',
-    minWidth: 160,
+    minWidth: 200,
+  },
+  taglineEditWrap: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  taglineInput: {
+    fontSize: 13,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    width: '100%',
+    maxWidth: 320,
+    textAlign: 'center',
+  },
+  taglineCounter: {
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 4,
   },
   domainRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  domainDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    marginHorizontal: 8,
   },
   domainText: {
     fontSize: 13,
@@ -386,9 +784,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#4ade80',
     marginRight: 6,
-    shadowColor: '#4ade80',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 4,
@@ -397,7 +793,6 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#4ade80',
     letterSpacing: 0.8,
   },
   statsGrid: {
@@ -455,6 +850,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     height: 44,
     paddingHorizontal: 12,
+  },
+  editableInput: {
+    fontSize: 14,
   },
   inputText: {
     flex: 1,

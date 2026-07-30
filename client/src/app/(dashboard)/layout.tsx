@@ -182,7 +182,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden relative z-0">
+      <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
         
         {/* Top Navigation */}
         <header className="h-16 md:h-20 flex-shrink-0 border-b border-outline-variant/20 glass-panel bg-surface/40 backdrop-blur-xl flex items-center justify-between px-4 md:px-8 z-20 relative shadow-sm">

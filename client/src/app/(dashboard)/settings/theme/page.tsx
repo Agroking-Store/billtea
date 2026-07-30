@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { apiFetch, getUser } from "../../../../lib/auth";
 import { THEME_SECTIONS, QUOTATION_THEME_SECTIONS, DEFAULT_LIGHT_THEME, DEFAULT_DARK_THEME } from "../../../../lib/theme";
 import { useTheme } from "../../../../components/ThemeProvider";
@@ -8,6 +9,7 @@ import { useTheme } from "../../../../components/ThemeProvider";
 type Theme = "light" | "dark";
 
 export default function ThemeSettingsPage() {
+  const router = useRouter();
   const [theme, setTheme] = useState<Theme>("dark");
   const [lightThemeData, setLightThemeData] = useState<Record<string, string>>({});
   const [darkThemeData, setDarkThemeData] = useState<Record<string, string>>({});
@@ -98,51 +100,86 @@ export default function ThemeSettingsPage() {
   }, [currentData, defaults]);
 
   return (
-    <main className="bg-background text-on-background min-h-screen w-full overflow-y-auto pb-20">
-      <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
+    <div className="flex-1 overflow-y-auto relative bg-background selection:bg-primary/30">
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes fadeSlideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-slide-up {
+          opacity: 0;
+          animation: fadeSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        }
+      `}} />
+
+      {/* Decorative Background */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/10 blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-tertiary/10 blur-[120px]" />
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto p-4 md:p-8 lg:p-12 pb-12">
 
         {/* HEADER */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-          <div>
-            <h1 className="text-4xl font-bold">Theme Settings</h1>
-            <p className="text-on-surface-variant mt-2">
-              Customize your application's visual identity for {theme} mode.
-            </p>
+        <div className="mb-10 animate-fade-slide-up">
+          <div className="flex items-center gap-2 text-sm text-on-surface-variant mb-4 font-medium tracking-wide uppercase">
+            <button onClick={() => router.back()} className="hover:bg-surface-container p-1 rounded-full transition-colors mr-1 group flex items-center justify-center cursor-pointer" aria-label="Go back">
+              <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
+            </button>
+            <span>Settings</span>
+            <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+            <span className="text-primary">Theme Settings</span>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto">
-            <div className="flex bg-surface-container rounded-xl p-1 shadow-sm">
-              <button
-                onClick={() => setActiveTab("global")}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === "global" ? "bg-surface text-on-surface shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
-              >
-                Dashboard Theme
-              </button>
-              <button
-                onClick={() => setActiveTab("quotation")}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === "quotation" ? "bg-surface text-on-surface shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
-              >
-                Quotation Theme
-              </button>
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+            <div className="max-w-2xl">
+              <h1 className="text-4xl md:text-5xl font-black text-on-surface mb-4 tracking-tight">Theme Settings</h1>
+              <p className="text-on-surface-variant text-lg leading-relaxed">Customize your application's visual identity for {theme} mode.</p>
             </div>
             
-            {activeTab === "global" && (
-              <button
-                onClick={toggleTheme}
-                className="btn-primary rounded-xl px-5 py-2 whitespace-nowrap text-sm h-10"
-              >
-                {theme === "dark" ? "🌙 Dark Theme Palette" : "☀️ Light Theme Palette"}
-              </button>
-            )}
+            <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
+              <div className="flex bg-surface-container rounded-2xl p-1 shadow-sm h-14 items-center">
+                <button
+                  onClick={() => setActiveTab("global")}
+                  className={`px-6 h-full rounded-xl text-sm font-bold transition-all cursor-pointer ${activeTab === "global" ? "bg-surface text-on-surface shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+                >
+                  Dashboard Theme
+                </button>
+                <button
+                  onClick={() => setActiveTab("quotation")}
+                  className={`px-6 h-full rounded-xl text-sm font-bold transition-all cursor-pointer ${activeTab === "quotation" ? "bg-surface text-on-surface shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+                >
+                  Quotation Theme
+                </button>
+              </div>
+              
+              {activeTab === "global" && (
+                <button
+                  onClick={toggleTheme}
+                  className="group relative h-14 px-8 rounded-2xl bg-surface border border-outline-variant/30 text-on-surface font-bold flex items-center gap-3 overflow-hidden hover:border-primary/50 transition-all hover:-translate-y-0.5 cursor-pointer shadow-sm hover:shadow-md"
+                >
+                  <div className="absolute inset-0 w-full h-full bg-primary/5 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out" />
+                  <span className="text-lg">{theme === "dark" ? "🌙" : "☀️"}</span>
+                  <span>{theme === "dark" ? "Dark Theme Palette" : "Light Theme Palette"}</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-slide-up" style={{ animationDelay: '0.2s' }}>
               {/* LEFT PANEL */}
           <div className="col-span-1 lg:col-span-8 space-y-6">
             {(activeTab === "global" ? THEME_SECTIONS : QUOTATION_THEME_SECTIONS).map((section) => (
-              <div key={section.title} className="glass-panel rounded-2xl p-6">
-                <h2 className="text-2xl font-semibold mb-6">{section.title}</h2>
+              <div key={section.title} className="group/section relative bg-surface border border-outline-variant/30 rounded-[2rem] p-1 overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 mb-6">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover/section:opacity-100 transition-opacity duration-500" />
+                <div className="relative h-full bg-surface-container-lowest rounded-[1.8rem] p-6 sm:p-8">
+                <h3 className="text-xl font-bold flex items-center gap-3 text-on-surface mb-8">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                      <span className="material-symbols-outlined text-[20px]">palette</span>
+                    </div>
+                    {section.title}
+                  </h3>
                 <div className="space-y-5">
                   {section.keys.map((item) => (
                     <div key={item.key} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -174,6 +211,7 @@ export default function ThemeSettingsPage() {
                     </div>
                   ))}
                 </div>
+                </div>
               </div>
             ))}
             
@@ -181,21 +219,21 @@ export default function ThemeSettingsPage() {
               <div className="flex gap-4">
                 <button 
                   onClick={handleResetDefaults}
-                  className="px-6 py-3 rounded-xl font-medium text-error hover:bg-error/10 transition-colors"
+                  className="h-14 px-8 rounded-2xl text-base font-bold text-error hover:bg-error/10 transition-colors cursor-pointer"
                 >
                   Reset Defaults
                 </button>
                 <button 
                   onClick={handleApplyTheme}
                   disabled={saving}
-                  className="btn-primary rounded-xl px-8 py-3 font-medium flex justify-center items-center gap-2"
+                  className="group relative h-14 px-10 rounded-2xl bg-primary text-on-primary font-bold flex items-center gap-3 overflow-hidden shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none cursor-pointer"
                 >
+                  <div className="absolute inset-0 w-full h-full bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out" />
                   {saving ? (
-                    <span className="material-symbols-outlined animate-spin">refresh</span>
+                    <><span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span><span>Saving...</span></>
                   ) : (
-                    <span className="material-symbols-outlined">save</span>
+                    <><span className="material-symbols-outlined text-[20px]">save</span><span>Save {activeTab === "global" ? (theme === "dark" ? "Dark" : "Light") : "Quotation"} Theme</span></>
                   )}
-                  Save {activeTab === "global" ? (theme === "dark" ? "Dark" : "Light") : "Quotation"} Theme
                 </button>
               </div>
             </div>
@@ -203,8 +241,15 @@ export default function ThemeSettingsPage() {
 
           {/* RIGHT PANEL - LIVE PREVIEW */}
           <div className={`col-span-1 lg:col-span-4 ${theme === "dark" && activeTab === "global" ? "dark" : ""}`} style={previewStyle}>
-            <div className="glass-elevated rounded-2xl p-6 sticky top-8 text-on-background bg-background">
-              <h2 className="text-2xl font-semibold mb-6">Live Preview</h2>
+            <div className="group/preview relative bg-surface border border-outline-variant/30 rounded-[2rem] p-1 overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 sticky top-8 text-on-background bg-background">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover/preview:opacity-100 transition-opacity duration-500" />
+              <div className="relative h-full bg-surface-container-lowest rounded-[1.8rem] p-6 sm:p-8">
+              <h3 className="text-xl font-bold flex items-center gap-3 text-on-surface mb-8">
+                <div className="w-10 h-10 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[20px]">visibility</span>
+                </div>
+                Live Preview
+              </h3>
 
               {activeTab === "global" ? (
                 <>
@@ -310,11 +355,12 @@ export default function ThemeSettingsPage() {
                   </div>
                 </div>
               )}
+              </div>
             </div>
           </div>
         </div>
 
       </div>
-    </main>
+    </div>
   );
 }

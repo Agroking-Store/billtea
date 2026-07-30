@@ -201,7 +201,8 @@ export default function ProfilePage() {
 
   return (
     <div className="flex-1 overflow-y-auto relative bg-background selection:bg-primary/30">
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @keyframes fadeSlideUp {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
@@ -237,6 +238,45 @@ export default function ProfilePage() {
                 View and manage your personal details, role definitions, and system authorization parameters.
               </p>
             </div>
+            {editing ? (
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    setEditing(false);
+                    setEditForm({
+                      fullName: user.fullName,
+                      email: user.email,
+                      phoneNumber: user.phoneNumber,
+                      profilePicture: user.profilePicture || '',
+                    });
+                    setSaveMessage({ type: '', text: '' });
+                  }}
+                  className="h-14 px-6 rounded-2xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 text-on-surface font-bold transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveProfile}
+                  disabled={saving}
+                  className="group relative h-14 px-8 rounded-2xl bg-primary text-on-primary font-bold flex items-center gap-3 overflow-hidden shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none cursor-pointer"
+                >
+                  <div className="absolute inset-0 w-full h-full bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out" />
+                  {saving ? (
+                    <><span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span><span>Saving...</span></>
+                  ) : (
+                    <><span className="material-symbols-outlined text-[18px]">save</span><span>Save Changes</span></>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setEditing(true)}
+                className="group relative h-14 px-8 rounded-2xl bg-primary text-on-primary font-bold flex items-center gap-3 overflow-hidden shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5 cursor-pointer"
+              >
+                <div className="absolute inset-0 w-full h-full bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out" />
+                <span className="material-symbols-outlined">edit</span><span>Edit Profile</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -257,7 +297,7 @@ export default function ProfilePage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-slide-up" style={{ animationDelay: '0.2s' }}>
-          
+
           {/* Profile Header Card */}
           <div className="lg:col-span-4 group relative bg-surface border border-outline-variant/30 rounded-[2rem] p-1 overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 h-full order-1">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -276,16 +316,18 @@ export default function ProfilePage() {
                     </div>
                   )}
                 </div>
-                <label className="absolute bottom-1 right-1 w-10 h-10 rounded-full bg-primary border-2 border-surface text-on-primary flex items-center justify-center cursor-pointer hover:scale-110 shadow-lg transition-transform">
-                  <span className="material-symbols-outlined text-sm">edit</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleProfilePictureUpload}
-                    disabled={saving}
-                  />
-                </label>
+                {editing && (
+                  <label className="absolute bottom-1 right-1 w-10 h-10 rounded-full bg-primary border-2 border-surface text-on-primary flex items-center justify-center cursor-pointer hover:scale-110 shadow-lg transition-transform">
+                    <span className="material-symbols-outlined text-sm">upload</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleProfilePictureUpload}
+                      disabled={saving}
+                    />
+                  </label>
+                )}
               </div>
               <h2 className="text-2xl font-bold text-on-surface mb-2">{user.fullName}</h2>
               <div className="flex items-center gap-2 mb-2 flex-wrap justify-center">
@@ -349,50 +391,6 @@ export default function ProfilePage() {
                   </div>
                   Personal Information
                 </h3>
-                {!editing ? (
-                  <button
-                    onClick={() => setEditing(true)}
-                    className="w-full sm:w-auto h-12 px-6 rounded-xl bg-surface-container hover:bg-primary border border-outline-variant/30 text-on-surface hover:text-on-primary font-bold flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">edit</span>
-                    Edit details
-                  </button>
-                ) : (
-                  <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto justify-end">
-                    <button
-                      onClick={() => {
-                        setEditing(false);
-                        setEditForm({
-                          fullName: user.fullName,
-                          email: user.email,
-                          phoneNumber: user.phoneNumber,
-                          profilePicture: user.profilePicture || '',
-                        });
-                        setSaveMessage({ type: '', text: '' });
-                      }}
-                      className="w-full sm:w-auto px-6 py-3 rounded-xl text-sm font-bold text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer text-center"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleSaveProfile}
-                      disabled={saving}
-                      className="w-full sm:w-auto bg-primary text-on-primary px-6 py-3 rounded-xl text-sm font-bold transition-all shadow-lg shadow-primary/30 hover:-translate-y-0.5 hover:shadow-primary/40 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      {saving ? (
-                        <>
-                          <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <span className="material-symbols-outlined text-[18px]">save</span>
-                          Save Changes
-                        </>
-                      )}
-                    </button>
-                  </div>
-                )}
               </div>
 
               {!editing ? (
@@ -460,7 +458,7 @@ export default function ProfilePage() {
                 </div>
                 Organization Details
               </h3>
-              
+
               <div className="space-y-8">
                 {company ? (
                   <div>
@@ -532,9 +530,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Footer */}
-        <div className="mt-16 text-center text-on-surface-variant text-xs opacity-40 uppercase tracking-[0.3em] font-bold">
-          © 2026 Indux Technology • Secure Environment
-        </div>
+
       </div>
     </div>
   );
