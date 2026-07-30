@@ -6,6 +6,7 @@ import {
   FlatList,
   Linking,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,6 +21,7 @@ import * as Clipboard from "expo-clipboard";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import {
   Eye,
   PencilLine,
@@ -32,6 +34,7 @@ import {
   Phone,
   Wallet,
   X,
+  StickyNote,
   FileText,
   Filter,
   RotateCcw,
@@ -40,6 +43,7 @@ import {
   Calendar,
   ArrowUpDown,
   Search,
+  Receipt,
 } from "lucide-react-native";
 
 import { AppHeader } from "../../components/ui/AppHeader";
@@ -185,19 +189,7 @@ export default function QuotationsScreen() {
   const [searchActive, setSearchActive] = useState(false);
   const [searchText, setSearchText] = useState("");
 
-  // ---- Inline Filter States (Matching reference code) ----
-  const [oldCustomerFilter, oldSetCustomerFilter] = useState("");
-  const [oldStatusFilter, oldSetStatusFilter] = useState("");
-  const [oldFromDate, oldSetFromDate] = useState("");
-  const [oldToDate, oldSetToDate] = useState("");
-
-  // Dropdown States for Filters
-  const [activeDropdown, setActiveDropdown] = useState<"customer" | "status" | null>(null);
-
-  // Toggle Dropdowns
-  const toggleDropdown = (dropdown: "customer" | "status") => {
-    setActiveDropdown((prev) => (prev === dropdown ? null : dropdown));
-  };
+  // Removed old filter states and toggleDropdown
 
   // Fetch data lazily on tab switch
   useEffect(() => {
@@ -249,91 +241,7 @@ export default function QuotationsScreen() {
     };
   }, [activeTab, fetchedTabs]);
 
-  // Unique customer list for Customer filter dropdown
-  const oldUniqueCustomers = useMemo(() => {
-    const names = new Set<string>();
-    const sourceList = activeTab === "Quotations" ? quotations : activeTab === "Invoices" ? invoices : [];
-    sourceList.forEach((item: any) => {
-      if (item.customer?.customerName) names.add(item.customer.customerName);
-    });
-    return Array.from(names).sort((a, b) => a.localeCompare(b));
-  }, [activeTab, quotations, invoices]);
-
-  // Dynamic Statuses based on Active Tab
-  const statusOptions = useMemo(() => {
-    if (activeTab === "Quotations") return ["DRAFT", "SENT", "ACCEPTED", "EXPIRED"];
-    if (activeTab === "Invoices") return ["DRAFT", "SENT", "UNPAID", "PARTIAL", "PAID", "OVERDUE", "CANCELLED"];
-    return [];
-  }, [activeTab]);
-
-  // Check if any filter is active
-  const oldHasActiveFilters = Boolean(oldCustomerFilter || oldStatusFilter || oldFromDate || oldToDate || searchText);
-
-  // Clear all filters
-  const oldHandleClearFilters = () => {
-    oldSetCustomerFilter("");
-    oldSetStatusFilter("");
-    oldSetFromDate("");
-    oldSetToDate("");
-    setSearchText("");
-    setActiveDropdown(null);
-  };
-
-  // Helper date checker
-  const isDateInRange = (itemDateStr: string) => {
-    if (!oldFromDate && !oldToDate) return true;
-    const itemDate = new Date(itemDateStr);
-    if (isNaN(itemDate.getTime())) return true;
-
-    if (oldFromDate) {
-      const from = new Date(oldFromDate);
-      from.setHours(0, 0, 0, 0);
-      if (itemDate < from) return false;
-    }
-
-    if (oldToDate) {
-      const to = new Date(oldToDate);
-      to.setHours(23, 59, 59, 999);
-      if (itemDate > to) return false;
-    }
-
-    return true;
-  };
-
-  // Client-side search & inline filters
-  const oldFilteredQuotations = useMemo(() => {
-    const query = searchText.trim().toLowerCase();
-    return quotations.filter((q) => {
-      const qNum = (q.quotationNumber ?? "").toLowerCase();
-      const customerName = (q.customer?.customerName ?? "").toLowerCase();
-      const companyName = (q.customer?.companyName ?? "").toLowerCase();
-      const matchesSearch =
-        !query || qNum.includes(query) || customerName.includes(query) || companyName.includes(query);
-
-      const matchesCustomer = !oldCustomerFilter || q.customer?.customerName === oldCustomerFilter;
-      const matchesStatus = !oldStatusFilter || q.status === oldStatusFilter;
-      const matchesDate = isDateInRange(q.quotationDate);
-
-      return matchesSearch && matchesCustomer && matchesStatus && matchesDate;
-    });
-  }, [quotations, searchText, oldCustomerFilter, oldStatusFilter, oldFromDate, oldToDate]);
-
-  const oldFilteredInvoices = useMemo(() => {
-    const query = searchText.trim().toLowerCase();
-    return invoices.filter((i) => {
-      const iNum = (i.invoiceNumber ?? "").toLowerCase();
-      const customerName = (i.customer?.customerName ?? "").toLowerCase();
-      const companyName = (i.customer?.companyName ?? "").toLowerCase();
-      const matchesSearch =
-        !query || iNum.includes(query) || customerName.includes(query) || companyName.includes(query);
-
-      const matchesCustomer = !oldCustomerFilter || i.customer?.customerName === oldCustomerFilter;
-      const matchesStatus = !oldStatusFilter || i.status === oldStatusFilter;
-      const matchesDate = isDateInRange(i.invoiceDate);
-
-      return matchesSearch && matchesCustomer && matchesStatus && matchesDate;
-    });
-  }, [invoices, searchText, oldCustomerFilter, oldStatusFilter, oldFromDate, oldToDate]);
+  // Removed old filter hooks (oldUniqueCustomers, statusOptions, oldFilteredQuotations, oldFilteredInvoices)
   // --- Filter & Sorting state for Quotations ---
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [customerFilter, setCustomerFilter] = useState("");
@@ -341,8 +249,15 @@ export default function QuotationsScreen() {
   const [statusFilter, setStatusFilter] = useState("");
   const [fromDateFilter, setFromDateFilter] = useState("");
   const [toDateFilter, setToDateFilter] = useState("");
+  const [showFromPicker, setShowFromPicker] = useState(false);
+  const [showToPicker, setShowToPicker] = useState(false);
   const [sortBy, setSortBy] = useState<"quotationNumber" | "customer" | "quotationDate" | "grandTotal">("quotationDate");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [displayLimit, setDisplayLimit] = useState(15);
+
+  useEffect(() => {
+    setDisplayLimit(15);
+  }, [activeTab, searchText, customerFilter, companyFilter, statusFilter, sortBy, sortOrder]);
 
   // Pickers state for selection modals
   const [showCustomerPicker, setShowCustomerPicker] = useState(false);
@@ -522,7 +437,7 @@ export default function QuotationsScreen() {
       }
 
       // Customer Filter mapping to Category for expenses
-      if (oldCustomerFilter && e.category?.name && !e.category.name.toLowerCase().includes(oldCustomerFilter.toLowerCase())) {
+      if (customerFilter && e.category?.name && !e.category.name.toLowerCase().includes(customerFilter.toLowerCase())) {
         return false;
       }
 
@@ -543,7 +458,7 @@ export default function QuotationsScreen() {
 
       return true;
     });
-  }, [expenses, searchText, oldCustomerFilter, fromDateFilter, toDateFilter]);
+  }, [expenses, searchText, customerFilter, fromDateFilter, toDateFilter]);
 
   // Stats Row calculations
   const currentStats = useMemo(() => {
@@ -952,290 +867,117 @@ export default function QuotationsScreen() {
   };
 
   // Card Render functions
-  const renderQuotationCard = ({ item }: { item: Quotation }) => {
-    const statusColors = {
-      DRAFT: "#fbbf24",
-      SENT: "#34d399",
-      ACCEPTED: "#38bdf8",
-      EXPIRED: "#fb7185",
-    };
-    const statusColor = statusColors[item.status] ?? colors.textSecondary;
-    const companyName = item.customer?.companyName || item.customer?.customerName || "Customer";
-    const customerPerson =
-      item.customer?.companyName && item.customer?.customerName !== item.customer?.companyName
-        ? item.customer.customerName
-        : "";
-
-    return (
-      <GlassPanel style={styles.card}>
-        {/* Row 1: Quotation Number Badge (Left) & Grand Total Price (Right) */}
-        <View style={styles.cardHeaderRow}>
-          <View style={[styles.numberPillBadge, { borderColor: "#38bdf8" + "40", backgroundColor: "#38bdf8" + "15" }]}>
-            <Text style={styles.numberPillText}>#{item.quotationNumber}</Text>
-          </View>
-
-          <Text style={[styles.priceValueText, { color: colors.text }]}>
-            {formatCurrency(item.totals?.grandTotal ?? 0)}
-          </Text>
-        </View>
-
-        {/* Row 2: Company Name (Left) & Status Badge (Right) */}
-        <View style={[styles.cardRow, { marginTop: 8, alignItems: "center" }]}>
-          <Text style={[styles.cardTitleText, { color: colors.text, flex: 1, marginRight: 8 }]} numberOfLines={1}>
-            {companyName}
-          </Text>
-
-          <View
-            style={[
-              styles.statusBadge,
-              {
-                backgroundColor: `${statusColor}1A`,
-                borderColor: `${statusColor}30`,
-              },
-            ]}
-          >
-            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-            <Text style={[styles.statusText, { color: statusColor }]}>
-              {item.status === "ACCEPTED" ? "Approved" : item.status === "EXPIRED" ? "Rejected" : item.status}
-            </Text>
-          </View>
-        </View>
-
-        {/* Row 3: Customer Contact Person & Quotation Date */}
-        <View style={[styles.cardRow, { marginTop: 4, alignItems: "center" }]}>
-          <Text style={[styles.cardSubtitleText, { color: colors.textSecondary, flex: 1 }]} numberOfLines={1}>
-            {customerPerson ? `${customerPerson}  •  ` : ""}{formatDate(item.quotationDate)}
-          </Text>
-        </View>
-
-        <View style={[styles.innerDivider, { backgroundColor: colors.border }]} />
-
-        {/* Actions Row */}
-        <View style={[styles.actionsRow, { justifyContent: "space-between" }]}>
-          <ActionIconButton icon={Eye} onPress={() => handleComingSoon("View")} />
-          <ActionIconButton
-            icon={PencilLine}
-            onPress={() =>
-              router.push({
-                pathname: "/(app)/create-quotation",
-                params: { id: item.id },
-              })
-            }
-            color="#fbbf24"
-          />
-          <ActionIconButton
-            icon={Copy}
-            onPress={() =>
-              router.push({
-                pathname: "/(app)/create-quotation",
-                params: { copyFromId: item.id },
-              })
-            }
-          />
-          <ActionIconButton
-            icon={FileText}
-            onPress={() => handleOpenNotesModal(item)}
-            color="#34D399"
-          />
-          <ActionIconButton
-            icon={Send}
-            onPress={() => handleDownloadQuotationPdf(item.id, item.quotationNumber)}
-            color="#7dd3fc"
-          />
-          <ActionIconButton
-            icon={Trash2}
-            onPress={() => handleDeleteQuotation(item.id)}
-            color="#FF6B6B"
-          />
-        </View>
-      </GlassPanel>
-    );
-  };
-
-  const renderInvoiceCard = ({ item }: { item: Invoice }) => {
-    const statusColors = {
-      PAID: "#34d399",
-      UNPAID: "#fbbf24",
-      PARTIAL: "#fbbf24",
-      OVERDUE: "#fb7185",
-      DRAFT: "#88b4cc",
-      SENT: "#7dd3fc",
-      CANCELLED: "#64748b",
-    };
-    const statusColor = statusColors[item.status] ?? colors.textSecondary;
-    const customerName =
-      item.customer?.companyName ?? item.customer?.customerName ?? "Unknown Customer";
-
-    const isOverdue = item.status === "OVERDUE";
-    const isCancelled = item.status === "CANCELLED";
-
-    return (
-      <GlassPanel
-        style={[styles.card, isCancelled && { opacity: 0.5 }]}
-      >
-        {/* Row 1: Invoice Number & Amount */}
-        <View style={styles.cardRow}>
-          <Text style={[styles.invoiceNumberText, { color: statusColor }]}>
-            {item.invoiceNumber}
-          </Text>
-          <Text style={[styles.priceValueText, { color: colors.text }]}>
-            {formatCurrency(item.totals?.grandTotal ?? 0)}
-          </Text>
-        </View>
-
-        {/* Row 2: Customer Name & Balance */}
-        <View style={[styles.cardRow, { marginTop: 6 }]}>
-          <Text style={[styles.cardTitleText, { color: colors.text }]} numberOfLines={1}>
-            {customerName}
-          </Text>
-          <Text style={[styles.balanceLabelText, { color: colors.textSecondary }]}>
-            BALANCE: {formatCurrency(item.amountDue ?? 0)}
-          </Text>
-        </View>
-
-        {/* Row 3: Date & Status */}
-        <View style={[styles.cardRow, { marginTop: 8, alignItems: "center" }]}>
-          <Text
-            style={[
-              styles.cardSubtitleText,
-              { color: colors.textSecondary },
-              isOverdue && { color: statusColor, fontWeight: "700" },
-            ]}
-          >
-            {isOverdue
-              ? `Due ${formatDate(item.dueDate)}`
-              : formatDate(item.invoiceDate)}
-          </Text>
-
-          <View
-            style={[
-              styles.statusBadge,
-              {
-                backgroundColor: `${statusColor}1A`,
-                borderColor: `${statusColor}30`,
-              },
-            ]}
-          >
-            <Text style={[styles.statusText, { color: statusColor }]}>
-              {item.status}
-            </Text>
-          </View>
-        </View>
-
-        <View style={[styles.innerDivider, { backgroundColor: colors.border }]} />
-
-        {/* Actions Row */}
-        <View style={[styles.actionsRow, { justifyContent: "space-between" }]}>
-          <ActionIconButton
-            icon={PencilLine}
-            onPress={() => handleEditInvoice(item)}
-            color="#fbbf24"
-          />
-          <ActionIconButton icon={Copy} onPress={() => handleCopyInvoice(item)} />
-          <ActionIconButton
-            icon={Wallet}
-            onPress={() => handleOpenPayment(item)}
-            color="#c084fc"
-          />
-          <ActionIconButton
-            icon={Send}
-            onPress={() => handleDownloadInvoicePdf(item.id, item.invoiceNumber)}
-            color="#7dd3fc"
-          />
-          <ActionIconButton
-            icon={Phone}
-            onPress={() => handleCallCustomer(item)}
-            color="#34D399"
-          />
-          <ActionIconButton
-            icon={Trash2}
-            onPress={() => handleDeleteInvoice(item.id)}
-            color="#FF6B6B"
-          />
-        </View>
-      </GlassPanel>
-    );
-  };
-
-  const renderExpenseCard = ({ item }: { item: Expense }) => {
-    const shortId = item.id
-      ? item.id.substring(item.id.length - 8).toUpperCase()
-      : "EXP";
-    const loggedBy = (item.createdBy?.fullName ?? "—").toUpperCase();
-    const categoryName = item.category?.name ?? "Uncategorized";
-
-    return (
-      <GlassPanel style={styles.card}>
-        {/* Row 1: ID & Amount */}
-        <View style={styles.cardRow}>
-          <Text style={[styles.expenseNumberText, { color: colors.textSecondary }]}>
-            #EXP-{shortId}
-          </Text>
-          <Text style={[styles.priceValueText, { color: colors.text }]}>
-            -{formatCurrency(item.amount)}
-          </Text>
-        </View>
-
-        {/* Row 2: Date & Creator */}
-        <View style={[styles.cardRow, { marginTop: 6 }]}>
-          <Text style={[styles.cardSubtitleText, { color: colors.textSecondary }]}>
-            {formatDate(item.date)}
-          </Text>
-          <Text style={[styles.loggedByCapsText, { color: colors.textSecondary }]}>
-            {loggedBy}
-          </Text>
-        </View>
-
-        {/* Row 3: Category Badge */}
-        <View style={[styles.cardRow, { marginTop: 8, justifyContent: "flex-start" }]}>
-          <View style={[styles.categoryBadge, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
-            <Text style={[styles.categoryBadgeText, { color: colors.text }]}>
-              {categoryName}
-            </Text>
-          </View>
-        </View>
-
-        {/* Row 4: Note */}
-        {item.note ? (
-          <View style={[styles.noteContainer, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
-            <Text style={[styles.noteText, { color: colors.textSecondary }]}>
-              {item.note}
-            </Text>
-          </View>
-        ) : null}
-
-        <View style={[styles.innerDivider, { backgroundColor: colors.border }]} />
-
-        {/* Actions Row */}
-        <View style={[styles.actionsRow, { justifyContent: "flex-start", gap: 12 }]}>
-          <ActionIconButton icon={Copy} onPress={() => handleComingSoon("Copy")} />
-          <ActionIconButton
-            icon={PencilLine}
-            onPress={() => handleComingSoon("Edit")}
-            color="#fbbf24"
-          />
-          <ActionIconButton icon={Eye} onPress={() => handleComingSoon("View")} />
-          <ActionIconButton
-            icon={Trash2}
-            onPress={() => handleDeleteExpense(item.id)}
-            color="#FF6B6B"
-          />
-        </View>
-      </GlassPanel>
-    );
-  };
-
   const activeDataList = useMemo(() => {
     if (activeTab === "Quotations") return filteredQuotations;
     if (activeTab === "Invoices") return filteredInvoices;
     return filteredExpenses;
   }, [activeTab, filteredQuotations, filteredInvoices, filteredExpenses]);
 
-  const activeCardRenderer = useMemo<any>(() => {
-    if (activeTab === "Quotations") return renderQuotationCard;
-    if (activeTab === "Invoices") return renderInvoiceCard;
-    return renderExpenseCard;
-  }, [activeTab]);
+  const displayedDataList = useMemo(() => {
+    return activeDataList.slice(0, displayLimit);
+  }, [activeDataList, displayLimit]);
+
+  const handleEditQuotation = React.useCallback((id: string) => {
+    router.push({ pathname: "/(app)/create-quotation", params: { id } });
+  }, [router]);
+
+  const handleConvertToInvoice = React.useCallback((id: string) => {
+    router.push({ pathname: "/(app)/create-invoice", params: { copyFromQuotation: id } });
+  }, [router]);
+
+  const handleCopyQuotation = React.useCallback((id: string) => {
+    router.push({ pathname: "/(app)/create-quotation", params: { copyFromId: id } });
+  }, [router]);
+
+  const memoizedHandleComingSoon = React.useCallback((action: string) => {
+    handleComingSoon(action);
+  }, []);
+
+  const memoizedHandleOpenNotesModal = React.useCallback((item: Quotation) => {
+    handleOpenNotesModal(item);
+  }, []);
+
+  const memoizedHandleDownloadQuotationPdf = React.useCallback((id: string, num: string) => {
+    handleDownloadQuotationPdf(id, num);
+  }, []);
+
+  const memoizedHandleDeleteQuotation = React.useCallback((id: string) => {
+    handleDeleteQuotation(id);
+  }, []);
+
+  const memoizedHandleEditInvoice = React.useCallback((item: Invoice) => {
+    handleEditInvoice(item);
+  }, []);
+
+  const memoizedHandleCopyInvoice = React.useCallback((item: Invoice) => {
+    handleCopyInvoice(item);
+  }, []);
+
+  const memoizedHandleOpenPayment = React.useCallback((item: Invoice) => {
+    handleOpenPayment(item);
+  }, []);
+
+  const memoizedHandleDownloadInvoicePdf = React.useCallback((id: string, num: string) => {
+    handleDownloadInvoicePdf(id, num);
+  }, []);
+
+  const memoizedHandleCallCustomer = React.useCallback((item: Invoice) => {
+    handleCallCustomer(item);
+  }, []);
+
+  const memoizedHandleDeleteInvoice = React.useCallback((id: string) => {
+    handleDeleteInvoice(id);
+  }, []);
+
+  const memoizedHandleDeleteExpense = React.useCallback((id: string) => {
+    handleDeleteExpense(id);
+  }, []);
+
+  const activeCardRenderer = React.useCallback(({ item }: any) => {
+    if (activeTab === "Quotations") {
+      return (
+        <MemoizedQuotationCard
+          item={item}
+          colors={colors}
+          onConvertToInvoice={handleConvertToInvoice}
+          onEdit={handleEditQuotation}
+          onCopy={handleCopyQuotation}
+          onViewNotes={memoizedHandleOpenNotesModal}
+          onDownloadPdf={memoizedHandleDownloadQuotationPdf}
+          onDelete={memoizedHandleDeleteQuotation}
+          onComingSoon={memoizedHandleComingSoon}
+        />
+      );
+    }
+    if (activeTab === "Invoices") {
+      return (
+        <MemoizedInvoiceCard
+          item={item}
+          colors={colors}
+          onEdit={memoizedHandleEditInvoice}
+          onCopy={memoizedHandleCopyInvoice}
+          onPayment={memoizedHandleOpenPayment}
+          onDownloadPdf={memoizedHandleDownloadInvoicePdf}
+          onCall={memoizedHandleCallCustomer}
+          onDelete={memoizedHandleDeleteInvoice}
+        />
+      );
+    }
+    return (
+      <MemoizedExpenseCard
+        item={item}
+        colors={colors}
+        onComingSoon={memoizedHandleComingSoon}
+        onDelete={memoizedHandleDeleteExpense}
+      />
+    );
+  }, [
+    activeTab, colors,
+    handleEditQuotation, handleConvertToInvoice, handleCopyQuotation, memoizedHandleOpenNotesModal, memoizedHandleDownloadQuotationPdf, memoizedHandleDeleteQuotation, memoizedHandleComingSoon,
+    memoizedHandleEditInvoice, memoizedHandleCopyInvoice, memoizedHandleOpenPayment, memoizedHandleDownloadInvoicePdf, memoizedHandleCallCustomer, memoizedHandleDeleteInvoice,
+    memoizedHandleDeleteExpense
+  ]);
+
 
   const [filterActive, setFilterActive] = useState(false);
   const handleFilterPress = () => {
@@ -1319,13 +1061,14 @@ export default function QuotationsScreen() {
               <View style={styles.filterFieldContainer}>
                 <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>FROM</Text>
                 <View style={[styles.dateInputWrapper, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}>
-                  <TextInput
-                    value={fromDateFilter}
-                    onChangeText={setFromDateFilter}
-                    placeholder="dd/mm/yyyy"
-                    placeholderTextColor={colors.textSecondary + "70"}
-                    style={[styles.filterDateInput, { color: colors.text }]}
-                  />
+                  <TouchableOpacity
+                    onPress={() => setShowFromPicker(true)}
+                    style={[styles.filterDateInput, { justifyContent: "center" }]}
+                  >
+                    <Text style={{color: fromDateFilter ? colors.text : colors.textSecondary + "70"}}>
+                      {fromDateFilter ? fromDateFilter : "yyyy-mm-dd"}
+                    </Text>
+                  </TouchableOpacity>
                   <Calendar size={16} color={colors.textSecondary} />
                 </View>
               </View>
@@ -1333,13 +1076,14 @@ export default function QuotationsScreen() {
               <View style={styles.filterFieldContainer}>
                 <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>TO</Text>
                 <View style={[styles.dateInputWrapper, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}>
-                  <TextInput
-                    value={toDateFilter}
-                    onChangeText={setToDateFilter}
-                    placeholder="dd/mm/yyyy"
-                    placeholderTextColor={colors.textSecondary + "70"}
-                    style={[styles.filterDateInput, { color: colors.text }]}
-                  />
+                  <TouchableOpacity
+                    onPress={() => setShowToPicker(true)}
+                    style={[styles.filterDateInput, { justifyContent: "center" }]}
+                  >
+                    <Text style={{color: toDateFilter ? colors.text : colors.textSecondary + "70"}}>
+                      {toDateFilter ? toDateFilter : "yyyy-mm-dd"}
+                    </Text>
+                  </TouchableOpacity>
                   <Calendar size={16} color={colors.textSecondary} />
                 </View>
               </View>
@@ -1573,10 +1317,48 @@ export default function QuotationsScreen() {
             </View>
           </View>
         )}
+      
+      {showFromPicker && (
+        <DateTimePicker
+          value={fromDateFilter ? new Date(fromDateFilter) : new Date()}
+          mode="date"
+          display="default"
+          onChange={(event, selectedDate) => {
+            if (Platform.OS === 'android') setShowFromPicker(false);
+            if (event.type === 'dismissed') {
+              setShowFromPicker(false);
+              return;
+            }
+            if (selectedDate) {
+              setFromDateFilter(selectedDate.toISOString().split("T")[0]);
+              if (Platform.OS === 'ios') setShowFromPicker(false);
+            }
+          }}
+        />
+      )}
+      {showToPicker && (
+        <DateTimePicker
+          value={toDateFilter ? new Date(toDateFilter) : new Date()}
+          mode="date"
+          display="default"
+          onChange={(event, selectedDate) => {
+            if (Platform.OS === 'android') setShowToPicker(false);
+            if (event.type === 'dismissed') {
+              setShowToPicker(false);
+              return;
+            }
+            if (selectedDate) {
+              setToDateFilter(selectedDate.toISOString().split("T")[0]);
+              if (Platform.OS === 'ios') setShowToPicker(false);
+            }
+          }}
+        />
+      )}
+
       </AppHeader>
 
       <FlatList
-        data={loading ? [] : (activeDataList as any[])}
+        data={loading ? [] : (displayedDataList as any[])}
         keyExtractor={(item) => item.id}
         renderItem={activeCardRenderer}
         showsVerticalScrollIndicator={false}
@@ -1590,7 +1372,7 @@ export default function QuotationsScreen() {
               activeOption={activeTab}
               onOptionChange={(opt) => {
                 setActiveTab(opt as Tab);
-                oldHandleClearFilters();
+                handleResetFilters();
               }}
               style={{ marginBottom: 16 }}
             />
@@ -1618,214 +1400,20 @@ export default function QuotationsScreen() {
               </View>
             </GlassPanel>
 
-            {/* ---- INLINE FILTERS SECTION (Adapted from Reference Code) ---- */}
-            <GlassPanel style={styles.inlineFilterPanel}>
-              {/* Filter Section Header */}
-              <View style={styles.filterHeaderRow}>
-                <View style={styles.filterTitleGroup}>
-                  <View style={[styles.filterIconBadge, { backgroundColor: colors.primary + "1A" }]}>
-                    <Filter size={16} color={colors.primary} />
-                  </View>
-                  <Text style={[styles.filterHeaderText, { color: colors.text }]}>Filters</Text>
-                </View>
 
-                {oldHasActiveFilters && (
-                  <View style={[styles.activeBadge, { backgroundColor: colors.primary + "1A", borderColor: colors.primary + "30" }]}>
-                    <Check size={12} color={colors.primary} />
-                    <Text style={[styles.activeBadgeText, { color: colors.primary }]}>Active</Text>
-                  </View>
-                )}
-              </View>
-
-              {/* Filter Inputs Grid */}
-              <View style={styles.filterControlsGrid}>
-                {/* 1. Customer Filter Input */}
-                <View style={styles.filterField}>
-                  <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
-                    {activeTab === "Expenses" ? "Category / Keyword" : "Customer"}
-                  </Text>
-                  {activeTab === "Expenses" ? (
-                    <TextInput
-                      value={oldCustomerFilter}
-                      onChangeText={oldSetCustomerFilter}
-                      placeholder="Filter category..."
-                      placeholderTextColor={colors.textSecondary + "70"}
-                      style={[
-                        styles.dropdownButton,
-                        { color: colors.text, borderColor: colors.border, backgroundColor: colors.surfaceVariant },
-                      ]}
-                    />
-                  ) : (
-                    <View style={{ zIndex: activeDropdown === "customer" ? 50 : 1 }}>
-                      <TouchableOpacity
-                        style={[
-                          styles.dropdownButton,
-                          { borderColor: colors.border, backgroundColor: colors.surfaceVariant },
-                        ]}
-                        onPress={() => toggleDropdown("customer")}
-                      >
-                        <Text style={[styles.dropdownButtonText, { color: oldCustomerFilter ? colors.text : colors.textSecondary }]} numberOfLines={1}>
-                          {oldCustomerFilter || "All Customers"}
-                        </Text>
-                        <ChevronDown size={16} color={colors.textSecondary} />
-                      </TouchableOpacity>
-
-                      {activeDropdown === "customer" && (
-                        <View style={[styles.dropdownMenu, { backgroundColor: isDark ? "#0f172a" : colors.surface, borderColor: colors.border }]}>
-                          <ScrollView nestedScrollEnabled style={{ maxHeight: 180 }}>
-                            <TouchableOpacity
-                              style={[
-                                styles.dropdownOption,
-                                oldCustomerFilter === "" && { backgroundColor: colors.primary + "20" },
-                              ]}
-                              onPress={() => {
-                                oldSetCustomerFilter("");
-                                setActiveDropdown(null);
-                              }}
-                            >
-                              <Text style={[styles.dropdownOptionText, { color: oldCustomerFilter === "" ? colors.primary : colors.text }]}>
-                                All Customers
-                              </Text>
-                            </TouchableOpacity>
-
-                            {oldUniqueCustomers.map((name) => (
-                              <TouchableOpacity
-                                key={name}
-                                style={[
-                                  styles.dropdownOption,
-                                  oldCustomerFilter === name && { backgroundColor: colors.primary + "20" },
-                                ]}
-                                onPress={() => {
-                                  oldSetCustomerFilter(name);
-                                  setActiveDropdown(null);
-                                }}
-                              >
-                                <Text style={[styles.dropdownOptionText, { color: oldCustomerFilter === name ? colors.primary : colors.text }]}>
-                                  {name}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </ScrollView>
-                        </View>
-                      )}
-                    </View>
-                  )}
-                </View>
-
-                {/* 2. Status Filter Input */}
-                {activeTab !== "Expenses" && (
-                  <View style={styles.filterField}>
-                    <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Status</Text>
-                    <View style={{ zIndex: activeDropdown === "status" ? 50 : 1 }}>
-                      <TouchableOpacity
-                        style={[
-                          styles.dropdownButton,
-                          { borderColor: colors.border, backgroundColor: colors.surfaceVariant },
-                        ]}
-                        onPress={() => toggleDropdown("status")}
-                      >
-                        <Text style={[styles.dropdownButtonText, { color: oldStatusFilter ? colors.text : colors.textSecondary }]}>
-                          {oldStatusFilter || "All Status"}
-                        </Text>
-                        <ChevronDown size={16} color={colors.textSecondary} />
-                      </TouchableOpacity>
-
-                      {activeDropdown === "status" && (
-                        <View style={[styles.dropdownMenu, { backgroundColor: isDark ? "#0f172a" : colors.surface, borderColor: colors.border }]}>
-                          <ScrollView nestedScrollEnabled style={{ maxHeight: 180 }}>
-                            <TouchableOpacity
-                              style={[
-                                styles.dropdownOption,
-                                oldStatusFilter === "" && { backgroundColor: colors.primary + "20" },
-                              ]}
-                              onPress={() => {
-                                oldSetStatusFilter("");
-                                setActiveDropdown(null);
-                              }}
-                            >
-                              <Text style={[styles.dropdownOptionText, { color: oldStatusFilter === "" ? colors.primary : colors.text }]}>
-                                All Status
-                              </Text>
-                            </TouchableOpacity>
-
-                            {statusOptions.map((st) => (
-                              <TouchableOpacity
-                                key={st}
-                                style={[
-                                  styles.dropdownOption,
-                                  oldStatusFilter === st && { backgroundColor: colors.primary + "20" },
-                                ]}
-                                onPress={() => {
-                                  oldSetStatusFilter(st);
-                                  setActiveDropdown(null);
-                                }}
-                              >
-                                <Text style={[styles.dropdownOptionText, { color: oldStatusFilter === st ? colors.primary : colors.text }]}>
-                                  {st}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </ScrollView>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                )}
-
-                {/* 3. From Date Input */}
-                <View style={styles.filterField}>
-                  <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>From Date</Text>
-                  <View style={styles.inputWithIcon}>
-                    <TextInput
-                      value={oldFromDate}
-                      onChangeText={oldSetFromDate}
-                      placeholder="YYYY-MM-DD"
-                      placeholderTextColor={colors.textSecondary + "70"}
-                      style={[
-                        styles.dropdownButton,
-                        { color: colors.text, borderColor: colors.border, backgroundColor: colors.surfaceVariant },
-                      ]}
-                    />
-                    <Calendar size={14} color={colors.textSecondary} style={styles.fieldRightIcon} />
-                  </View>
-                </View>
-
-                {/* 4. To Date Input */}
-                <View style={styles.filterField}>
-                  <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>To Date</Text>
-                  <View style={styles.inputWithIcon}>
-                    <TextInput
-                      value={oldToDate}
-                      onChangeText={oldSetToDate}
-                      placeholder="YYYY-MM-DD"
-                      placeholderTextColor={colors.textSecondary + "70"}
-                      style={[
-                        styles.dropdownButton,
-                        { color: colors.text, borderColor: colors.border, backgroundColor: colors.surfaceVariant },
-                      ]}
-                    />
-                    <Calendar size={14} color={colors.textSecondary} style={styles.fieldRightIcon} />
-                  </View>
-                </View>
-              </View>
-
-              {/* Reset Action */}
-              <View style={styles.resetActionRow}>
-                <TouchableOpacity
-                  disabled={!oldHasActiveFilters}
-                  onPress={oldHandleClearFilters}
-                  style={[
-                    styles.resetInlineBtn,
-                    { borderColor: colors.border },
-                    !oldHasActiveFilters && { opacity: 0.4 },
-                  ]}
-                >
-                  <RotateCcw size={14} color={colors.textSecondary} />
-                  <Text style={[styles.resetInlineBtnText, { color: colors.textSecondary }]}>Reset Filters</Text>
-                </TouchableOpacity>
-              </View>
-            </GlassPanel>
           </>
+        }
+        ListFooterComponent={
+          displayLimit < activeDataList.length && !loading ? (
+            <View style={{ padding: 20, alignItems: "center" }}>
+              <TouchableOpacity
+                style={{ paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary + "1A", borderRadius: 20, borderColor: colors.primary + "30", borderWidth: 1 }}
+                onPress={() => setDisplayLimit((prev) => prev + 15)}
+              >
+                <Text style={{ color: colors.primary, fontWeight: "600" }}>Load More</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null
         }
         ListEmptyComponent={
           loading ? (
@@ -2324,6 +1912,213 @@ export default function QuotationsScreen() {
   );
 }
 
+
+const MemoizedQuotationCard = React.memo(({ item, colors, onConvertToInvoice, onEdit, onCopy, onViewNotes, onDownloadPdf, onDelete, onComingSoon }: any) => {
+  const statusColors: any = {
+    DRAFT: "#fbbf24",
+    SENT: "#34d399",
+    ACCEPTED: "#38bdf8",
+    EXPIRED: "#fb7185",
+  };
+  const statusColor = statusColors[item.status] ?? colors.textSecondary;
+  const personName = item.customer?.customerName || item.customer?.companyName || "Customer";
+  const companySubtitle =
+    item.customer?.companyName && item.customer?.companyName !== item.customer?.customerName
+      ? item.customer.companyName
+      : "";
+
+  return (
+    <GlassPanel style={styles.card}>
+      <View style={styles.cardHeaderRow}>
+        <View style={[styles.numberPillBadge, { borderColor: "#38bdf8" + "40", backgroundColor: "#38bdf8" + "15" }]}>
+          <Text style={styles.numberPillText}>#{item.quotationNumber}</Text>
+        </View>
+        <Text style={[styles.priceValueText, { color: colors.text }]}>
+          {formatCurrency(item.totals?.grandTotal ?? 0)}
+        </Text>
+      </View>
+
+      <View style={[styles.cardRow, { marginTop: 8, alignItems: "center" }]}>
+        <Text style={[styles.cardTitleText, { color: colors.text, flex: 1, marginRight: 8 }]} numberOfLines={1}>
+          {personName}
+        </Text>
+        <View
+          style={[
+            styles.statusBadge,
+            {
+              backgroundColor: `${statusColor}1A`,
+              borderColor: `${statusColor}30`,
+            },
+          ]}
+        >
+          <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+          <Text style={[styles.statusText, { color: statusColor }]}>
+            {item.status === "ACCEPTED" ? "Approved" : item.status === "EXPIRED" ? "Rejected" : item.status}
+          </Text>
+        </View>
+      </View>
+
+      <View style={[styles.cardRow, { marginTop: 4, alignItems: "center" }]}>
+        <Text style={[styles.cardSubtitleText, { color: colors.textSecondary, flex: 1 }]} numberOfLines={1}>
+          {companySubtitle ? `${companySubtitle}  •  ` : ""}{formatDate(item.quotationDate)}
+        </Text>
+      </View>
+
+      <View style={[styles.innerDivider, { backgroundColor: colors.border }]} />
+
+      <View style={[styles.actionsRow, { justifyContent: "space-between" }]}>
+        <ActionIconButton icon={PencilLine} onPress={() => onEdit(item.id)} color="#fbbf24" />
+        <ActionIconButton icon={Copy} onPress={() => onCopy(item.id)} />
+        <ActionIconButton icon={StickyNote} onPress={() => onViewNotes(item)} color="#34D399" />
+        <ActionIconButton icon={Receipt} onPress={() => onConvertToInvoice(item.id)} color="#c084fc" />
+        <ActionIconButton icon={Send} onPress={() => onDownloadPdf(item.id, item.quotationNumber)} color="#7dd3fc" />
+        <ActionIconButton icon={Trash2} onPress={() => onDelete(item.id)} color="#FF6B6B" />
+      </View>
+    </GlassPanel>
+  );
+});
+
+const MemoizedInvoiceCard = React.memo(({ item, colors, onEdit, onCopy, onPayment, onDownloadPdf, onCall, onDelete }: any) => {
+  const statusColors: any = {
+    PAID: "#34d399",
+    UNPAID: "#fbbf24",
+    PARTIAL: "#fbbf24",
+    OVERDUE: "#fb7185",
+    DRAFT: "#88b4cc",
+    SENT: "#7dd3fc",
+    CANCELLED: "#64748b",
+  };
+  const statusColor = statusColors[item.status] ?? colors.textSecondary;
+  const personName = item.customer?.customerName || item.customer?.companyName || "Unknown Customer";
+  const companySubtitle =
+    item.customer?.companyName && item.customer?.companyName !== item.customer?.customerName
+      ? item.customer.companyName
+      : "";
+
+  const isOverdue = item.status === "OVERDUE";
+  const isCancelled = item.status === "CANCELLED";
+
+  return (
+    <GlassPanel
+      style={[styles.card, isCancelled && { opacity: 0.5 }]}
+    >
+      <View style={styles.cardRow}>
+        <Text style={[styles.invoiceNumberText, { color: statusColor }]}>
+          {item.invoiceNumber}
+        </Text>
+        <Text style={[styles.priceValueText, { color: colors.text }]}>
+          {formatCurrency(item.totals?.grandTotal ?? 0)}
+        </Text>
+      </View>
+
+      <View style={[styles.cardRow, { marginTop: 6 }]}>
+        <Text style={[styles.cardTitleText, { color: colors.text }]} numberOfLines={1}>
+          {personName}
+        </Text>
+        <Text style={[styles.balanceLabelText, { color: colors.textSecondary }]}>
+          BALANCE: {formatCurrency(item.amountDue ?? 0)}
+        </Text>
+      </View>
+
+      <View style={[styles.cardRow, { marginTop: 8, alignItems: "center" }]}>
+        <Text
+          style={[
+            styles.cardSubtitleText,
+            { color: colors.textSecondary, flex: 1, paddingRight: 8 },
+            isOverdue && { color: statusColor, fontWeight: "700" },
+          ]}
+          numberOfLines={1}
+        >
+          {companySubtitle ? `${companySubtitle}  •  ` : ""}
+          {isOverdue
+            ? `Due ${formatDate(item.dueDate)}`
+            : formatDate(item.invoiceDate)}
+        </Text>
+
+        <View
+          style={[
+            styles.statusBadge,
+            {
+              backgroundColor: `${statusColor}1A`,
+              borderColor: `${statusColor}30`,
+            },
+          ]}
+        >
+          <Text style={[styles.statusText, { color: statusColor }]}>
+            {item.status}
+          </Text>
+        </View>
+      </View>
+
+      <View style={[styles.innerDivider, { backgroundColor: colors.border }]} />
+
+      <View style={[styles.actionsRow, { justifyContent: "space-between" }]}>
+        <ActionIconButton icon={PencilLine} onPress={() => onEdit(item)} color="#fbbf24" />
+        <ActionIconButton icon={Copy} onPress={() => onCopy(item)} />
+        <ActionIconButton icon={Wallet} onPress={() => onPayment(item)} color="#c084fc" />
+        <ActionIconButton icon={Send} onPress={() => onDownloadPdf(item.id, item.invoiceNumber)} color="#7dd3fc" />
+        <ActionIconButton icon={Phone} onPress={() => onCall(item)} color="#34D399" />
+        <ActionIconButton icon={Trash2} onPress={() => onDelete(item.id)} color="#FF6B6B" />
+      </View>
+    </GlassPanel>
+  );
+});
+
+const MemoizedExpenseCard = React.memo(({ item, colors, onComingSoon, onDelete }: any) => {
+  const shortId = item.id
+    ? item.id.substring(item.id.length - 8).toUpperCase()
+    : "EXP";
+  const loggedBy = (item.createdBy?.fullName ?? "—").toUpperCase();
+  const categoryName = item.category?.name ?? "Uncategorized";
+
+  return (
+    <GlassPanel style={styles.card}>
+      <View style={styles.cardRow}>
+        <Text style={[styles.expenseNumberText, { color: colors.textSecondary }]}>
+          #EXP-{shortId}
+        </Text>
+        <Text style={[styles.priceValueText, { color: colors.text }]}>
+          -{formatCurrency(item.amount)}
+        </Text>
+      </View>
+
+      <View style={[styles.cardRow, { marginTop: 6 }]}>
+        <Text style={[styles.cardSubtitleText, { color: colors.textSecondary }]}>
+          {formatDate(item.date)}
+        </Text>
+        <Text style={[styles.loggedByCapsText, { color: colors.textSecondary }]}>
+          {loggedBy}
+        </Text>
+      </View>
+
+      <View style={[styles.cardRow, { marginTop: 8, justifyContent: "flex-start" }]}>
+        <View style={[styles.categoryBadge, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
+          <Text style={[styles.categoryBadgeText, { color: colors.text }]}>
+            {categoryName}
+          </Text>
+        </View>
+      </View>
+
+      {item.note ? (
+        <View style={[styles.noteContainer, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
+          <Text style={[styles.noteText, { color: colors.textSecondary }]}>
+            {item.note}
+          </Text>
+        </View>
+      ) : null}
+
+      <View style={[styles.innerDivider, { backgroundColor: colors.border }]} />
+
+      <View style={[styles.actionsRow, { justifyContent: "flex-start", gap: 12 }]}>
+        <ActionIconButton icon={Copy} onPress={() => onComingSoon("Copy")} />
+        <ActionIconButton icon={PencilLine} onPress={() => onComingSoon("Edit")} color="#fbbf24" />
+        <ActionIconButton icon={Eye} onPress={() => onComingSoon("View")} />
+        <ActionIconButton icon={Trash2} onPress={() => onDelete(item.id)} color="#FF6B6B" />
+      </View>
+    </GlassPanel>
+  );
+});
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -2583,8 +2378,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 12,
     borderWidth: 1,
+    flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    gap: 4,
   },
   statusText: {
     fontSize: 9,
