@@ -85,7 +85,11 @@ export class CompanyService {
             products: true,
           }
         },
-        subscription: true
+        subscription: {
+          include: {
+            plan: true
+          }
+        }
       }
     });
 

@@ -10,12 +10,13 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import { Building2 } from 'lucide-react-native';
 import { useTheme } from '../hooks/useTheme';
 
 interface ProfileHeaderProps {
   name: string;
   role: string;
-  avatarUri: string;
+  avatarUri?: string;
   planName: string;
   onEditPress: () => void;
 }
@@ -29,6 +30,21 @@ export default function ProfileHeader({
 }: ProfileHeaderProps) {
   const { colors, isDark } = useTheme();
 
+  let badgeColor = colors.primary;
+  let badgeIcon: any = 'verified';
+  const planUpper = planName.toUpperCase();
+  
+  if (planUpper.includes('EXPIRED')) {
+    badgeColor = colors.error || '#EF4444';
+    badgeIcon = 'error-outline';
+  } else if (planUpper.includes('GOLD')) {
+    badgeColor = '#FBBF24'; // Gold
+  } else if (planUpper.includes('SILVER')) {
+    badgeColor = '#94A3B8'; // Silver
+  } else if (planUpper.includes('BRONZE')) {
+    badgeColor = '#B45309'; // Bronze
+  }
+
   return (
     <View style={styles.container}>
       {/* Avatar Container with Ice-Blue Glowing Border */}
@@ -40,11 +56,17 @@ export default function ProfileHeader({
           style={[styles.gradientBorder, { shadowColor: colors.primary }]}
         >
           <View style={[styles.avatarInnerContainer, { borderColor: colors.background, backgroundColor: colors.surface }]}>
-            <Image
-              source={{ uri: avatarUri }}
-              style={styles.avatarImage}
-              resizeMode="cover"
-            />
+            {avatarUri ? (
+              <Image
+                source={{ uri: avatarUri }}
+                style={styles.avatarImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={[styles.avatarImage, { alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceVariant }]}>
+                <Building2 color={colors.primary} size={48} opacity={0.5} />
+              </View>
+            )}
             
             {/* Edit Button Badge */}
             <Pressable
@@ -69,14 +91,14 @@ export default function ProfileHeader({
       <Text style={[styles.roleText, { color: colors.textSecondary }]}>{role}</Text>
 
       {/* Premium Plan Badge */}
-      <View style={[styles.badgeWrapper, { borderColor: colors.glassBorder }]}>
+      <View style={[styles.badgeWrapper, { borderColor: badgeColor + '40' }]}>
         <LinearGradient
-          colors={[colors.primary + '26', colors.primary + '0D']}
+          colors={[badgeColor + '26', badgeColor + '0D']}
           style={styles.badgeGradient}
         >
           <View style={styles.badgeContent}>
-            <MaterialIcons name="verified" size={14} color={colors.primary} style={styles.verifiedIcon} />
-            <Text style={[styles.badgeText, { color: colors.primary }]}>{planName}</Text>
+            <MaterialIcons name={badgeIcon} size={14} color={badgeColor} style={styles.verifiedIcon} />
+            <Text style={[styles.badgeText, { color: badgeColor }]}>{planName}</Text>
           </View>
         </LinearGradient>
       </View>

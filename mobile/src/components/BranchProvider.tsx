@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { initAuthStore, subscribeAuth } from '../lib/auth';
 import { useAuthStore } from '../store/authStore';
+import { subscribeAuth } from '../lib/auth';
+import { getStorageItemAsync } from '../utils/storage';
+import { TOKEN_KEYS } from '../constants/keys';
 import { apiClient } from '../api/client';
 
 export interface Branch {
@@ -49,7 +51,7 @@ export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       let token = authState?.token || authState?.accessToken;
 
       if (!token) {
-        token = await initAuthStore();
+        token = await getStorageItemAsync(TOKEN_KEYS.ACCESS);
       }
 
       if (!token) {
