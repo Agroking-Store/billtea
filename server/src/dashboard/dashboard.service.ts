@@ -40,9 +40,6 @@ export class DashboardService {
       where: { ...whereFilter, invoiceDate: { gte: previousStart, lte: previousEnd } },
     });
 
-    const totalInvoices = await this.prisma.invoice.count({ where: whereFilter });
-    
-    const totalQuotations = await this.prisma.quotation.count({ where: whereFilter });
     const currentMonthQuotations = await this.prisma.quotation.count({
       where: { ...whereFilter, quotationDate: { gte: targetStart, lte: targetEnd } },
     });
@@ -50,7 +47,6 @@ export class DashboardService {
       where: { ...whereFilter, quotationDate: { gte: previousStart, lte: previousEnd } },
     });
 
-    const totalCustomers = await this.prisma.customer.count({ where: whereFilter });
     const currentMonthCustomers = await this.prisma.customer.count({
       where: { ...whereFilter, createdAt: { gte: targetStart, lte: targetEnd } },
     });
@@ -59,11 +55,6 @@ export class DashboardService {
     });
 
     // Total sales (paid invoices)
-    const totalSalesAggr = await this.prisma.invoice.aggregate({
-      where: { ...whereFilter, status: 'PAID' },
-      _sum: { grandTotal: true },
-    });
-    const totalSales = totalSalesAggr._sum.grandTotal || 0;
 
     const currentMonthSalesAggr = await this.prisma.invoice.aggregate({
       where: { ...whereFilter, status: 'PAID', invoiceDate: { gte: targetStart, lte: targetEnd } },
@@ -83,13 +74,13 @@ export class DashboardService {
     };
 
     const kpis = {
-      totalInvoices,
+      totalInvoices: currentMonthInvoices,
       invoicesChange: calcPercentage(currentMonthInvoices, previousMonthInvoices),
-      totalQuotations,
+      totalQuotations: currentMonthQuotations,
       quotationsChange: calcPercentage(currentMonthQuotations, previousMonthQuotations),
-      totalSales,
+      totalSales: currentSales,
       salesChange: calcPercentage(currentSales, previousSales),
-      totalCustomers,
+      totalCustomers: currentMonthCustomers,
       customersChange: calcPercentage(currentMonthCustomers, previousMonthCustomers),
     };
 
