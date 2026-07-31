@@ -16,6 +16,7 @@ interface Invoice {
     id: string;
     customerName: string;
     companyName: string;
+    mobileNumber?: string;
   };
   totals: {
     grandTotal: number;
@@ -35,6 +36,7 @@ export default function InvoicesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [openActionId, setOpenActionId] = useState<string | null>(null);
+  const [isSendingId, setIsSendingId] = useState<string | null>(null);
   const [viewerPdfUrl, setViewerPdfUrl] = useState<{ url: string, title: string, id: string } | null>(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
 
@@ -184,6 +186,90 @@ export default function InvoicesPage() {
       }
     } catch (err: any) {
       alert('Failed to delete invoice');
+    }
+  };
+
+  const handleSend = async (invoiceInput: string | Invoice) => {
+    // 1. Resolve target invoice object
+    let targetInvoice: Invoice | undefined;
+    if (typeof invoiceInput === 'string') {
+      targetInvoice = invoices.find((i) => i.id === invoiceInput);
+    } else {
+      targetInvoice = invoiceInput;
+    }
+
+    if (!targetInvoice || !targetInvoice.id) {
+      alert('Invoice details not found.');
+      return;
+    }
+
+    const invoice = targetInvoice;
+
+    // 2. Prepare English message template & WhatsApp URL
+    const customerName = invoice.customer?.customerName || invoice.customer?.companyName || 'Valued Customer';
+    const grandTotalFormatted = invoice.totals?.grandTotal
+      ? `₹${invoice.totals.grandTotal.toLocaleString('en-IN')}`
+      : '₹0';
+    const formattedDate = invoice.invoiceDate
+      ? new Date(invoice.invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+      : 'N/A';
+
+    const message = `Hello ${customerName},
+
+Here are the details for your Invoice:
+
+📌 *Invoice No:* ${invoice.invoiceNumber}
+📅 *Date:* ${formattedDate}
+💰 *Total Amount:* ${grandTotalFormatted}
+
+Please find the attached Invoice PDF document for complete payment and billing details.
+
+Thank you for your business! Please feel free to reach out if you have any questions.
+
+Best regards,
+BillTea`;
+
+    // Format customer mobile number if available
+    let rawPhone = invoice.customer?.mobileNumber || '';
+    let cleanPhone = rawPhone.replace(/\D/g, '');
+    if (cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone;
+    }
+
+    const encodedText = encodeURIComponent(message);
+    const waUrl = cleanPhone
+      ? `https://wa.me/${cleanPhone}?text=${encodedText}`
+      : `https://wa.me/?text=${encodedText}`;
+
+    // 3. Open WhatsApp IMMEDIATELY directly on user click event
+    window.open(waUrl, '_blank');
+
+    try {
+      setIsSendingId(invoice.id);
+
+      // 4. Download PDF file for user in background
+      try {
+        const pdfRes = await apiFetch(`/invoices/${invoice.id}/pdf?t=${Date.now()}`, { method: 'GET' });
+        if (pdfRes.ok) {
+          const pdfBlob = await pdfRes.blob();
+          const downloadUrl = window.URL.createObjectURL(pdfBlob);
+          const a = document.createElement('a');
+          a.href = downloadUrl;
+          a.download = `Invoice-${invoice.invoiceNumber}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            window.URL.revokeObjectURL(downloadUrl);
+            document.body.removeChild(a);
+          }, 1000);
+        }
+      } catch (err) {
+        console.error('Failed to fetch invoice PDF for download', err);
+      }
+    } catch (err: any) {
+      console.error('Send invoice error:', err);
+    } finally {
+      setIsSendingId(null);
     }
   };
 
@@ -883,8 +969,8 @@ export default function InvoicesPage() {
                                   <button onClick={() => handleOpenPaymentModal(invoice)} className="glass-button-icon p-1 rounded-md transition-all hover:text-purple-400 hover:border-purple-400/30 hover:bg-purple-400/10 tooltip cursor-pointer" title="Add Payment">
                                     <span className="material-symbols-outlined text-[16px]">payments</span>
                                   </button>
-                                  <button className="glass-button-icon p-1 rounded-md transition-all hover:text-emerald-400 hover:border-emerald-400/30 hover:bg-emerald-400/10 tooltip cursor-pointer" title="Send">
-                                    <span className="material-symbols-outlined text-[16px]">send</span>
+                                  <button onClick={() => handleSend(invoice)} disabled={isSendingId === invoice.id} className="glass-button-icon p-1 rounded-md transition-all hover:text-emerald-400 hover:border-emerald-400/30 hover:bg-emerald-400/10 tooltip cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" title="Send">
+                                    {isSendingId === invoice.id ? <span className="material-symbols-outlined text-[16px] animate-spin">refresh</span> : <span className="material-symbols-outlined text-[16px]">send</span>}
                                   </button>
                                   <button onClick={() => handleDownloadPdf(invoice.id, invoice.invoiceNumber)} className="glass-button-icon p-1 rounded-md transition-all hover:text-indigo-400 hover:border-indigo-400/30 hover:bg-indigo-400/10 tooltip cursor-pointer" title="Download PDF">
                                     <span className="material-symbols-outlined text-[16px]">download</span>
@@ -912,8 +998,8 @@ export default function InvoicesPage() {
                                   <button onClick={() => handleOpenPaymentModal(invoice)} className="glass-button-icon p-1 rounded-md transition-all hover:text-purple-400 hover:border-purple-400/30 hover:bg-purple-400/10 tooltip cursor-pointer" title="Add Payment">
                                     <span className="material-symbols-outlined text-[16px]">payments</span>
                                   </button>
-                                  <button className="glass-button-icon p-1 rounded-md transition-all hover:text-emerald-400 hover:border-emerald-400/30 hover:bg-emerald-400/10 tooltip cursor-pointer" title="Send">
-                                    <span className="material-symbols-outlined text-[16px]">send</span>
+                                  <button onClick={() => handleSend(invoice)} disabled={isSendingId === invoice.id} className="glass-button-icon p-1 rounded-md transition-all hover:text-emerald-400 hover:border-emerald-400/30 hover:bg-emerald-400/10 tooltip cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" title="Send">
+                                    {isSendingId === invoice.id ? <span className="material-symbols-outlined text-[16px] animate-spin">refresh</span> : <span className="material-symbols-outlined text-[16px]">send</span>}
                                   </button>
                                   <div className="w-px h-4 bg-primary/20 mx-1"></div>
                                   <button
@@ -936,8 +1022,8 @@ export default function InvoicesPage() {
                                 <button onClick={() => handleOpenPaymentModal(invoice)} className="glass-button-icon p-1 rounded-md transition-all hover:text-purple-400 hover:border-purple-400/30 hover:bg-purple-400/10 tooltip cursor-pointer" title="Add Payment">
                                   <span className="material-symbols-outlined text-[16px]">payments</span>
                                 </button>
-                                <button className="glass-button-icon p-1 rounded-md transition-all hover:text-emerald-400 hover:border-emerald-400/30 hover:bg-emerald-400/10 tooltip cursor-pointer" title="Send">
-                                  <span className="material-symbols-outlined text-[16px]">send</span>
+                                <button onClick={() => handleSend(invoice)} disabled={isSendingId === invoice.id} className="glass-button-icon p-1 rounded-md transition-all hover:text-emerald-400 hover:border-emerald-400/30 hover:bg-emerald-400/10 tooltip cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" title="Send">
+                                  {isSendingId === invoice.id ? <span className="material-symbols-outlined text-[16px] animate-spin">refresh</span> : <span className="material-symbols-outlined text-[16px]">send</span>}
                                 </button>
                                 <button onClick={() => handleDownloadPdf(invoice.id, invoice.invoiceNumber)} className="glass-button-icon p-1 rounded-md transition-all hover:text-indigo-400 hover:border-indigo-400/30 hover:bg-indigo-400/10 tooltip cursor-pointer" title="Download PDF">
                                   <span className="material-symbols-outlined text-[16px]">download</span>
@@ -1020,8 +1106,8 @@ export default function InvoicesPage() {
                           <button onClick={() => handleOpenPaymentModal(invoice)} className="glass-button-icon p-2 rounded-lg transition-all hover:text-purple-400 hover:border-purple-400/30 hover:bg-purple-400/10 cursor-pointer" title="Add Payment">
                             <span className="material-symbols-outlined text-[18px]">payments</span>
                           </button>
-                          <button className="glass-button-icon p-2 rounded-lg transition-all hover:text-emerald-400 hover:border-emerald-400/30 hover:bg-emerald-400/10 cursor-pointer" title="Send">
-                            <span className="material-symbols-outlined text-[18px]">send</span>
+                          <button onClick={() => handleSend(invoice)} disabled={isSendingId === invoice.id} className="glass-button-icon p-2 rounded-lg transition-all hover:text-emerald-400 hover:border-emerald-400/30 hover:bg-emerald-400/10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" title="Send">
+                            {isSendingId === invoice.id ? <span className="material-symbols-outlined text-[18px] animate-spin">refresh</span> : <span className="material-symbols-outlined text-[18px]">send</span>}
                           </button>
 
                           {isMostRecent ? (
