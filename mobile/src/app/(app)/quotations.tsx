@@ -600,7 +600,7 @@ export default function QuotationsScreen() {
     if (!permission.granted) return;
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       quality: 0.8,
     });
 
@@ -909,9 +909,7 @@ export default function QuotationsScreen() {
     handleEditInvoice(item);
   }, []);
 
-  const memoizedHandleCopyInvoice = React.useCallback((item: Invoice) => {
-    handleCopyInvoice(item);
-  }, []);
+
 
   const memoizedHandleOpenPayment = React.useCallback((item: Invoice) => {
     handleOpenPayment(item);
@@ -955,7 +953,6 @@ export default function QuotationsScreen() {
           item={item}
           colors={colors}
           onEdit={memoizedHandleEditInvoice}
-          onCopy={memoizedHandleCopyInvoice}
           onPayment={memoizedHandleOpenPayment}
           onDownloadPdf={memoizedHandleDownloadInvoicePdf}
           onCall={memoizedHandleCallCustomer}
@@ -974,7 +971,7 @@ export default function QuotationsScreen() {
   }, [
     activeTab, colors,
     handleEditQuotation, handleConvertToInvoice, handleCopyQuotation, memoizedHandleOpenNotesModal, memoizedHandleDownloadQuotationPdf, memoizedHandleDeleteQuotation, memoizedHandleComingSoon,
-    memoizedHandleEditInvoice, memoizedHandleCopyInvoice, memoizedHandleOpenPayment, memoizedHandleDownloadInvoicePdf, memoizedHandleCallCustomer, memoizedHandleDeleteInvoice,
+    memoizedHandleEditInvoice, memoizedHandleOpenPayment, memoizedHandleDownloadInvoicePdf, memoizedHandleCallCustomer, memoizedHandleDeleteInvoice,
     memoizedHandleDeleteExpense
   ]);
 
@@ -1978,7 +1975,7 @@ const MemoizedQuotationCard = React.memo(({ item, colors, onConvertToInvoice, on
   );
 });
 
-const MemoizedInvoiceCard = React.memo(({ item, colors, onEdit, onCopy, onPayment, onDownloadPdf, onCall, onDelete }: any) => {
+const MemoizedInvoiceCard = React.memo(({ item, colors, onEdit, onPayment, onDownloadPdf, onCall, onDelete }: any) => {
   const statusColors: any = {
     PAID: "#34d399",
     UNPAID: "#fbbf24",
@@ -2054,7 +2051,6 @@ const MemoizedInvoiceCard = React.memo(({ item, colors, onEdit, onCopy, onPaymen
 
       <View style={[styles.actionsRow, { justifyContent: "space-between" }]}>
         <ActionIconButton icon={PencilLine} onPress={() => onEdit(item)} color="#fbbf24" />
-        <ActionIconButton icon={Copy} onPress={() => onCopy(item)} />
         <ActionIconButton icon={Wallet} onPress={() => onPayment(item)} color="#c084fc" />
         <ActionIconButton icon={Send} onPress={() => onDownloadPdf(item.id, item.invoiceNumber)} color="#7dd3fc" />
         <ActionIconButton icon={Phone} onPress={() => onCall(item)} color="#34D399" />
