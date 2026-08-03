@@ -20,6 +20,148 @@ const getImageUrl = (url?: string) => {
   return url;
 };
 
+interface ToastMessage {
+  type: 'success' | 'error';
+  text: string;
+}
+
+interface ToastProps {
+  message: ToastMessage | null;
+  onClose: () => void;
+  duration?: number;
+}
+
+function Toast({ message, onClose, duration = 4000 }: ToastProps) {
+  const [visible, setVisible] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const remainingRef = useRef(duration);
+  const startedAtRef = useRef<number>(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [progressKey, setProgressKey] = useState(0);
+
+  const clearTimer = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const scheduleClose = (ms: number) => {
+    clearTimer();
+    startedAtRef.current = Date.now();
+    remainingRef.current = ms;
+    timerRef.current = setTimeout(() => {
+      handleClose();
+    }, ms);
+  };
+
+  useEffect(() => {
+    if (!message) return;
+
+    setLeaving(false);
+    setPaused(false);
+    setProgressKey((k) => k + 1);
+    const enterTimer = setTimeout(() => setVisible(true), 10);
+
+    scheduleClose(duration);
+
+    return () => {
+      clearTimeout(enterTimer);
+      clearTimer();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [message]);
+
+  const handleClose = () => {
+    clearTimer();
+    setLeaving(true);
+    setVisible(false);
+    setTimeout(() => {
+      onClose();
+      setLeaving(false);
+    }, 300);
+  };
+
+  const handleMouseEnter = () => {
+    if (!message) return;
+    setPaused(true);
+    const elapsed = Date.now() - startedAtRef.current;
+    remainingRef.current = Math.max(remainingRef.current - elapsed, 0);
+    clearTimer();
+  };
+
+  const handleMouseLeave = () => {
+    if (!message) return;
+    setPaused(false);
+    scheduleClose(remainingRef.current);
+  };
+
+  if (!message && !leaving) return null;
+
+  const isSuccess = message?.type === 'success';
+
+  return (
+    <div
+      className="fixed top-6 right-6 z-[100] pointer-events-none"
+      role="status"
+      aria-live="polite"
+    >
+      <div
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className={`pointer-events-auto relative overflow-hidden flex items-start gap-4 min-w-[320px] max-w-md p-5 rounded-2xl border shadow-2xl backdrop-blur-sm transition-all duration-300 ease-out ${
+          isSuccess
+            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'
+            : 'bg-red-500/10 border-red-500/20 text-red-500'
+        } ${
+          visible
+            ? 'opacity-100 translate-x-0 translate-y-0'
+            : 'opacity-0 translate-x-4 -translate-y-1'
+        }`}
+      >
+        <span
+          className={`material-symbols-outlined mt-0.5 p-1 rounded-full shrink-0 ${
+            isSuccess ? 'bg-emerald-500/20' : 'bg-red-500/20'
+          }`}
+        >
+          {isSuccess ? 'check_circle' : 'error'}
+        </span>
+        <div className="flex-1">
+          <h4 className="font-bold text-lg mb-1">{isSuccess ? 'Success' : 'Error'}</h4>
+          <p className="text-sm opacity-90 leading-relaxed whitespace-pre-line">{message?.text}</p>
+        </div>
+        <button
+          onClick={handleClose}
+          aria-label="Dismiss notification"
+          className="shrink-0 p-1 rounded-full hover:bg-black/5 transition-colors cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-[18px]">close</span>
+        </button>
+
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/5">
+          <div
+            key={progressKey}
+            className={`h-full ${isSuccess ? 'bg-emerald-500' : 'bg-red-500'}`}
+            style={{
+              animation: `toast-countdown ${duration}ms linear forwards`,
+              animationPlayState: paused ? 'paused' : 'running',
+            }}
+          />
+        </div>
+      </div>
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        @keyframes toast-countdown {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+      `}} />
+    </div>
+  );
+}
+
 export default function CreateQuotationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -28,6 +170,10 @@ export default function CreateQuotationPage() {
 
   // Loading State for fetching existing quotation (if copying)
   const [isLoading, setIsLoading] = useState(false);
+
+  // Toast State
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [navigateAfterToast, setNavigateAfterToast] = useState(false);
 
   // 1. Core State
   const [formData, setFormData] = useState({
@@ -391,7 +537,9 @@ export default function CreateQuotationPage() {
 
 
     if (errors.length > 0) {
-      setError(`Attachment errors:\n• ${errors.join('\n• ')}`);
+      const errorText = `Attachment errors:\n• ${errors.join('\n• ')}`;
+      setError(errorText);
+      setToast({ type: 'error', text: errorText });
     }
 
     if (validFiles.length > 0) {
@@ -404,6 +552,7 @@ export default function CreateQuotationPage() {
   const handleSave = async () => {
     if (!formData.customerId || items.length === 0) {
       setError('Please select a customer and add at least one item.');
+      setToast({ type: 'error', text: 'Please select a customer and add at least one item.' });
       return;
     }
     try {
@@ -438,9 +587,12 @@ export default function CreateQuotationPage() {
         await apiFetch(`/quotations/${data.id}/attachments`, { method: 'POST', body: formData, headers: {} }); // empty headers allows fetch to set multipart boundary
       }
 
-      router.push('/quotations');
+      setToast({ type: 'success', text: 'Quotation created successfully!' });
+      setNavigateAfterToast(true);
     } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+      const message = err.message || 'Something went wrong';
+      setError(message);
+      setToast({ type: 'error', text: message });
     } finally {
       setIsSaving(false);
     }
@@ -461,6 +613,17 @@ export default function CreateQuotationPage() {
 
   return (
     <div className="flex-1 overflow-y-auto p-4 md:p-8 relative overflow-x-hidden selection:bg-primary/30 w-full max-w-full min-w-0">
+      <Toast
+        message={toast}
+        onClose={() => {
+          setToast(null);
+          if (navigateAfterToast) {
+            setNavigateAfterToast(false);
+            router.push('/quotations');
+          }
+        }}
+      />
+
       <style dangerouslySetInnerHTML={{
         __html: `
         @keyframes fadeSlideUp {

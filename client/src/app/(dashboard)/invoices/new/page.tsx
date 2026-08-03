@@ -21,12 +21,158 @@ const getImageUrl = (url?: string) => {
   return url;
 };
 
+interface ToastMessage {
+  type: 'success' | 'error';
+  text: string;
+}
+
+interface ToastProps {
+  message: ToastMessage | null;
+  onClose: () => void;
+  duration?: number;
+}
+
+function Toast({ message, onClose, duration = 4000 }: ToastProps) {
+  const [visible, setVisible] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const remainingRef = useRef(duration);
+  const startedAtRef = useRef<number>(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [progressKey, setProgressKey] = useState(0);
+
+  const clearTimer = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const scheduleClose = (ms: number) => {
+    clearTimer();
+    startedAtRef.current = Date.now();
+    remainingRef.current = ms;
+    timerRef.current = setTimeout(() => {
+      handleClose();
+    }, ms);
+  };
+
+  useEffect(() => {
+    if (!message) return;
+
+    setLeaving(false);
+    setPaused(false);
+    setProgressKey((k) => k + 1);
+    const enterTimer = setTimeout(() => setVisible(true), 10);
+
+    scheduleClose(duration);
+
+    return () => {
+      clearTimeout(enterTimer);
+      clearTimer();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [message]);
+
+  const handleClose = () => {
+    clearTimer();
+    setLeaving(true);
+    setVisible(false);
+    setTimeout(() => {
+      onClose();
+      setLeaving(false);
+    }, 300);
+  };
+
+  const handleMouseEnter = () => {
+    if (!message) return;
+    setPaused(true);
+    const elapsed = Date.now() - startedAtRef.current;
+    remainingRef.current = Math.max(remainingRef.current - elapsed, 0);
+    clearTimer();
+  };
+
+  const handleMouseLeave = () => {
+    if (!message) return;
+    setPaused(false);
+    scheduleClose(remainingRef.current);
+  };
+
+  if (!message && !leaving) return null;
+
+  const isSuccess = message?.type === 'success';
+
+  return (
+    <div
+      className="fixed top-6 right-6 z-[100] pointer-events-none"
+      role="status"
+      aria-live="polite"
+    >
+      <div
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className={`pointer-events-auto relative overflow-hidden flex items-start gap-4 min-w-[320px] max-w-md p-5 rounded-2xl border shadow-2xl backdrop-blur-sm transition-all duration-300 ease-out ${
+          isSuccess
+            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'
+            : 'bg-red-500/10 border-red-500/20 text-red-500'
+        } ${
+          visible
+            ? 'opacity-100 translate-x-0 translate-y-0'
+            : 'opacity-0 translate-x-4 -translate-y-1'
+        }`}
+      >
+        <span
+          className={`material-symbols-outlined mt-0.5 p-1 rounded-full shrink-0 ${
+            isSuccess ? 'bg-emerald-500/20' : 'bg-red-500/20'
+          }`}
+        >
+          {isSuccess ? 'check_circle' : 'error'}
+        </span>
+        <div className="flex-1">
+          <h4 className="font-bold text-lg mb-1">{isSuccess ? 'Success' : 'Error'}</h4>
+          <p className="text-sm opacity-90 leading-relaxed whitespace-pre-line">{message?.text}</p>
+        </div>
+        <button
+          onClick={handleClose}
+          aria-label="Dismiss notification"
+          className="shrink-0 p-1 rounded-full hover:bg-black/5 transition-colors cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-[18px]">close</span>
+        </button>
+
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/5">
+          <div
+            key={progressKey}
+            className={`h-full ${isSuccess ? 'bg-emerald-500' : 'bg-red-500'}`}
+            style={{
+              animation: `toast-countdown ${duration}ms linear forwards`,
+              animationPlayState: paused ? 'paused' : 'running',
+            }}
+          />
+        </div>
+      </div>
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        @keyframes toast-countdown {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+      `}} />
+    </div>
+  );
+}
+
 
 export default function CreateInvoicePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const copyFromQuotationId = searchParams.get('copyFromQuotation');
   const { selectedBranchId, branches } = useBranch();
+
+  // Toast State
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [navigateAfterToast, setNavigateAfterToast] = useState(false);
 
   // 1. Core State
   const [formData, setFormData] = useState({
@@ -297,11 +443,11 @@ export default function CreateInvoicePage() {
           setProductSearchRows(prev => ({ ...prev, ...newProductSearchRows }));
         }
       } else {
-        alert("Failed to fetch quotation details from server.");
+        setToast({ type: 'error', text: 'Failed to fetch quotation details from server.' });
       }
     } catch (e: any) {
       console.error("Error in handleQuotationSelect:", e);
-      alert("Error selecting quotation: " + e.message);
+      setToast({ type: 'error', text: 'Error selecting quotation: ' + e.message });
     }
   };
 
@@ -448,7 +594,9 @@ export default function CreateInvoicePage() {
     }
 
     if (errors.length > 0) {
-      setError(`Attachment errors:\n• ${errors.join('\n• ')}`);
+      const errorText = `Attachment errors:\n• ${errors.join('\n• ')}`;
+      setError(errorText);
+      setToast({ type: 'error', text: errorText });
     }
     
     if (validFiles.length > 0) {
@@ -460,18 +608,24 @@ export default function CreateInvoicePage() {
 
   const handleSave = async () => {
     if (!formData.customerId || items.length === 0) {
-      setError('Please select a customer and add at least one item.');
+      const msg = 'Please select a customer and add at least one item.';
+      setError(msg);
+      setToast({ type: 'error', text: msg });
       return;
     }
     if (formData.paymentConfiguration.addPayment) {
       const paymentAmount = Number(Number(formData.paymentConfiguration.amount).toFixed(2));
       const grandTotal = Number(Number(calculatedTotals?.grandTotal || 0).toFixed(2));
       if (paymentAmount <= 0) {
-        setError('Payment amount must be greater than 0.');
+        const msg = 'Payment amount must be greater than 0.';
+        setError(msg);
+        setToast({ type: 'error', text: msg });
         return;
       }
       if (paymentAmount > grandTotal) {
-        setError('Payment amount cannot exceed the grand total.');
+        const msg = 'Payment amount cannot exceed the grand total.';
+        setError(msg);
+        setToast({ type: 'error', text: msg });
         return;
       }
     }
@@ -523,9 +677,12 @@ export default function CreateInvoicePage() {
         await apiFetch(`/invoices/${data.id}/payments/${data.payments[0].id}/attachment`, { method: 'POST', body: paymentFormData, headers: {} });
       }
 
-      router.push('/invoices');
+      setToast({ type: 'success', text: 'Invoice created successfully!' });
+      setNavigateAfterToast(true);
     } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+      const message = err.message || 'Something went wrong';
+      setError(message);
+      setToast({ type: 'error', text: message });
     } finally {
       setIsSaving(false);
     }
@@ -533,7 +690,17 @@ export default function CreateInvoicePage() {
 
   return (
     <>
-      
+      <Toast
+        message={toast}
+        onClose={() => {
+          setToast(null);
+          if (navigateAfterToast) {
+            setNavigateAfterToast(false);
+            router.push('/invoices');
+          }
+        }}
+      />
+
       <div className="flex-1 overflow-y-auto p-4 md:p-8 relative overflow-x-hidden selection:bg-primary/30">
       <style dangerouslySetInnerHTML={{
         __html: `
@@ -1132,12 +1299,14 @@ export default function CreateInvoicePage() {
                           const isHeic = file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif');
                           if (!allowedTypes.includes(file.type) && !isHeic && !file.type.startsWith('image/')) {
                             setError('Payment attachment must be a PDF or an Image.');
+                            setToast({ type: 'error', text: 'Payment attachment must be a PDF or an Image.' });
                             e.target.value = '';
                             return;
                           }
                           
                           if (file.size > 5 * 1024 * 1024) {
                             setError('Payment attachment must be less than 5MB.');
+                            setToast({ type: 'error', text: 'Payment attachment must be less than 5MB.' });
                             e.target.value = '';
                             return;
                           }
