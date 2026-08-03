@@ -352,7 +352,7 @@ export default function EditQuotationPage() {
       try {
         if (file.type.startsWith('image/') || isHeic) {
           let fileToCompress = file;
-          
+
           if (isHeic) {
             const heic2any = (await import('heic2any')).default;
             const convertedBlob = await heic2any({
@@ -578,7 +578,7 @@ export default function EditQuotationPage() {
                     <div className="text-sm text-on-surface font-semibold">{selectedCustomerDetails.businessLabelValue || 'N/A'}</div>
                   </div>
                   <div className="col-span-2">
-                    <span className="text-[10px] uppercase font-bold text-on-surface-variant">Billing Address (Read Only)</span>
+                    <span className="text-[10px] uppercase font-bold text-on-surface-variant">Billing Address</span>
                     <div className="text-sm text-on-surface">{billingAddress.address || 'N/A'}</div>
                   </div>
                 </div>
@@ -658,7 +658,7 @@ export default function EditQuotationPage() {
                           </div>
                         ) : (
                           <div className="relative">
-                            <select 
+                            <select
                               className="glass-input px-4 py-2.5 rounded-lg w-full text-sm font-semibold cursor-pointer focus:ring-0 focus:border-primary/50 appearance-none bg-surface-container/30 border-outline-variant/30 text-on-surface"
                               value={branchTaxConfig.label}
                               onChange={(e) => {

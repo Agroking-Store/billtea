@@ -810,7 +810,7 @@ export default function EditInvoicePage() {
                     <div className="text-sm text-on-surface font-semibold">{selectedCustomerDetails.businessLabelValue || 'N/A'}</div>
                   </div>
                   <div className="col-span-full">
-                    <span className="text-[10px] uppercase font-bold text-on-surface-variant">Billing Address (Read Only)</span>
+                    <span className="text-[10px] uppercase font-bold text-on-surface-variant">Billing Address</span>
                     <div className="text-sm text-on-surface">{billingAddress.address || 'N/A'}</div>
                   </div>
                 </div>
@@ -1024,8 +1024,8 @@ export default function EditInvoicePage() {
                           {/* Row 2: Description, Discount, Tax, Total */}
                           <div className="grid grid-cols-12 gap-3 md:gap-4 items-end">
                             <div className={`col-span-12 ${(formData.discountConfiguration.mode === 'PER_PRODUCT' && formData.taxConfiguration.mode === 'PER_PRODUCT') ? 'md:col-span-4' :
-                                (formData.discountConfiguration.mode === 'PER_PRODUCT' ? 'md:col-span-6' :
-                                  (formData.taxConfiguration.mode === 'PER_PRODUCT' ? 'md:col-span-7' : 'md:col-span-9'))
+                              (formData.discountConfiguration.mode === 'PER_PRODUCT' ? 'md:col-span-6' :
+                                (formData.taxConfiguration.mode === 'PER_PRODUCT' ? 'md:col-span-7' : 'md:col-span-9'))
                               }`}>
                               <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1 block">Description</label>
                               <input type="text" value={item.description} onChange={(e) => updateItem(item.id, 'description', e.target.value)} className="glass-input px-3 py-2 rounded-lg text-sm w-full text-on-surface" placeholder="Line item details..." />

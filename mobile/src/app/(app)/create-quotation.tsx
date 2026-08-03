@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity, 
-  Image, 
-  TextInput, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  TextInput,
   Platform,
   Alert,
   Dimensions,
@@ -15,21 +16,9 @@ import {
 } from 'react-native';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { 
-  MoreVertical, 
-  Search, 
-  Plus, 
-  Trash2, 
-  Copy, 
-  Calendar as CalendarIcon, 
-  Send,
-  ChevronDown,
-  User,
-  Tag,
-  FileText,
-  Calculator,
-  Upload
-} from 'lucide-react-native';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import { ChevronDown, Plus, Trash2, Camera, Calendar as CalendarIcon, Save, FileText, Send, Percent, Tag, User, Search, Copy, MoreVertical, Calculator, Upload, X } from 'lucide-react-native';
+import { ScrollView as GHScrollView } from 'react-native-gesture-handler';
 import { useTheme } from '../../hooks/useTheme';
 import { GlassPanel } from '../../components/ui/GlassPanel';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -80,10 +69,10 @@ export default function CreateQuotationScreen() {
 
   // --- STATE DEFINITIONS ---
   const [isLoadingQuotation, setIsLoadingQuotation] = useState(false);
-  
+
   // Backend Active State
   const { selectedBranchId, branches } = useBranch();
-  
+
   const [formData, setFormData] = useState({
     customerId: '',
     quotationDate: new Date(),
@@ -96,7 +85,7 @@ export default function CreateQuotationScreen() {
     termsAndConditions: '',
   });
 
-  const [showDatePicker, setShowDatePicker] = useState<{show: boolean, mode: 'quotation' | 'expiry' | 'followup'}>({show: false, mode: 'quotation'});
+  const [showDatePicker, setShowDatePicker] = useState<{ show: boolean, mode: 'quotation' | 'expiry' | 'followup' }>({ show: false, mode: 'quotation' });
 
   // Customer State
   const [customerSearch, setCustomerSearch] = useState('');
@@ -114,7 +103,7 @@ export default function CreateQuotationScreen() {
     { id: Math.random().toString(), productId: '', name: '', description: '', price: 0, originalPrice: 0, originalDescription: '', quantity: 1, discount: { type: 'PERCENTAGE', value: 0 }, tax: 0, image: '', sku: '', hsnCode: '' }
   ]);
   const [productSearchRows, setProductSearchRows] = useState<{ [key: string]: { query: string, results: any[], show: boolean } }>({});
-  
+
   const [activeProductSearchIdx, setActiveProductSearchIdx] = useState<string | null>(null);
 
   // Attachments State (Mobile version usually uses uri)
@@ -189,7 +178,7 @@ export default function CreateQuotationScreen() {
       const res = await apiClient.get(`/quotations/${idToFetch}`);
       if (res.status === 200 && res.data) {
         const data = res.data;
-        
+
         setFormData(prev => ({
           ...prev,
           customerId: data.customer?.id || '',
@@ -356,7 +345,7 @@ export default function CreateQuotationScreen() {
       if (res.status === 200) {
         setProductSearchRows(prev => ({ ...prev, [rowId]: { ...prev[rowId], results: res.data } }));
       }
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const handleProductSelect = (product: any, rowId: string) => {
@@ -377,7 +366,7 @@ export default function CreateQuotationScreen() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) return;
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       quality: 0.8,
       base64: true
     });
@@ -386,12 +375,47 @@ export default function CreateQuotationScreen() {
     }
   };
 
+  const handlePickAttachment = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission Denied', 'Please grant permission to access your photos to attach images.');
+      return;
+    }
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.5, // Compress image by reducing quality
+        allowsMultipleSelection: false, // Limit to 1 attachment
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+
+        // 5MB limit
+        if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
+          Alert.alert("File Too Large", "Attachment size must be less than 5MB.");
+          return;
+        }
+
+        // Replace any existing attachment with the new one
+        setAttachments([asset]);
+      }
+    } catch (err) {
+      console.error("Failed to pick attachment:", err);
+      Alert.alert("Error", "Could not pick attachment.");
+    }
+  };
+
+  const removeAttachment = (indexToRemove: number) => {
+    setAttachments(prev => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
   const handleSave = async () => {
     if (!formData.customerId || items.length === 0 || !items[0].name) {
       Alert.alert('Required', 'Please select a customer and add at least one item.');
       return;
     }
-    
+
     setIsSaving(true);
     try {
       let effectiveTaxConfig = {
@@ -413,22 +437,51 @@ export default function CreateQuotationScreen() {
         notes: formData.notes,
         followUpDate: formData.followUpDate ? formData.followUpDate.toISOString() : undefined,
         termsAndConditions: { text: formData.termsAndConditions },
-        items: items.map(i => ({ 
-          productId: i.productId || undefined, 
-          price: i.price, 
-          description: i.description, 
-          quantity: i.quantity, 
-          discount: i.discount, 
+        items: items.map(i => ({
+          productId: i.productId || undefined,
+          price: i.price,
+          description: i.description,
+          quantity: i.quantity,
+          discount: i.discount,
           tax: i.tax,
           image: i.image.startsWith('data:') ? i.image : undefined // Only send base64 if it's a new upload, otherwise it is handled separately or ignored.
         }))
       };
 
-      const res = id 
+      const res = id
         ? await apiClient.put(`/quotations/${id}`, payload)
         : await apiClient.post('/quotations', payload);
 
       if (res.status === 200 || res.status === 201) {
+        const quoId = id || res.data.quotation?.id;
+
+        // Handle Attachments
+        if (quoId && attachments.length > 0) {
+          for (const att of attachments) {
+            // Only upload new attachments (those that have a local uri from ImagePicker and no id)
+            if (att.uri && !att.id) {
+              const fileData = new FormData();
+              const fileUri = att.uri;
+              const fileName = att.fileName || fileUri.split('/').pop() || 'attachment.jpg';
+              const fileType = att.mimeType || 'image/jpeg';
+
+              fileData.append('file', {
+                uri: Platform.OS === 'ios' ? fileUri.replace('file://', '') : fileUri,
+                name: fileName,
+                type: fileType,
+              } as any);
+
+              try {
+                await apiClient.post(`/quotations/${quoId}/attachments`, fileData, {
+                  headers: { 'Content-Type': 'multipart/form-data' },
+                });
+              } catch (attErr) {
+                console.error("Failed to upload attachment", attErr);
+              }
+            }
+          }
+        }
+
         Alert.alert(
           "Success",
           id ? "Quotation updated successfully!" : "Quotation created successfully!",
@@ -468,7 +521,7 @@ export default function CreateQuotationScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      
+
       {/* Background Gradient */}
       <LinearGradient
         colors={isDark ? ['#081326', '#111b2f'] : [colors.background, colors.surface]}
@@ -487,12 +540,14 @@ export default function CreateQuotationScreen() {
       <AppHeader title={id ? "Edit Quotation" : "New Quotation"} showBackButton />
 
       {/* Main Canvas ScrollView */}
-      <ScrollView 
+      <ScrollView
+        scrollEnabled={!showCustomerDropdown && activeProductSearchIdx === null}
+        nestedScrollEnabled={true}
         contentContainerStyle={[
-          styles.scrollContent, 
-          { 
-            paddingTop: 16, 
-            paddingBottom: insets.bottom + 140 
+          styles.scrollContent,
+          {
+            paddingTop: 16,
+            paddingBottom: insets.bottom + 140
           }
         ]}
         showsVerticalScrollIndicator={false}
@@ -506,8 +561,8 @@ export default function CreateQuotationScreen() {
               <User color={colors.primary} size={18} style={styles.sectionTitleIcon} />
               <Text style={[styles.sectionTitle, { color: colors.primary }]}>Customer Details</Text>
             </View>
-            <TouchableOpacity 
-              style={styles.addNewBtn} 
+            <TouchableOpacity
+              style={styles.addNewBtn}
               activeOpacity={0.7}
               onPress={() => router.push('/(app)/create-customer')}
             >
@@ -544,25 +599,27 @@ export default function CreateQuotationScreen() {
                 </TouchableOpacity>
               )}
             </View>
-            
+
             {showCustomerDropdown && (
-              <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={[styles.dropdownList, { backgroundColor: colors.surfaceVariant, borderColor: colors.glassBorder }]}>
-                {customerResults.length === 0 ? (
-                  <Text style={{ padding: 16, color: colors.textSecondary, textAlign: 'center' }}>No customers found</Text>
-                ) : (
-                  customerResults.map((customer) => (
-                    <TouchableOpacity 
-                      key={customer.id} 
-                      style={[styles.dropdownItem, { borderBottomColor: colors.border + '33' }]}
-                      onPress={() => handleCustomerSelect(customer)}
-                    >
-                      <Text style={[styles.dropdownItemText, { color: colors.text }]}>
-                        {customer.companyName ? `${customer.companyName} (${customer.customerName})` : customer.customerName}
-                      </Text>
-                    </TouchableOpacity>
-                  ))
-                )}
-              </ScrollView>
+              <View style={[styles.dropdownList, { backgroundColor: colors.surfaceVariant, borderColor: colors.glassBorder }]}>
+                <GHScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
+                  {customerResults.length === 0 ? (
+                    <Text style={{ padding: 16, color: colors.textSecondary, textAlign: 'center' }}>No customers found</Text>
+                  ) : (
+                    customerResults.map((customer) => (
+                      <TouchableOpacity
+                        key={customer.id}
+                        style={[styles.dropdownItem, { borderBottomColor: colors.border + '33' }]}
+                        onPress={() => handleCustomerSelect(customer)}
+                      >
+                        <Text style={[styles.dropdownItemText, { color: colors.text }]}>
+                          {customer.companyName ? `${customer.companyName} (${customer.customerName})` : customer.customerName}
+                        </Text>
+                      </TouchableOpacity>
+                    ))
+                  )}
+                </GHScrollView>
+              </View>
             )}
           </View>
 
@@ -578,7 +635,7 @@ export default function CreateQuotationScreen() {
                   <Text style={[styles.readOnlyText, { color: colors.text }]}>{selectedCustomerDetails.mobileNumber || 'N/A'}</Text>
                 </View>
               </View>
-              
+
               <View style={styles.rowInputs}>
                 <View style={[styles.readOnlyBlock, { flex: 1 }]}>
                   <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Company Name</Text>
@@ -591,14 +648,14 @@ export default function CreateQuotationScreen() {
               </View>
 
               <View style={styles.readOnlyBlock}>
-                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Billing Address (Read Only)</Text>
+                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Billing Address</Text>
                 <Text style={[styles.readOnlyText, { color: colors.text }]}>{billingAddress.address || 'N/A'}</Text>
               </View>
             </View>
           )}
 
-          <TouchableOpacity 
-            style={styles.checkboxRow} 
+          <TouchableOpacity
+            style={styles.checkboxRow}
             activeOpacity={0.8}
             onPress={() => setFormData({ ...formData, shippingSameAsBilling: !formData.shippingSameAsBilling })}
           >
@@ -611,13 +668,13 @@ export default function CreateQuotationScreen() {
           {!formData.shippingSameAsBilling && (
             <View style={[styles.inputGroup, { marginTop: 16 }]}>
               <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Shipping Address</Text>
-              <TextInput 
+              <TextInput
                 value={shippingAddress.address}
-                onChangeText={(val) => setShippingAddress({...shippingAddress, address: val})}
+                onChangeText={(val) => setShippingAddress({ ...shippingAddress, address: val })}
                 multiline
                 numberOfLines={2}
                 style={[
-                  styles.input, 
+                  styles.input,
                   styles.textareaGlass,
                   { color: colors.text, borderColor: colors.border, backgroundColor: colors.background + '50' }
                 ]}
@@ -636,36 +693,36 @@ export default function CreateQuotationScreen() {
               <Text style={[styles.sectionTitle, { color: colors.primary }]}>Discount & Tax Rules</Text>
             </View>
           </View>
-          
+
           <View style={{ flexDirection: 'column', gap: 20 }}>
             {/* Discount */}
             <View style={styles.inputGroup}>
               <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Discount Method</Text>
               <View style={styles.combinedInput}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.typeToggleBtn, { flex: 1, backgroundColor: formData.discountConfiguration.mode === "FIXED" ? colors.primary + '20' : colors.surfaceVariant, borderColor: colors.border }]}
-                  onPress={() => setFormData({...formData, discountConfiguration: {...formData.discountConfiguration, mode: 'FIXED'}})}
+                  onPress={() => setFormData({ ...formData, discountConfiguration: { ...formData.discountConfiguration, mode: 'FIXED' } })}
                 >
                   <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.typeToggleText, { color: formData.discountConfiguration.mode === "FIXED" ? colors.primary : colors.textSecondary }]}>Fixed for all</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.typeToggleBtn, { flex: 1, backgroundColor: formData.discountConfiguration.mode === "PER_PRODUCT" ? colors.primary + '20' : colors.surfaceVariant, borderColor: colors.border }]}
-                  onPress={() => setFormData({...formData, discountConfiguration: {...formData.discountConfiguration, mode: 'PER_PRODUCT'}})}
+                  onPress={() => setFormData({ ...formData, discountConfiguration: { ...formData.discountConfiguration, mode: 'PER_PRODUCT' } })}
                 >
                   <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.typeToggleText, { color: formData.discountConfiguration.mode === "PER_PRODUCT" ? colors.primary : colors.textSecondary }]}>Per Item</Text>
                 </TouchableOpacity>
               </View>
               {formData.discountConfiguration.mode === "FIXED" && (
                 <View style={[styles.combinedInput, { marginTop: 12 }]}>
-                  <TextInput 
+                  <TextInput
                     value={String(formData.discountConfiguration.value)}
-                    onChangeText={(val) => setFormData({...formData, discountConfiguration: {...formData.discountConfiguration, value: parseFloat(val) || 0}})}
+                    onChangeText={(val) => setFormData({ ...formData, discountConfiguration: { ...formData.discountConfiguration, value: parseFloat(val) || 0 } })}
                     keyboardType="numeric"
                     style={[styles.input, { flex: 1, color: colors.text, borderTopRightRadius: 0, borderBottomRightRadius: 0, borderRightWidth: 0, borderColor: colors.border }]}
                   />
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.typeToggleBtn, { backgroundColor: colors.surfaceVariant, borderColor: colors.border, paddingHorizontal: 16 }]}
-                    onPress={() => setFormData({...formData, discountConfiguration: {...formData.discountConfiguration, type: formData.discountConfiguration.type === "AMOUNT" ? "PERCENTAGE" : "AMOUNT"}})}
+                    onPress={() => setFormData({ ...formData, discountConfiguration: { ...formData.discountConfiguration, type: formData.discountConfiguration.type === "AMOUNT" ? "PERCENTAGE" : "AMOUNT" } })}
                   >
                     <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.typeToggleText, { color: colors.primary, fontSize: 16 }]}>{formData.discountConfiguration.type === "AMOUNT" ? "₹" : "%"}</Text>
                   </TouchableOpacity>
@@ -677,39 +734,39 @@ export default function CreateQuotationScreen() {
             <View style={styles.inputGroup}>
               <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Tax Method</Text>
               <View style={styles.combinedInput}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.typeToggleBtn, { flex: 1, backgroundColor: (formData.taxConfiguration.mode === "FIXED" && !formData.taxConfiguration.customTaxActive) ? colors.primary + '20' : colors.surfaceVariant, borderColor: colors.border }]}
-                  onPress={() => setFormData({...formData, taxConfiguration: {...formData.taxConfiguration, mode: 'FIXED', customTaxActive: false}})}
+                  onPress={() => setFormData({ ...formData, taxConfiguration: { ...formData.taxConfiguration, mode: 'FIXED', customTaxActive: false } })}
                 >
                   <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.typeToggleText, { color: (formData.taxConfiguration.mode === "FIXED" && !formData.taxConfiguration.customTaxActive) ? colors.primary : colors.textSecondary }]}>Default</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.typeToggleBtn, { flex: 1, backgroundColor: (formData.taxConfiguration.mode === "FIXED" && formData.taxConfiguration.customTaxActive) ? colors.primary + '20' : colors.surfaceVariant, borderColor: colors.border }]}
-                  onPress={() => setFormData({...formData, taxConfiguration: {...formData.taxConfiguration, mode: 'FIXED', customTaxActive: true}})}
+                  onPress={() => setFormData({ ...formData, taxConfiguration: { ...formData.taxConfiguration, mode: 'FIXED', customTaxActive: true } })}
                 >
                   <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.typeToggleText, { color: (formData.taxConfiguration.mode === "FIXED" && formData.taxConfiguration.customTaxActive) ? colors.primary : colors.textSecondary }]}>Custom</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.typeToggleBtn, { flex: 1, backgroundColor: formData.taxConfiguration.mode === "PER_PRODUCT" ? colors.primary + '20' : colors.surfaceVariant, borderColor: colors.border }]}
-                  onPress={() => setFormData({...formData, taxConfiguration: {...formData.taxConfiguration, mode: 'PER_PRODUCT'}})}
+                  onPress={() => setFormData({ ...formData, taxConfiguration: { ...formData.taxConfiguration, mode: 'PER_PRODUCT' } })}
                 >
                   <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.typeToggleText, { color: formData.taxConfiguration.mode === "PER_PRODUCT" ? colors.primary : colors.textSecondary }]}>Per Item</Text>
                 </TouchableOpacity>
               </View>
-              
+
               {formData.taxConfiguration.mode === "FIXED" && formData.taxConfiguration.customTaxActive && (
                 <View style={[styles.combinedInput, { marginTop: 12, flexDirection: 'column', gap: 12, overflow: 'visible', borderRadius: 0 }]}>
-                  <TextInput 
+                  <TextInput
                     value={formData.taxConfiguration.label}
-                    onChangeText={(val) => setFormData({...formData, taxConfiguration: {...formData.taxConfiguration, label: val}})}
+                    onChangeText={(val) => setFormData({ ...formData, taxConfiguration: { ...formData.taxConfiguration, label: val } })}
                     placeholder="Custom Tax Name"
                     placeholderTextColor={colors.textSecondary + '80'}
                     style={[styles.input, { color: colors.text, borderColor: colors.border }]}
                   />
                   <View style={[styles.combinedInput, { flex: undefined }]}>
-                    <TextInput 
+                    <TextInput
                       value={String(formData.taxConfiguration.value)}
-                      onChangeText={(val) => setFormData({...formData, taxConfiguration: {...formData.taxConfiguration, value: parseFloat(val) || 0}})}
+                      onChangeText={(val) => setFormData({ ...formData, taxConfiguration: { ...formData.taxConfiguration, value: parseFloat(val) || 0 } })}
                       keyboardType="numeric"
                       placeholder="0"
                       placeholderTextColor={colors.textSecondary + '80'}
@@ -723,10 +780,10 @@ export default function CreateQuotationScreen() {
               )}
               {formData.taxConfiguration.mode === "FIXED" && !formData.taxConfiguration.customTaxActive && (
                 <View style={[styles.combinedInput, { marginTop: 12 }]}>
-                   {/* Normally a dropdown, in React Native simulating with a button to open modal or just static display since it selects default branch tax */}
-                   <View style={[styles.input, { flex: 1, justifyContent: 'center', borderColor: colors.border, backgroundColor: colors.background + '50' }]}>
-                      <Text style={{ color: colors.text }}>{branchTaxConfig.label} ({branchTaxConfig.tax}%)</Text>
-                   </View>
+                  {/* Normally a dropdown, in React Native simulating with a button to open modal or just static display since it selects default branch tax */}
+                  <View style={[styles.input, { flex: 1, justifyContent: 'center', borderColor: colors.border, backgroundColor: colors.background + '50' }]}>
+                    <Text style={{ color: colors.text }}>{branchTaxConfig.label} ({branchTaxConfig.tax}%)</Text>
+                  </View>
                 </View>
               )}
             </View>
@@ -744,174 +801,175 @@ export default function CreateQuotationScreen() {
         {items.map((item, idx) => {
           const calcItem = calculatedItems[idx];
           return (
-          <View key={item.id} style={[styles.itemCard, { backgroundColor: colors.surfaceVariant + 'B3', borderColor: colors.primary + '33', zIndex: activeProductSearchIdx === item.id ? 30 : 1 }]}>
-            {/* Overlay card controls */}
-            <View style={styles.itemCardControls}>
-              <TouchableOpacity style={styles.cardActionIcon} onPress={() => removeItem(item.id)}>
-                <Trash2 color={colors.error} size={16} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.itemMainRow}>
-              {/* Product Image */}
-              <TouchableOpacity onPress={() => handleImagePick(item.id)} style={[styles.imageContainer, { borderColor: colors.border + '4D' }]}>
-                {item.image && item.image !== 'null' && item.image !== 'undefined' ? (
-                  <Image source={{ uri: item.image.startsWith('data:') ? item.image : getImageUrl(item.image) }} style={styles.productImage} />
-                ) : (
-                  <View style={[styles.imagePlaceholder, { backgroundColor: colors.surface }]}>
-                     <Upload color={colors.textSecondary} size={20} />
-                  </View>
-                )}
-              </TouchableOpacity>
-
-              {/* Product Selector / Input */}
-              <View style={styles.itemDetailsContainer}>
-                <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Product Search</Text>
-                <TextInput
-                  value={productSearchRows[item.id]?.query ?? item.name}
-                  onChangeText={(val) => handleProductSearch(val, item.id)}
-                  onFocus={() => {
-                    setActiveProductSearchIdx(item.id);
-                    if (!productSearchRows[item.id]?.results?.length) {
-                      handleProductSearch(productSearchRows[item.id]?.query ?? item.name, item.id);
-                    } else {
-                      setProductSearchRows(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: true } }));
-                    }
-                  }}
-                  onBlur={() => setTimeout(() => setActiveProductSearchIdx(null), 200)}
-                  style={[styles.inputGlass, { color: colors.text, borderColor: colors.border, height: 40 }]}
-                  placeholder="Type to search..."
-                  placeholderTextColor={colors.textSecondary + '80'}
-                />
-
-                {/* Product Search Dropdown */}
-                {activeProductSearchIdx === item.id && productSearchRows[item.id]?.show && (
-                  <View style={[styles.productSearchDropdown, { backgroundColor: colors.surfaceVariant, borderColor: colors.glassBorder, elevation: 10 }]}>
-                    <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={{ maxHeight: 180 }}>
-                      {!(productSearchRows[item.id]?.results?.length > 0) ? (
-                        <Text style={{ padding: 16, color: colors.textSecondary, textAlign: 'center' }}>No products found</Text>
-                      ) : (
-                        (productSearchRows[item.id]?.results || []).map((product) => (
-                          <TouchableOpacity
-                            key={product.id}
-                            style={[styles.dropdownItem, { borderBottomColor: colors.border + '33' }]}
-                            onPress={() => {
-                              handleProductSelect(product, item.id);
-                              setProductSearchRows(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } }));
-                              setActiveProductSearchIdx(null);
-                            }}
-                          >
-                            <Text style={[styles.productSearchItemText, { color: colors.text }]} numberOfLines={1}>{product.name}</Text>
-                            <Text style={{ fontSize: 12, color: colors.primary }}>₹{product.price}</Text>
-                          </TouchableOpacity>
-                        ))
-                      )}
-                    </ScrollView>
-                  </View>
-                )}
-                
-                {/* SKU / HSN Badges */}
-                {(item.sku || item.hsnCode) ? (
-                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 4, paddingHorizontal: 4 }}>
-                    {item.sku ? <Text style={{ fontSize: 11, color: colors.textSecondary }}>SKU: {item.sku}</Text> : null}
-                    {item.hsnCode ? <Text style={{ fontSize: 11, color: colors.textSecondary }}>HSN: {item.hsnCode}</Text> : null}
-                  </View>
-                ) : null}
-
-                <TextInput
-                  value={item.description}
-                  onChangeText={(val) => updateItem(item.id, 'description', val)}
-                  style={[styles.inputGlass, { color: colors.textSecondary, borderColor: colors.border, height: 60, textAlignVertical: 'top', paddingTop: 8, marginTop: 8 }]}
-                  placeholder="Description..."
-                  placeholderTextColor={colors.textSecondary + '60'}
-                  multiline
-                />
-              </View>
-            </View>
-
-            {/* Calculations Row */}
-            <View style={styles.itemCalcRow}>
-              <View style={styles.calcInputBlock}>
-                <Text style={[styles.calcLabel, { color: colors.textSecondary }]}>Price (₹)</Text>
-                <TextInput
-                  value={String(item.price)}
-                  onChangeText={(val) => updateItem(item.id, 'price', parseFloat(val) || 0)}
-                  keyboardType="numeric"
-                  style={[styles.calcInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background + '50' }]}
-                />
+            <View key={item.id} style={[styles.itemCard, { backgroundColor: colors.surfaceVariant + 'B3', borderColor: colors.primary + '33', zIndex: activeProductSearchIdx === item.id ? 30 : 1 }]}>
+              {/* Overlay card controls */}
+              <View style={styles.itemCardControls}>
+                <TouchableOpacity style={styles.cardActionIcon} onPress={() => removeItem(item.id)}>
+                  <Trash2 color={colors.error} size={16} />
+                </TouchableOpacity>
               </View>
 
-              <View style={styles.calcInputBlock}>
-                <Text style={[styles.calcLabel, { color: colors.textSecondary }]}>Qty</Text>
-                <View style={[styles.qtyCounterContainer, { borderColor: colors.primary + '33', backgroundColor: colors.background + '50' }]}>
-                  <TouchableOpacity 
-                    style={styles.qtyBtn}
-                    onPress={() => updateItem(item.id, 'quantity', Math.max(1, item.quantity - 1))}
-                  >
-                    <Text style={[styles.qtyBtnText, { color: colors.textSecondary }]}>-</Text>
-                  </TouchableOpacity>
+              <View style={styles.itemMainRow}>
+                {/* Product Image */}
+                <TouchableOpacity onPress={() => handleImagePick(item.id)} style={[styles.imageContainer, { borderColor: colors.border + '4D' }]}>
+                  {item.image && item.image !== 'null' && item.image !== 'undefined' ? (
+                    <Image source={{ uri: item.image.startsWith('data:') ? item.image : getImageUrl(item.image) }} style={styles.productImage} />
+                  ) : (
+                    <View style={[styles.imagePlaceholder, { backgroundColor: colors.surface }]}>
+                      <Upload color={colors.textSecondary} size={20} />
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                {/* Product Selector / Input */}
+                <View style={styles.itemDetailsContainer}>
+                  <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Product Search</Text>
                   <TextInput
-                    value={String(item.quantity)}
-                    onChangeText={(val) => updateItem(item.id, 'quantity', parseInt(val) || 1)}
-                    keyboardType="numeric"
-                    style={[styles.qtyInput, { color: colors.text }]}
+                    value={productSearchRows[item.id]?.query ?? item.name}
+                    onChangeText={(val) => handleProductSearch(val, item.id)}
+                    onFocus={() => {
+                      setActiveProductSearchIdx(item.id);
+                      if (!productSearchRows[item.id]?.results?.length) {
+                        handleProductSearch(productSearchRows[item.id]?.query ?? item.name, item.id);
+                      } else {
+                        setProductSearchRows(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: true } }));
+                      }
+                    }}
+                    onBlur={() => setTimeout(() => setActiveProductSearchIdx(null), 200)}
+                    style={[styles.inputGlass, { color: colors.text, borderColor: colors.border, height: 40 }]}
+                    placeholder="Type to search..."
+                    placeholderTextColor={colors.textSecondary + '80'}
                   />
-                  <TouchableOpacity 
-                    style={styles.qtyBtn}
-                    onPress={() => updateItem(item.id, 'quantity', item.quantity + 1)}
-                  >
-                    <Text style={[styles.qtyBtnText, { color: colors.textSecondary }]}>+</Text>
-                  </TouchableOpacity>
+
+                  {/* Product Search Dropdown */}
+                  {activeProductSearchIdx === item.id && productSearchRows[item.id]?.show && (
+                    <View style={[styles.productSearchDropdown, { backgroundColor: colors.surfaceVariant, borderColor: colors.glassBorder, elevation: 10, maxHeight: 180 }]}>
+                      <GHScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
+                        {!(productSearchRows[item.id]?.results?.length > 0) ? (
+                          <Text style={{ padding: 16, color: colors.textSecondary, textAlign: 'center' }}>No products found</Text>
+                        ) : (
+                          (productSearchRows[item.id]?.results || []).map((product) => (
+                            <TouchableOpacity
+                              key={product.id}
+                              style={[styles.dropdownItem, { borderBottomColor: colors.border + '33' }]}
+                              onPress={() => {
+                                handleProductSelect(product, item.id);
+                                setProductSearchRows(prev => ({ ...prev, [item.id]: { ...prev[item.id], show: false } }));
+                                setActiveProductSearchIdx(null);
+                              }}
+                            >
+                              <Text style={[styles.productSearchItemText, { color: colors.text }]} numberOfLines={1}>{product.name}</Text>
+                              <Text style={{ fontSize: 12, color: colors.primary }}>₹{product.price}</Text>
+                            </TouchableOpacity>
+                          ))
+                        )}
+                      </GHScrollView>
+                    </View>
+                  )}
+
+                  {/* SKU / HSN Badges */}
+                  {(item.sku || item.hsnCode) ? (
+                    <View style={{ flexDirection: 'row', gap: 8, marginTop: 4, paddingHorizontal: 4 }}>
+                      {item.sku ? <Text style={{ fontSize: 11, color: colors.textSecondary }}>SKU: {item.sku}</Text> : null}
+                      {item.hsnCode ? <Text style={{ fontSize: 11, color: colors.textSecondary }}>HSN: {item.hsnCode}</Text> : null}
+                    </View>
+                  ) : null}
+
+                  <TextInput
+                    value={item.description}
+                    onChangeText={(val) => updateItem(item.id, 'description', val)}
+                    style={[styles.inputGlass, { color: colors.textSecondary, borderColor: colors.border, height: 60, textAlignVertical: 'top', paddingTop: 8, marginTop: 8 }]}
+                    placeholder="Description..."
+                    placeholderTextColor={colors.textSecondary + '60'}
+                    multiline
+                  />
                 </View>
               </View>
 
-              <View style={styles.calcTotalBlock}>
-                <Text style={[styles.calcLabel, { color: colors.textSecondary }]}>Total</Text>
-                <Text style={[styles.calcTotalText, { color: colors.primary }]}>
-                  ₹{calcItem ? calcItem.total?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (item.price * item.quantity).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                </Text>
-              </View>
-            </View>
+              {/* Calculations Row */}
+              <View style={styles.itemCalcRow}>
+                <View style={styles.calcInputBlock}>
+                  <Text style={[styles.calcLabel, { color: colors.textSecondary }]}>Price (₹)</Text>
+                  <TextInput
+                    value={String(item.price)}
+                    onChangeText={(val) => updateItem(item.id, 'price', parseFloat(val) || 0)}
+                    keyboardType="numeric"
+                    style={[styles.calcInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background + '50' }]}
+                  />
+                </View>
 
-            {(formData.discountConfiguration.mode === "PER_PRODUCT" || formData.taxConfiguration.mode === "PER_PRODUCT") && (
-              <View style={[styles.itemCalcRow, { marginTop: 12, borderTopWidth: 0, paddingTop: 0 }]}>
-                {formData.discountConfiguration.mode === "PER_PRODUCT" && (
-                  <View style={[styles.calcInputBlock, { flex: 2, marginRight: 8 }]}>
-                    <Text style={[styles.calcLabel, { color: colors.textSecondary }]}>Discount</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <TextInput
-                        value={String(item.discount.value)}
-                        onChangeText={(val) => updateItem(item.id, 'discount', { ...item.discount, value: parseFloat(val) || 0 })}
-                        keyboardType="numeric"
-                        style={[styles.calcInput, { flex: 1, color: colors.text, borderColor: colors.border, backgroundColor: colors.background + '50', borderTopRightRadius: 0, borderBottomRightRadius: 0, borderRightWidth: 0 }]}
-                      />
-                      <TouchableOpacity 
-                        style={[styles.typeToggleBtn, { backgroundColor: colors.surfaceVariant, borderColor: colors.border, height: 44, paddingHorizontal: 12, justifyContent: 'center' }]}
-                        onPress={() => updateItem(item.id, 'discount', { ...item.discount, type: item.discount.type === "AMOUNT" ? "PERCENTAGE" : "AMOUNT" })}
-                      >
-                        <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.typeToggleText, { color: colors.primary }]}>{item.discount.type === "AMOUNT" ? "₹" : "%"}</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                )}
-
-                {formData.taxConfiguration.mode === "PER_PRODUCT" && (
-                  <View style={[styles.calcInputBlock, { flex: 1 }]}>
-                    <Text style={[styles.calcLabel, { color: colors.textSecondary }]}>Tax (%)</Text>
+                <View style={styles.calcInputBlock}>
+                  <Text style={[styles.calcLabel, { color: colors.textSecondary }]}>Qty</Text>
+                  <View style={[styles.qtyCounterContainer, { borderColor: colors.primary + '33', backgroundColor: colors.background + '50' }]}>
+                    <TouchableOpacity
+                      style={styles.qtyBtn}
+                      onPress={() => updateItem(item.id, 'quantity', Math.max(1, item.quantity - 1))}
+                    >
+                      <Text style={[styles.qtyBtnText, { color: colors.textSecondary }]}>-</Text>
+                    </TouchableOpacity>
                     <TextInput
-                      value={String(item.tax)}
-                      onChangeText={(val) => updateItem(item.id, 'tax', parseFloat(val) || 0)}
+                      value={String(item.quantity)}
+                      onChangeText={(val) => updateItem(item.id, 'quantity', parseInt(val) || 1)}
                       keyboardType="numeric"
-                      style={[styles.calcInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background + '50' }]}
+                      style={[styles.qtyInput, { color: colors.text }]}
                     />
+                    <TouchableOpacity
+                      style={styles.qtyBtn}
+                      onPress={() => updateItem(item.id, 'quantity', item.quantity + 1)}
+                    >
+                      <Text style={[styles.qtyBtnText, { color: colors.textSecondary }]}>+</Text>
+                    </TouchableOpacity>
                   </View>
-                )}
-              </View>
-            )}
-          </View>
-        )})}
+                </View>
 
-        <TouchableOpacity 
+                <View style={styles.calcTotalBlock}>
+                  <Text style={[styles.calcLabel, { color: colors.textSecondary }]}>Total</Text>
+                  <Text style={[styles.calcTotalText, { color: colors.primary }]}>
+                    ₹{calcItem ? calcItem.total?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (item.price * item.quantity).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </Text>
+                </View>
+              </View>
+
+              {(formData.discountConfiguration.mode === "PER_PRODUCT" || formData.taxConfiguration.mode === "PER_PRODUCT") && (
+                <View style={[styles.itemCalcRow, { marginTop: 12, borderTopWidth: 0, paddingTop: 0 }]}>
+                  {formData.discountConfiguration.mode === "PER_PRODUCT" && (
+                    <View style={[styles.calcInputBlock, { flex: 2, marginRight: 8 }]}>
+                      <Text style={[styles.calcLabel, { color: colors.textSecondary }]}>Discount</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <TextInput
+                          value={String(item.discount.value)}
+                          onChangeText={(val) => updateItem(item.id, 'discount', { ...item.discount, value: parseFloat(val) || 0 })}
+                          keyboardType="numeric"
+                          style={[styles.calcInput, { flex: 1, color: colors.text, borderColor: colors.border, backgroundColor: colors.background + '50', borderTopRightRadius: 0, borderBottomRightRadius: 0, borderRightWidth: 0 }]}
+                        />
+                        <TouchableOpacity
+                          style={[styles.typeToggleBtn, { backgroundColor: colors.surfaceVariant, borderColor: colors.border, height: 44, paddingHorizontal: 12, justifyContent: 'center' }]}
+                          onPress={() => updateItem(item.id, 'discount', { ...item.discount, type: item.discount.type === "AMOUNT" ? "PERCENTAGE" : "AMOUNT" })}
+                        >
+                          <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.typeToggleText, { color: colors.primary }]}>{item.discount.type === "AMOUNT" ? "₹" : "%"}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+
+                  {formData.taxConfiguration.mode === "PER_PRODUCT" && (
+                    <View style={[styles.calcInputBlock, { flex: 1 }]}>
+                      <Text style={[styles.calcLabel, { color: colors.textSecondary }]}>Tax (%)</Text>
+                      <TextInput
+                        value={String(item.tax)}
+                        onChangeText={(val) => updateItem(item.id, 'tax', parseFloat(val) || 0)}
+                        keyboardType="numeric"
+                        style={[styles.calcInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background + '50' }]}
+                      />
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          )
+        })}
+
+        <TouchableOpacity
           style={[styles.addItemBtn, { backgroundColor: colors.surfaceVariant + '4D', borderColor: colors.primary + '66' }]}
           activeOpacity={0.7}
           onPress={addItem}
@@ -919,6 +977,44 @@ export default function CreateQuotationScreen() {
           <Plus color={colors.primary} size={16} />
           <Text style={[styles.addItemBtnText, { color: colors.primary }]}>Add Another Item</Text>
         </TouchableOpacity>
+
+        {/* Attachments Section */}
+        <GlassPanel style={styles.sectionCard}>
+          <View style={[styles.sectionHeaderRow, { marginBottom: 16 }]}>
+            <View style={styles.sectionTitleGroup}>
+              <Upload color={colors.primary} size={18} style={styles.sectionTitleIcon} />
+              <Text style={[styles.sectionTitle, { color: colors.primary }]}>Attachments</Text>
+            </View>
+          </View>
+          <View style={styles.inputGroup}>
+            {attachments.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                {attachments.map((att, idx) => (
+                  <View key={idx} style={{ marginRight: 12, position: 'relative' }}>
+                    <Image source={{ uri: att.uri || att.url }} style={{ width: 80, height: 80, borderRadius: 8, borderWidth: 1, borderColor: colors.border }} />
+                    <TouchableOpacity
+                      style={{ position: 'absolute', top: -6, right: -6, backgroundColor: colors.surface, borderRadius: 12, padding: 2, borderWidth: 1, borderColor: colors.border }}
+                      onPress={() => removeAttachment(idx)}
+                    >
+                      <X size={14} color={colors.error} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+            <TouchableOpacity
+              style={[styles.fileUploadBtn, { backgroundColor: colors.background + '40', borderColor: colors.border, padding: 12, borderRadius: 12, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+              activeOpacity={0.7}
+              onPress={handlePickAttachment}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Upload color={colors.primary} size={18} style={{ marginRight: 8 }} />
+                <Text style={{ color: colors.textSecondary }}>Add Attachment</Text>
+              </View>
+              <Text style={{ color: colors.primary, fontWeight: '600' }}>Select</Text>
+            </TouchableOpacity>
+          </View>
+        </GlassPanel>
 
         {/* 4. Summary */}
         <GlassPanel style={styles.sectionCard}>
@@ -935,7 +1031,7 @@ export default function CreateQuotationScreen() {
               ₹{calculatedTotals.subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </Text>
           </View>
-          
+
           <View style={styles.summaryRow}>
             <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Total Discount</Text>
             <Text style={[styles.summaryValue, { color: colors.error }]}>
@@ -972,7 +1068,7 @@ export default function CreateQuotationScreen() {
           <View style={styles.rowInputs}>
             <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
               <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Date</Text>
-              <TouchableOpacity style={styles.iconInputWrapper} onPress={() => setShowDatePicker({show: true, mode: 'quotation'})}>
+              <TouchableOpacity style={styles.iconInputWrapper} onPress={() => setShowDatePicker({ show: true, mode: 'quotation' })}>
                 <CalendarIcon color={colors.textSecondary} size={16} style={styles.inputLeftIcon} />
                 <View style={[styles.inputGlass, styles.inputGlassIcon, { justifyContent: 'center', borderColor: colors.border, backgroundColor: colors.background + '50' }]}>
                   <Text style={{ color: colors.text }}>{formData.quotationDate.toLocaleDateString()}</Text>
@@ -982,7 +1078,7 @@ export default function CreateQuotationScreen() {
 
             <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
               <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Valid Until</Text>
-              <TouchableOpacity style={styles.iconInputWrapper} onPress={() => setShowDatePicker({show: true, mode: 'expiry'})}>
+              <TouchableOpacity style={styles.iconInputWrapper} onPress={() => setShowDatePicker({ show: true, mode: 'expiry' })}>
                 <CalendarIcon color={colors.textSecondary} size={16} style={styles.inputLeftIcon} />
                 <View style={[styles.inputGlass, styles.inputGlassIcon, { justifyContent: 'center', borderColor: colors.border, backgroundColor: colors.background + '50' }]}>
                   <Text style={{ color: colors.text }}>{formData.expiryDate.toLocaleDateString()}</Text>
@@ -1003,7 +1099,7 @@ export default function CreateQuotationScreen() {
 
           <View style={styles.inputGroup}>
             <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Follow Up Date</Text>
-            <TouchableOpacity style={styles.iconInputWrapper} onPress={() => setShowDatePicker({show: true, mode: 'followup'})}>
+            <TouchableOpacity style={styles.iconInputWrapper} onPress={() => setShowDatePicker({ show: true, mode: 'followup' })}>
               <CalendarIcon color={colors.textSecondary} size={16} style={styles.inputLeftIcon} />
               <View style={[styles.inputGlass, styles.inputGlassIcon, { justifyContent: 'center', borderColor: colors.border, backgroundColor: colors.background + '50' }]}>
                 <Text style={{ color: colors.text }}>{formData.followUpDate.toLocaleDateString()}</Text>
@@ -1013,39 +1109,40 @@ export default function CreateQuotationScreen() {
 
           <View style={styles.inputGroup}>
             <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Notes</Text>
-            <TextInput 
+            <TextInput
               value={formData.notes}
-              onChangeText={(text) => setFormData({...formData, notes: text})}
+              onChangeText={(text) => setFormData({ ...formData, notes: text })}
               multiline
               numberOfLines={2}
               style={[
-                styles.inputGlass, 
-                styles.textareaGlass, 
+                styles.inputGlass,
+                styles.textareaGlass,
                 { color: colors.text, borderColor: colors.border, backgroundColor: colors.background + '50' }
               ]}
-              placeholder="Optional notes for the client..."
+              placeholder="Optional notes for internal use.."
               placeholderTextColor={colors.textSecondary + '60'}
             />
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Terms & Conditions</Text>
-            <TextInput 
+            <TextInput
               value={formData.termsAndConditions}
-              onChangeText={(text) => setFormData({...formData, termsAndConditions: text})}
+              onChangeText={(text) => setFormData({ ...formData, termsAndConditions: text })}
               multiline
               numberOfLines={3}
               style={[
-                styles.inputGlass, 
-                styles.textareaGlass, 
+                styles.inputGlass,
+                styles.textareaGlass,
                 { color: colors.textSecondary, borderColor: colors.border, backgroundColor: colors.background + '50', height: 100 }
               ]}
             />
           </View>
+
         </GlassPanel>
 
         <View style={styles.createBtnContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.createBtn, { shadowColor: colors.primary }]}
             activeOpacity={0.8}
             onPress={handleSave}
@@ -1075,7 +1172,7 @@ export default function CreateQuotationScreen() {
         <DateTimePicker
           value={
             showDatePicker.mode === 'quotation' ? formData.quotationDate :
-            showDatePicker.mode === 'expiry' ? formData.expiryDate : formData.followUpDate
+              showDatePicker.mode === 'expiry' ? formData.expiryDate : formData.followUpDate
           }
           mode="date"
           display="default"
@@ -1504,5 +1601,14 @@ const styles = StyleSheet.create({
   createBtnText: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  fileUploadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: 10,
+    height: 46,
+    paddingHorizontal: 16,
   },
 });
