@@ -15,6 +15,7 @@ interface Quotation {
   customer: {
     customerName: string;
     companyName: string;
+    mobileNumber?: string;
   };
   notes?: string;
   followUpDate?: string;
@@ -325,23 +326,95 @@ export default function QuotationsPage() {
     }
   };
 
-  const handleSend = async (id: string) => {
+  const handleSend = async (quotationInput: string | Quotation) => {
+    // 1. Resolve target quotation object
+    let targetQuotation: Quotation | undefined;
+    if (typeof quotationInput === 'string') {
+      targetQuotation = quotations.find((q) => q.id === quotationInput);
+    } else {
+      targetQuotation = quotationInput;
+    }
+
+    if (!targetQuotation || !targetQuotation.id) {
+      alert('Quotation details not found.');
+      return;
+    }
+
+    const quotation = targetQuotation;
+
+    // 2. Prepare English message template & WhatsApp URL
+    const customerName = quotation.customer?.customerName || quotation.customer?.companyName || 'Valued Customer';
+    const grandTotalFormatted = quotation.totals?.grandTotal
+      ? `₹${quotation.totals.grandTotal.toLocaleString('en-IN')}`
+      : '₹0';
+    const formattedDate = quotation.quotationDate
+      ? new Date(quotation.quotationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+      : 'N/A';
+
+    const message = `Hello ${customerName},
+
+Here are the details for your Quotation:
+
+📌 *Quotation No:* ${quotation.quotationNumber}
+📅 *Date:* ${formattedDate}
+💰 *Total Amount:* ${grandTotalFormatted}
+
+Please find the attached Quotation PDF document for complete item details and terms.
+
+Thank you for your business! Please feel free to reach out if you have any questions or require further adjustments.
+
+Best regards,
+BillTea`;
+
+    // Format customer mobile number if available
+    let rawPhone = quotation.customer?.mobileNumber || '';
+    let cleanPhone = rawPhone.replace(/\D/g, '');
+    if (cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone;
+    }
+
+    const encodedText = encodeURIComponent(message);
+    const waUrl = cleanPhone
+      ? `https://wa.me/${cleanPhone}?text=${encodedText}`
+      : `https://wa.me/?text=${encodedText}`;
+
+    // 3. Open WhatsApp IMMEDIATELY directly on user click event (never gets blocked or closed!)
+    window.open(waUrl, '_blank');
+
     try {
-      setIsSendingId(id);
-      const res = await apiFetch(`/quotations/${id}`, {
+      setIsSendingId(quotation.id);
+
+      // 4. Download PDF file for user in background
+      try {
+        const pdfRes = await apiFetch(`/quotations/${quotation.id}/pdf?t=${Date.now()}`, { method: 'GET' });
+        if (pdfRes.ok) {
+          const pdfBlob = await pdfRes.blob();
+          const downloadUrl = window.URL.createObjectURL(pdfBlob);
+          const a = document.createElement('a');
+          a.href = downloadUrl;
+          a.download = `Quotation-${quotation.quotationNumber}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            window.URL.revokeObjectURL(downloadUrl);
+            document.body.removeChild(a);
+          }, 1000);
+        }
+      } catch (err) {
+        console.error('Failed to fetch quotation PDF for download', err);
+      }
+
+      // 5. Update status to SENT in backend
+      const res = await apiFetch(`/quotations/${quotation.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'SENT' }),
       });
       if (res.ok) {
         fetchQuotations();
-        setToast({ type: 'success', text: 'Quotation status set to SENT!' });
-      } else {
-        const errData = await res.json();
-        setToast({ type: 'error', text: errData.message || 'Failed to send quotation' });
       }
     } catch (err: any) {
-      setToast({ type: 'error', text: 'Failed to send quotation' });
+      console.error('Send quotation error:', err);
     } finally {
       setIsSendingId(null);
     }
@@ -1008,7 +1081,7 @@ export default function QuotationsPage() {
                                     <span className="material-symbols-outlined text-[16px]">receipt_long</span>
                                   </button>
                                 </Link>
-                                <button onClick={() => handleSend(quotation.id)} disabled={isSendingId === quotation.id} className="glass-button-icon p-1 rounded-md transition-all hover:text-emerald-400 hover:border-emerald-400/30 hover:bg-emerald-400/10 tooltip cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" title="Send">
+                                <button onClick={() => handleSend(quotation)} disabled={isSendingId === quotation.id} className="glass-button-icon p-1 rounded-md transition-all hover:text-emerald-400 hover:border-emerald-400/30 hover:bg-emerald-400/10 tooltip cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" title="Send">
                                   {isSendingId === quotation.id ? <span className="material-symbols-outlined text-[16px] animate-spin">refresh</span> : <span className="material-symbols-outlined text-[16px]">send</span>}
                                 </button>
                                 <button
@@ -1053,7 +1126,7 @@ export default function QuotationsPage() {
                                     <span className="material-symbols-outlined text-[16px]">receipt_long</span>
                                   </button>
                                 </Link>
-                                <button onClick={() => handleSend(quotation.id)} disabled={isSendingId === quotation.id} className="glass-button-icon p-1 rounded-md transition-all hover:text-emerald-400 hover:border-emerald-400/30 hover:bg-emerald-400/10 tooltip cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" title="Send">
+                                <button onClick={() => handleSend(quotation)} disabled={isSendingId === quotation.id} className="glass-button-icon p-1 rounded-md transition-all hover:text-emerald-400 hover:border-emerald-400/30 hover:bg-emerald-400/10 tooltip cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" title="Send">
                                   {isSendingId === quotation.id ? <span className="material-symbols-outlined text-[16px] animate-spin">refresh</span> : <span className="material-symbols-outlined text-[16px]">send</span>}
                                 </button>
                                 <div className="w-px h-4 bg-primary/20 mx-1"></div>
@@ -1147,7 +1220,7 @@ export default function QuotationsPage() {
                                 <span className="material-symbols-outlined text-[16px]">receipt_long</span>
                               </button>
                             </Link>
-                            <button onClick={() => handleSend(quotation.id)} disabled={isSendingId === quotation.id} className="glass-button-icon p-2 rounded-md hover:text-emerald-400 hover:bg-emerald-400/10 cursor-pointer disabled:opacity-50" title="Send">
+                            <button onClick={() => handleSend(quotation)} disabled={isSendingId === quotation.id} className="glass-button-icon p-2 rounded-md hover:text-emerald-400 hover:bg-emerald-400/10 cursor-pointer disabled:opacity-50" title="Send">
                               {isSendingId === quotation.id ? <span className="material-symbols-outlined text-[16px] animate-spin">refresh</span> : <span className="material-symbols-outlined text-[16px]">send</span>}
                             </button>
                             <button
@@ -1189,7 +1262,7 @@ export default function QuotationsPage() {
                                 <span className="material-symbols-outlined text-[16px]">receipt_long</span>
                               </button>
                             </Link>
-                            <button onClick={() => handleSend(quotation.id)} disabled={isSendingId === quotation.id} className="glass-button-icon p-2 rounded-md hover:text-emerald-400 hover:bg-emerald-400/10 cursor-pointer disabled:opacity-50" title="Send">
+                            <button onClick={() => handleSend(quotation)} disabled={isSendingId === quotation.id} className="glass-button-icon p-2 rounded-md hover:text-emerald-400 hover:bg-emerald-400/10 cursor-pointer disabled:opacity-50" title="Send">
                               {isSendingId === quotation.id ? <span className="material-symbols-outlined text-[16px] animate-spin">refresh</span> : <span className="material-symbols-outlined text-[16px]">send</span>}
                             </button>
                             <div className="w-px h-5 bg-primary/20"></div>

@@ -46,6 +46,13 @@ async function bootstrap() {
   
   const expressApp = app.getHttpAdapter().getInstance();
   expressApp.set('trust proxy', 1);
+  expressApp.use((req: any, res: any, next: any) => {
+    const branchHeader = req.headers['x-branch-id'];
+    if (branchHeader && !req.query.branchId) {
+      req.query.branchId = branchHeader;
+    }
+    next();
+  });
 
   const port = process.env.PORT || 5000;
   await app.listen(port, '0.0.0.0');

@@ -42,14 +42,17 @@ function notifyAuthChange(isAuth: boolean) {
 }
 
 export async function initAuthStore(): Promise<string | null> {
-  if (isStorageInitialized && inMemoryToken) return inMemoryToken;
+  if (inMemoryToken) return inMemoryToken;
   try {
-    let token = null;
+    let token: string | null = null;
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       token = localStorage.getItem('accessToken') || localStorage.getItem('token');
     }
     if (!token) {
       token = await AsyncStorage.getItem('accessToken');
+    }
+    if (!token) {
+      token = await AsyncStorage.getItem('token');
     }
     inMemoryToken = token;
     isStorageInitialized = true;
