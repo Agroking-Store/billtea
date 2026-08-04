@@ -15,16 +15,41 @@ export const apiClient = axios.create({
 
 console.log('API_URL is:', ENV.API_URL);
 
-// Add request interceptor for auth token
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Add request interceptor for auth token and selected branch
 apiClient.interceptors.request.use(
   async (config) => {
     try {
-      const token = await getStorageItemAsync(TOKEN_KEYS.ACCESS);
+      let token = await getStorageItemAsync(TOKEN_KEYS.ACCESS);
+      if (!token) {
+        token = await AsyncStorage.getItem('accessToken');
+      }
+      if (!token && Platform.OS === 'web' && typeof window !== 'undefined') {
+        token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      }
+
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
       }
+
+      let branchId: string | null = null;
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        branchId = localStorage.getItem('selectedBranchId');
+      }
+      if (!branchId) {
+        branchId = await AsyncStorage.getItem('selectedBranchId');
+      }
+      if (!branchId) {
+        branchId = await getStorageItemAsync('selectedBranchId');
+      }
+
+      if (branchId && config.headers) {
+        config.headers['x-branch-id'] = branchId;
+      }
     } catch (error) {
-      console.error('Error fetching token from storage', error);
+      console.error('Error fetching token or branch from storage', error);
     }
     return config;
   },

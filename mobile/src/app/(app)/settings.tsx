@@ -388,7 +388,7 @@ export default function SettingsScreen() {
         onRequestClose={() => setBranchDropdownOpen(false)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => setBranchDropdownOpen(false)}>
-          <View style={[styles.modalCard, { backgroundColor: '#0F172A', borderColor: 'rgba(125, 211, 252, 0.25)' }]}>
+          <Pressable style={[styles.modalCard, { backgroundColor: '#0F172A', borderColor: 'rgba(125, 211, 252, 0.25)' }]} onPress={(e) => e.stopPropagation?.()}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>Select Branch</Text>
               <Pressable onPress={() => setBranchDropdownOpen(false)}>
@@ -397,33 +397,52 @@ export default function SettingsScreen() {
             </View>
 
             <ScrollView style={{ maxHeight: 250 }}>
-              {branches?.map((b: Branch) => {
-                const isSelected = String(b.id) === String(selectedBranchId || (branches.length > 0 ? branches[0].id : ''));
-                return (
-                  <Pressable
-                    key={b.id}
-                    onPress={async () => {
-                      await setSelectedBranchId(b.id);
-                      setBranchDropdownOpen(false);
-                    }}
-                    style={({ pressed }) => [
-                      styles.dropdownItem,
-                      isSelected && styles.dropdownItemSelected,
-                      pressed && { backgroundColor: 'rgba(125, 211, 252, 0.15)' },
-                    ]}
-                  >
-                    <Text
-                      numberOfLines={1}
-                      style={[styles.dropdownItemText, { color: isSelected ? colors.primary : colors.text || '#FFFFFF' }]}
+              {isLoadingBranches ? (
+                <View style={{ padding: 20, alignItems: 'center' }}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                </View>
+              ) : branches && branches.length > 0 ? (
+                branches.map((b: Branch) => {
+                  const isSelected = String(b.id) === String(selectedBranchId || (branches.length > 0 ? branches[0].id : ''));
+                  return (
+                    <Pressable
+                      key={b.id}
+                      onPress={async () => {
+                        await setSelectedBranchId(b.id);
+                        setBranchDropdownOpen(false);
+                      }}
+                      style={({ pressed }) => [
+                        styles.dropdownItem,
+                        isSelected && styles.dropdownItemSelected,
+                        pressed && { backgroundColor: 'rgba(125, 211, 252, 0.15)' },
+                      ]}
                     >
-                      {b.name}
-                    </Text>
-                    {isSelected && <Check size={16} color={colors.primary} />}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                        <MaterialIcons name="store" size={18} color={isSelected ? colors.primary : colors.textSecondary} />
+                        <Text
+                          numberOfLines={1}
+                          style={[styles.dropdownItemText, { color: isSelected ? colors.primary : colors.text || '#FFFFFF' }]}
+                        >
+                          {b.name}
+                        </Text>
+                      </View>
+                      {isSelected && <Check size={16} color={colors.primary} />}
+                    </Pressable>
+                  );
+                })
+              ) : (
+                <View style={{ padding: 20, alignItems: 'center' }}>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 8 }}>No branches found in database</Text>
+                  <Pressable
+                    onPress={() => refreshBranches()}
+                    style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: 'rgba(125, 211, 252, 0.15)', borderRadius: 6 }}
+                  >
+                    <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>Retry Loading</Text>
                   </Pressable>
-                );
-              })}
+                </View>
+              )}
             </ScrollView>
-          </View>
+          </Pressable>
         </Pressable>
       </Modal>
     </View>
@@ -557,7 +576,7 @@ const styles = StyleSheet.create({
   branchBtnText: {
     fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
     flexShrink: 1,
   },
