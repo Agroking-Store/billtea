@@ -31,7 +31,8 @@ import {
 
 import { useTheme } from '@/hooks/useTheme';
 import { GlassPanel } from '@/components/ui/GlassPanel';
-import { useInvoiceSettingsStore } from '@/store/invoiceSettingsStore';
+import { apiClient } from '@/api/client';
+import { useBranch } from '@/components/BranchProvider';
 
 // Custom Animated Switch to match the premium screenshot design
 interface CustomSwitchProps {
@@ -178,13 +179,16 @@ export default function InvoiceSettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const { settings, isInitialized, initSettings, updateSettings } = useInvoiceSettingsStore();
+  const { selectedBranchId } = useBranch();
 
   // Local Form States
   const [prefix, setPrefix] = useState('');
   const [startingNumber, setStartingNumber] = useState('');
   const [showHsnCode, setShowHsnCode] = useState(true);
   const [showSku, setShowSku] = useState(false);
+  // NOTE: backend's DocumentSettings table has no field for these two yet —
+  // they work in the UI but won't be saved/loaded from the server until
+  // the backend adds columns for them.
   const [showPaymentMethod, setShowPaymentMethod] = useState(true);
   const [displayPersonalName, setDisplayPersonalName] = useState(false);
   const [topMessage, setTopMessage] = useState('');
@@ -192,25 +196,38 @@ export default function InvoiceSettingsScreen() {
   const [terms, setTerms] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize form with stored settings
-  useEffect(() => {
-    initSettings();
-  }, []);
-
-  useEffect(() => {
-    if (isInitialized && settings) {
-      setPrefix(settings.prefix);
-      setStartingNumber(String(settings.startingNumber));
-      setShowHsnCode(settings.showHsnCode);
-      setShowSku(settings.showSku);
-      setShowPaymentMethod(settings.showPaymentMethod);
-      setDisplayPersonalName(settings.displayPersonalName);
-      setTopMessage(settings.topMessage);
-      setBottomMessage(settings.bottomMessage);
-      setTerms(settings.termsAndConditions);
+  // Load the real, live settings (including the next invoice number) from the backend
+  const fetchSettings = async () => {
+    if (!selectedBranchId) return;
+    try {
+      const res = await apiClient.get(`/document-settings/${selectedBranchId}`, {
+        params: { type: 'INVOICE' },
+      });
+      if (res.status === 200 && res.data?.settings) {
+        const s = res.data.settings;
+        setPrefix(s.prefix ?? '');
+        setStartingNumber(String(s.nextNumber ?? 1));
+        setShowHsnCode(!!s.showHsn);
+        setShowSku(!!s.showSku);
+        setTopMessage(s.topMessage ?? '');
+        setBottomMessage(s.bottomMessage ?? '');
+        setTerms(s.terms ?? '');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Could not load invoice settings.');
+    } finally {
+      setIsInitialized(true);
     }
-  }, [isInitialized, settings]);
+  };
+
+  // Fetch fresh every time this screen is focused, so it always reflects
+  // the latest invoice created (nextNumber updates automatically on the backend
+  // each time a new invoice is saved).
+  useEffect(() => {
+    fetchSettings();
+  }, [selectedBranchId]);
 
   const handleGenerateTC = () => {
     setIsGenerating(true);
@@ -227,6 +244,10 @@ export default function InvoiceSettingsScreen() {
   };
 
   const handleSave = async () => {
+    if (!selectedBranchId) {
+      Alert.alert('Error', 'No branch selected.');
+      return;
+    }
     if (!prefix.trim()) {
       Alert.alert('Validation Error', 'Invoice prefix cannot be empty.');
       return;
@@ -239,23 +260,26 @@ export default function InvoiceSettingsScreen() {
 
     setIsSaving(true);
     try {
-      await updateSettings({
+      await apiClient.put(`/document-settings/${selectedBranchId}`, {
+        type: 'INVOICE',
         prefix: prefix.trim(),
-        startingNumber: startingNumInt,
-        showHsnCode,
-        showSku,
-        showPaymentMethod,
-        displayPersonalName,
+        nextNumber: startingNumInt,
         topMessage: topMessage.trim(),
         bottomMessage: bottomMessage.trim(),
-        termsAndConditions: terms.trim(),
+        terms: terms.trim(),
+        showHsn: showHsnCode,
+        showSku,
       });
+
+      // Re-fetch so the screen shows exactly what's now saved (e.g. if the
+      // prefix/starting number were adjusted server-side for any reason)
+      await fetchSettings();
 
       Alert.alert('Success', 'Invoice settings saved successfully!', [
         { text: 'OK', onPress: () => router.back() },
       ]);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to save settings. Please try again.');
+    } catch (error: any) {
+      Alert.alert('Error', error?.response?.data?.message || 'Failed to save settings. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -330,7 +354,7 @@ export default function InvoiceSettingsScreen() {
             />
 
             <PremiumInput
-              label="Starting Number"
+              label={`Next Invoice Number${isInitialized ? ` (currently ${prefix}${startingNumber})` : ''}`}
               value={startingNumber}
               onChangeText={setStartingNumber}
               placeholder="1"
