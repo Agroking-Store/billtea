@@ -4,7 +4,7 @@ import { apiFetch } from '@/lib/auth';
 import { AlertMessage } from '@/components/AlertMessage';
 
 /* ────────────────────────────────────────────────────────────────────────
-   Toast
+   Toast Component
    ──────────────────────────────────────────────────────────────────────── */
 
 interface ToastMessage {
@@ -97,7 +97,7 @@ function Toast({ message, onClose, duration = 4000 }: ToastProps) {
       <div
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className={`pointer-events-auto relative overflow-hidden flex items-start gap-4 min-w-[320px] max-w-md p-5 rounded-2xl border shadow-2xl backdrop-blur-sm transition-all duration-300 ease-out ${
+        className={`pointer-events-auto relative overflow-hidden flex items-center gap-2.5 min-w-[220px] max-w-sm px-4 py-2.5 rounded-lg border shadow-xl backdrop-blur-sm transition-all duration-300 ease-out ${
           isSuccess
             ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'
             : 'bg-red-500/10 border-red-500/20 text-red-500'
@@ -108,25 +108,23 @@ function Toast({ message, onClose, duration = 4000 }: ToastProps) {
         }`}
       >
         <span
-          className={`material-symbols-outlined mt-0.5 p-1 rounded-full shrink-0 ${
-            isSuccess ? 'bg-emerald-500/20' : 'bg-red-500/20'
+          className={`material-symbols-outlined text-[18px] shrink-0 ${
+            isSuccess ? 'text-emerald-600' : 'text-red-500'
           }`}
         >
           {isSuccess ? 'check_circle' : 'error'}
         </span>
-        <div className="flex-1">
-          <h4 className="font-bold text-lg mb-1">{isSuccess ? 'Success' : 'Error'}</h4>
-          <p className="text-sm opacity-90 leading-relaxed whitespace-pre-line">{message?.text}</p>
-        </div>
+        <p className="flex-1 text-sm font-semibold leading-snug truncate">{message?.text}</p>
         <button
+          type="button"
           onClick={handleClose}
           aria-label="Dismiss notification"
-          className="shrink-0 p-1 rounded-full hover:bg-black/5 transition-colors cursor-pointer"
+          className="shrink-0 p-0.5 rounded-full hover:bg-black/10 transition-colors cursor-pointer"
         >
-          <span className="material-symbols-outlined text-[18px]">close</span>
+          <span className="material-symbols-outlined text-[16px]">close</span>
         </button>
 
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/5">
+        <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-black/5">
           <div
             key={progressKey}
             className={`h-full ${isSuccess ? 'bg-emerald-500' : 'bg-red-500'}`}
@@ -190,7 +188,7 @@ export default function CustomerModal({ isOpen, onClose, branchId, editCustomerI
           customerName: initialData.customerName || '',
           companyName: initialData.companyName || '',
           email: initialData.email || '',
-          mobileNumber: initialData.mobileNumber || '',
+          mobileNumber: initialData.mobileNumber ? String(initialData.mobileNumber).replace(/\D/g, '') : '',
           businessLabel: initialData.businessLabel || '',
           businessLabelValue: initialData.businessLabelValue || '',
           address: initialData.address || '',
@@ -213,21 +211,42 @@ export default function CustomerModal({ isOpen, onClose, branchId, editCustomerI
   }, [isOpen, initialData]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+
+    if (name === 'mobileNumber') {
+      const onlyDigits = value.replace(/\D/g, '');
+      setFormData((prev) => ({
+        ...prev,
+        mobileNumber: onlyDigits
+      }));
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleSaveCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!branchId) return;
 
+    // 1. Mobile Number Validation Check (< 10 Digits)
+    const digitsOnly = formData.mobileNumber.replace(/\D/g, '');
+    if (digitsOnly.length < 10) {
+      const errorMsg = 'Mobile number must be at least 10 digits long.';
+      // Show ONLY toast notification
+      setToast({ type: 'error', text: errorMsg });
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
     try {
-      const payload = editCustomerId ? formData : { ...formData, branchId };
+      const updatedFormData = { ...formData, mobileNumber: digitsOnly };
+      const payload = editCustomerId ? updatedFormData : { ...updatedFormData, branchId };
       const endpoint = editCustomerId ? `/customers/${editCustomerId}` : '/customers';
       const method = editCustomerId ? 'PUT' : 'POST';
 
@@ -239,6 +258,15 @@ export default function CustomerModal({ isOpen, onClose, branchId, editCustomerI
       const data = await res.json();
 
       if (res.ok && data.success) {
+        try {
+          sessionStorage.setItem('customerToast', JSON.stringify({
+            type: 'success',
+            text: editCustomerId ? 'Customer updated successfully!' : 'Customer added successfully!'
+          }));
+        } catch (e) {
+          // Fallback inline toast
+        }
+        
         setToast({ type: 'success', text: editCustomerId ? 'Customer updated successfully!' : 'Customer added successfully!' });
         onSaveSuccess(data.customer);
         onClose();
@@ -256,22 +284,18 @@ export default function CustomerModal({ isOpen, onClose, branchId, editCustomerI
     }
   };
 
-  // IMPORTANT: don't gate the whole component on `isOpen` — only gate the
-  // portal/modal markup. If Toast lived inside an `if (!isOpen) return null`
-  // check, it gets unmounted the instant the modal closes (killing its
-  // running timer), then remounts with the *same stale message* next time
-  // the modal opens, replaying the whole toast animation for an action
-  // that already happened. That was the "message running again" bug.
   if (!mounted) return null;
 
   return (
     <>
-      <Toast message={toast} onClose={() => setToast(null)} />
+      {createPortal(
+        <Toast message={toast} onClose={() => setToast(null)} />,
+        document.body
+      )}
 
       {isOpen && createPortal(
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 sm:p-6 bg-background/80 backdrop-blur-md animate-in fade-in duration-300">
           <div className="glass-panel w-full max-w-2xl rounded-3xl border border-primary/20 shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300 relative overflow-hidden">
-            {/* Modal Ambient Glow */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-32 bg-primary/10 rounded-full blur-[60px] pointer-events-none"></div>
 
             <div className="p-6 sm:px-8 sm:pt-8 sm:pb-6 border-b border-primary/10 flex justify-between items-center relative z-10">
@@ -303,7 +327,16 @@ export default function CustomerModal({ isOpen, onClose, branchId, editCustomerI
                     <label className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-[16px]">phone_iphone</span> Mobile Number *
                     </label>
-                    <input required name="mobileNumber" value={formData.mobileNumber} onChange={handleInputChange} className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container" placeholder="+1 234 567 8900" />
+                    <input 
+                      required 
+                      type="tel"
+                      name="mobileNumber" 
+                      value={formData.mobileNumber} 
+                      onChange={handleInputChange} 
+                      maxLength={10}
+                      className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container" 
+                      placeholder="Enter 10-digit mobile number" 
+                    />
                   </div>
 
                   <div className="space-y-2">

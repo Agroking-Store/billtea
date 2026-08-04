@@ -100,7 +100,7 @@ function Toast({ message, onClose, duration = 4000 }: ToastProps) {
       <div
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className={`pointer-events-auto relative overflow-hidden flex items-start gap-4 min-w-[320px] max-w-md p-5 rounded-2xl border shadow-2xl backdrop-blur-sm transition-all duration-300 ease-out ${
+        className={`pointer-events-auto relative overflow-hidden flex items-center gap-2.5 min-w-[220px] max-w-sm px-4 py-2.5 rounded-lg border shadow-xl backdrop-blur-sm transition-all duration-300 ease-out ${
           isSuccess
             ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'
             : 'bg-red-500/10 border-red-500/20 text-red-500'
@@ -111,25 +111,22 @@ function Toast({ message, onClose, duration = 4000 }: ToastProps) {
         }`}
       >
         <span
-          className={`material-symbols-outlined mt-0.5 p-1 rounded-full shrink-0 ${
-            isSuccess ? 'bg-emerald-500/20' : 'bg-red-500/20'
+          className={`material-symbols-outlined text-[18px] shrink-0 ${
+            isSuccess ? 'text-emerald-600' : 'text-red-500'
           }`}
         >
           {isSuccess ? 'check_circle' : 'error'}
         </span>
-        <div className="flex-1">
-          <h4 className="font-bold text-lg mb-1">{isSuccess ? 'Success' : 'Error'}</h4>
-          <p className="text-sm opacity-90 leading-relaxed whitespace-pre-line">{message?.text}</p>
-        </div>
+        <p className="flex-1 text-sm font-semibold leading-snug truncate">{message?.text}</p>
         <button
           onClick={handleClose}
           aria-label="Dismiss notification"
-          className="shrink-0 p-1 rounded-full hover:bg-black/5 transition-colors cursor-pointer"
+          className="shrink-0 p-0.5 rounded-full hover:bg-black/10 transition-colors cursor-pointer"
         >
-          <span className="material-symbols-outlined text-[18px]">close</span>
+          <span className="material-symbols-outlined text-[16px]">close</span>
         </button>
 
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/5">
+        <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-black/5">
           <div
             key={progressKey}
             className={`h-full ${isSuccess ? 'bg-emerald-500' : 'bg-red-500'}`}
@@ -241,8 +238,6 @@ export default function ThemeSettingsPage() {
     } else {
       setLightThemeData({});
     }
-    // We can also trigger an auto-save here if we want to reset globally immediately
-    // await handleApplyTheme(); 
   };
 
   const currentData = theme === "dark" ? darkThemeData : lightThemeData;
@@ -450,8 +445,8 @@ export default function ThemeSettingsPage() {
                     </div>
 
                     <div className="rounded-xl bg-error-container p-4 mt-6 flex items-center gap-3">
-                       <span className="text-error font-bold material-symbols-outlined">warning</span>
-                       <p className="text-sm text-on-error-container">Critical system alert example.</p>
+                        <span className="text-error font-bold material-symbols-outlined">warning</span>
+                        <p className="text-sm text-on-error-container">Critical system alert example.</p>
                     </div>
                   </>
                 ) : (

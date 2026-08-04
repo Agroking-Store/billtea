@@ -98,7 +98,7 @@ function Toast({ message, onClose, duration = 4000 }: ToastProps) {
       <div
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className={`pointer-events-auto relative overflow-hidden flex items-start gap-4 min-w-[320px] max-w-md p-5 rounded-2xl border shadow-2xl backdrop-blur-sm transition-all duration-300 ease-out ${
+        className={`pointer-events-auto relative overflow-hidden flex items-center gap-2.5 min-w-[220px] max-w-sm px-4 py-2.5 rounded-lg border shadow-xl backdrop-blur-sm transition-all duration-300 ease-out ${
           isSuccess
             ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'
             : 'bg-red-500/10 border-red-500/20 text-red-500'
@@ -109,25 +109,22 @@ function Toast({ message, onClose, duration = 4000 }: ToastProps) {
         }`}
       >
         <span
-          className={`material-symbols-outlined mt-0.5 p-1 rounded-full shrink-0 ${
-            isSuccess ? 'bg-emerald-500/20' : 'bg-red-500/20'
+          className={`material-symbols-outlined text-[18px] shrink-0 ${
+            isSuccess ? 'text-emerald-600' : 'text-red-500'
           }`}
         >
           {isSuccess ? 'check_circle' : 'error'}
         </span>
-        <div className="flex-1">
-          <h4 className="font-bold text-lg mb-1">{isSuccess ? 'Success' : 'Error'}</h4>
-          <p className="text-sm opacity-90 leading-relaxed whitespace-pre-line">{message?.text}</p>
-        </div>
+        <p className="flex-1 text-sm font-semibold leading-snug truncate">{message?.text}</p>
         <button
           onClick={handleClose}
           aria-label="Dismiss notification"
-          className="shrink-0 p-1 rounded-full hover:bg-black/5 transition-colors cursor-pointer"
+          className="shrink-0 p-0.5 rounded-full hover:bg-black/10 transition-colors cursor-pointer"
         >
-          <span className="material-symbols-outlined text-[18px]">close</span>
+          <span className="material-symbols-outlined text-[16px]">close</span>
         </button>
 
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/5">
+        <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-black/5">
           <div
             key={progressKey}
             className={`h-full ${isSuccess ? 'bg-emerald-500' : 'bg-red-500'}`}
@@ -205,7 +202,7 @@ function BranchSettingsContent() {
       }
 
       if (data.success) {
-        setBranches(data.branches);
+        setBranches(data.branches || []);
       } else {
         setPageError(data.message || "Failed to fetch branches.");
       }
@@ -305,12 +302,10 @@ function BranchSettingsContent() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        // Handle NestJS validation errors which are often in data.message array
         let errorMsg = data.message || "An error occurred.";
         if (Array.isArray(data.message)) {
           errorMsg = data.message.join(", ");
         }
-        // Specific user-friendly mapping for common roles error
         if (res.status === 403 && errorMsg.includes('Forbidden')) {
            errorMsg = "You do not have permission to perform this action. Only the OWNER can modify branches.";
         }
@@ -319,6 +314,12 @@ function BranchSettingsContent() {
 
       setToast({ type: 'success', text: modalMode === 'create' ? 'Branch created successfully!' : 'Branch updated successfully!' });
       setIsModalOpen(false);
+      
+      // Emit global update event so branch providers refresh
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('branch-updated'));
+      }
+      
       fetchBranches();
     } catch (err: any) {
       const msg = err.message || "Failed to save branch. Ensure you have the required permissions.";
@@ -348,9 +349,18 @@ function BranchSettingsContent() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
+
+      // Optimistically remove/update deactivated branch from local list
+      setBranches(prev => prev.filter(b => b.id !== id && b._id !== id));
       
       setToast({ type: 'success', text: `${name} was deactivated successfully!` });
       setIsModalOpen(false);
+
+      // Trigger global event so Header / BranchProvider dropdowns refresh immediately
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('branch-updated'));
+      }
+
       fetchBranches();
     } catch (err: any) {
       const msg = "A network error occurred while deactivating branch.";
@@ -391,7 +401,7 @@ function BranchSettingsContent() {
           {/* Header Section */}
           <div className="mb-10 animate-fade-slide-up">
             <div className="flex items-center gap-2 text-sm text-on-surface-variant mb-4 font-medium tracking-wide uppercase">
-              <button onClick={() => router.back()} className="hover:bg-surface-container p-1 rounded-full transition-colors mr-1 group flex items-center justify-center" aria-label="Go back">
+              <button onClick={() => router.back()} className="hover:bg-surface-container p-1 rounded-full transition-colors mr-1 group flex items-center justify-center cursor-pointer" aria-label="Go back">
                 <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
               </button>
               <span>Settings</span>
@@ -404,7 +414,7 @@ function BranchSettingsContent() {
                 <h1 className="text-4xl md:text-5xl font-black text-on-surface mb-4 tracking-tight">Branches</h1>
                 <p className="text-on-surface-variant text-lg leading-relaxed">Manage all your business locations. Add new branches, update details, or deactivate locations that are no longer operational.</p>
               </div>
-              <button onClick={openCreateModal} className="group relative h-14 px-8 rounded-2xl bg-primary text-on-primary font-bold flex items-center gap-3 overflow-hidden shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5">
+              <button onClick={openCreateModal} className="group relative h-14 px-8 rounded-2xl bg-primary text-on-primary font-bold flex items-center gap-3 overflow-hidden shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5 cursor-pointer">
                 <div className="absolute inset-0 w-full h-full bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out" />
                 <span className="material-symbols-outlined">add</span>
                 <span>Add New Branch</span>
@@ -444,7 +454,7 @@ function BranchSettingsContent() {
                  </div>
               ) : (
                 branches.map((branch) => (
-                  <div key={branch.id} className="group relative bg-surface border border-outline-variant/30 rounded-[2rem] p-1 overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 hover:-translate-y-1">
+                  <div key={branch.id || branch._id} className="group relative bg-surface border border-outline-variant/30 rounded-[2rem] p-1 overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 hover:-translate-y-1">
                     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                     
                     <div className="relative h-full bg-surface-container-lowest rounded-[1.8rem] p-6 sm:p-8 flex flex-col">
@@ -469,7 +479,7 @@ function BranchSettingsContent() {
                         </div>
                         
                         {!branch.isMainBranch && branch.isActive && (
-                          <button onClick={() => handleDeactivate(branch.id, branch.name)} className="w-12 h-12 rounded-2xl bg-surface-container hover:bg-red-500 text-on-surface-variant hover:text-white flex items-center justify-center transition-all duration-300 shadow-sm tooltip tooltip-left" data-tip="Deactivate">
+                          <button onClick={() => handleDeactivate(branch.id || branch._id, branch.name)} className="w-12 h-12 rounded-2xl bg-surface-container hover:bg-red-500 text-on-surface-variant hover:text-white flex items-center justify-center transition-all duration-300 shadow-sm cursor-pointer" title="Deactivate Branch">
                             <span className="material-symbols-outlined text-[20px]">block</span>
                           </button>
                         )}
@@ -530,7 +540,7 @@ function BranchSettingsContent() {
 
                       {/* Bottom Actions */}
                       <div className="mt-8 pt-6 border-t border-outline-variant/20 flex justify-end">
-                        <button onClick={() => openEditModal(branch)} className="h-12 px-6 rounded-xl bg-surface-container hover:bg-primary border border-outline-variant/30 text-on-surface hover:text-on-primary font-bold flex items-center gap-2 transition-all duration-300">
+                        <button onClick={() => openEditModal(branch)} className="h-12 px-6 rounded-xl bg-surface-container hover:bg-primary border border-outline-variant/30 text-on-surface hover:text-on-primary font-bold flex items-center gap-2 transition-all duration-300 cursor-pointer">
                           <span className="material-symbols-outlined text-[18px]">edit</span>
                           Edit Details
                         </button>
@@ -671,7 +681,7 @@ function BranchSettingsContent() {
                             <button 
                               type="button" 
                               onClick={addTaxField}
-                              className="text-primary text-sm font-bold flex items-center gap-1 hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors"
+                              className="text-primary text-sm font-bold flex items-center gap-1 hover:bg-primary/10 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
                             >
                               <span className="material-symbols-outlined text-[18px]">add</span> Add Tax
                             </button>
@@ -710,7 +720,7 @@ function BranchSettingsContent() {
                                 <button 
                                   type="button" 
                                   onClick={() => removeTaxField(index)}
-                                  className="w-10 h-10 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-colors shadow-sm"
+                                  className="w-10 h-10 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-colors shadow-sm cursor-pointer"
                                   aria-label="Remove Tax"
                                 >
                                   <span className="material-symbols-outlined text-[20px]">delete</span>
@@ -848,7 +858,7 @@ function BranchSettingsContent() {
                       className="px-6 py-2.5 rounded-xl text-sm font-bold text-error hover:bg-error/10 transition-colors flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[18px]">delete</span>
-                      Delete
+                      Deactivate
                     </button>
                   )}
                 </div>

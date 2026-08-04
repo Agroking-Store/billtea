@@ -111,7 +111,7 @@ function Toast({ message, onClose, duration = 4000 }: ToastProps) {
       <div
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className={`pointer-events-auto relative overflow-hidden flex items-start gap-4 min-w-[320px] max-w-md p-5 rounded-2xl border shadow-2xl backdrop-blur-sm transition-all duration-300 ease-out ${
+        className={`pointer-events-auto relative overflow-hidden flex items-center gap-3 min-w-[280px] max-w-sm px-4 py-3 rounded-lg border shadow-lg backdrop-blur-sm transition-all duration-300 ease-out ${
           isSuccess
             ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'
             : 'bg-red-500/10 border-red-500/20 text-red-500'
@@ -121,26 +121,19 @@ function Toast({ message, onClose, duration = 4000 }: ToastProps) {
             : 'opacity-0 translate-x-4 -translate-y-1'
         }`}
       >
-        <span
-          className={`material-symbols-outlined mt-0.5 p-1 rounded-full shrink-0 ${
-            isSuccess ? 'bg-emerald-500/20' : 'bg-red-500/20'
-          }`}
-        >
+        <span className="material-symbols-outlined text-[18px] shrink-0">
           {isSuccess ? 'check_circle' : 'error'}
         </span>
-        <div className="flex-1">
-          <h4 className="font-bold text-lg mb-1">{isSuccess ? 'Success' : 'Error'}</h4>
-          <p className="text-sm opacity-90 leading-relaxed whitespace-pre-line">{message?.text}</p>
-        </div>
+        <p className="flex-1 text-sm font-semibold leading-snug whitespace-pre-line">{message?.text}</p>
         <button
           onClick={handleClose}
           aria-label="Dismiss notification"
           className="shrink-0 p-1 rounded-full hover:bg-black/5 transition-colors cursor-pointer"
         >
-          <span className="material-symbols-outlined text-[18px]">close</span>
+          <span className="material-symbols-outlined text-[16px]">close</span>
         </button>
 
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/5">
+        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-black/5">
           <div
             key={progressKey}
             className={`h-full ${isSuccess ? 'bg-emerald-500' : 'bg-red-500'}`}
@@ -172,13 +165,12 @@ export default function CreateInvoicePage() {
 
   // Toast State
   const [toast, setToast] = useState<ToastMessage | null>(null);
-  const [navigateAfterToast, setNavigateAfterToast] = useState(false);
 
   // 1. Core State
   const [formData, setFormData] = useState({
     customerId: '',
     invoiceDate: new Date().toISOString().split('T')[0],
-    dueDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Default +2 months
+    dueDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     shippingSameAsBilling: true,
     discountConfiguration: { mode: 'FIXED', type: 'PERCENTAGE', value: 0 },
     taxConfiguration: { mode: 'FIXED', customTaxActive: false, label: '', value: 0 },
@@ -309,7 +301,6 @@ export default function CreateInvoicePage() {
     try {
       setIsCalculating(true);
 
-      // Calculate effective tax value if global is used
       let effectiveTaxConfig = { 
         mode: formData.taxConfiguration.mode,
         label: formData.taxConfiguration.customTaxActive ? formData.taxConfiguration.label : branchTaxConfig.label,
@@ -392,13 +383,10 @@ export default function CreateInvoicePage() {
       setQuotationSearch(quotationSummary.quotationNumber);
       setSelectedQuotation(quotationSummary);
       
-      // Fetch full quotation details
       const res = await apiFetch(`/quotations/${quotationSummary.id}`);
       if (res.ok) {
         const fullQuotation = await res.json();
-        console.log("Full quotation fetched:", fullQuotation);
         
-        // Auto-populate invoice state
         setQuotationSearch(fullQuotation.quotationNumber);
         setSelectedQuotation(fullQuotation);
         setCustomerSearch(fullQuotation.customer.customerName);
@@ -542,7 +530,7 @@ export default function CreateInvoicePage() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
 
-    setError(''); // clear previous errors
+    setError('');
     const allowedTypes = ['application/pdf'];
     const MAX_SIZE_MB = 5;
     const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
@@ -603,7 +591,7 @@ export default function CreateInvoicePage() {
       setAttachments(prev => [...prev, ...validFiles]);
     }
     
-    e.target.value = ''; // reset input
+    e.target.value = '';
   };
 
   const handleSave = async () => {
@@ -633,7 +621,6 @@ export default function CreateInvoicePage() {
     try {
       setIsSaving(true); setError('');
 
-      // Resolve tax config same as preview
       const effectiveTaxConfig = {
         mode: formData.taxConfiguration.mode,
         label: formData.taxConfiguration.customTaxActive ? formData.taxConfiguration.label : branchTaxConfig.label,
@@ -667,7 +654,7 @@ export default function CreateInvoicePage() {
       for (const file of attachments) {
         const fileFormData = new FormData();
         fileFormData.append('file', file);
-        await apiFetch(`/invoices/${data.id}/attachments`, { method: 'POST', body: fileFormData, headers: {} }); // empty headers allows fetch to set multipart boundary
+        await apiFetch(`/invoices/${data.id}/attachments`, { method: 'POST', body: fileFormData, headers: {} });
       }
 
       // Upload Payment Attachment
@@ -677,8 +664,9 @@ export default function CreateInvoicePage() {
         await apiFetch(`/invoices/${data.id}/payments/${data.payments[0].id}/attachment`, { method: 'POST', body: paymentFormData, headers: {} });
       }
 
-      setToast({ type: 'success', text: 'Invoice created successfully!' });
-      setNavigateAfterToast(true);
+      sessionStorage.setItem('invoiceToast', JSON.stringify({ type: 'success', text: 'Invoice created successfully!' }));
+      router.push('/invoices');
+      router.refresh();
     } catch (err: any) {
       const message = err.message || 'Something went wrong';
       setError(message);
@@ -692,13 +680,7 @@ export default function CreateInvoicePage() {
     <>
       <Toast
         message={toast}
-        onClose={() => {
-          setToast(null);
-          if (navigateAfterToast) {
-            setNavigateAfterToast(false);
-            router.push('/invoices');
-          }
-        }}
+        onClose={() => setToast(null)}
       />
 
       <div className="flex-1 overflow-y-auto p-4 md:p-8 relative overflow-x-hidden selection:bg-primary/30">

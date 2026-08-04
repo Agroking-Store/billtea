@@ -110,7 +110,7 @@ function Toast({ message, onClose, duration = 4000 }: ToastProps) {
       <div
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className={`pointer-events-auto relative overflow-hidden flex items-start gap-4 min-w-[320px] max-w-md p-5 rounded-2xl border shadow-2xl backdrop-blur-sm transition-all duration-300 ease-out ${
+        className={`pointer-events-auto relative overflow-hidden flex items-center gap-3 min-w-[280px] max-w-sm px-4 py-3 rounded-lg border shadow-lg backdrop-blur-sm transition-all duration-300 ease-out ${
           isSuccess
             ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'
             : 'bg-red-500/10 border-red-500/20 text-red-500'
@@ -120,26 +120,19 @@ function Toast({ message, onClose, duration = 4000 }: ToastProps) {
             : 'opacity-0 translate-x-4 -translate-y-1'
         }`}
       >
-        <span
-          className={`material-symbols-outlined mt-0.5 p-1 rounded-full shrink-0 ${
-            isSuccess ? 'bg-emerald-500/20' : 'bg-red-500/20'
-          }`}
-        >
+        <span className="material-symbols-outlined text-[18px] shrink-0">
           {isSuccess ? 'check_circle' : 'error'}
         </span>
-        <div className="flex-1">
-          <h4 className="font-bold text-lg mb-1">{isSuccess ? 'Success' : 'Error'}</h4>
-          <p className="text-sm opacity-90 leading-relaxed whitespace-pre-line">{message?.text}</p>
-        </div>
+        <p className="flex-1 text-sm font-semibold leading-snug whitespace-pre-line">{message?.text}</p>
         <button
           onClick={handleClose}
           aria-label="Dismiss notification"
           className="shrink-0 p-1 rounded-full hover:bg-black/5 transition-colors cursor-pointer"
         >
-          <span className="material-symbols-outlined text-[18px]">close</span>
+          <span className="material-symbols-outlined text-[16px]">close</span>
         </button>
 
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/5">
+        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-black/5">
           <div
             key={progressKey}
             className={`h-full ${isSuccess ? 'bg-emerald-500' : 'bg-red-500'}`}
@@ -168,18 +161,17 @@ export default function CreateQuotationPage() {
   const copyFromId = searchParams.get('copyFrom');
   const { selectedBranchId, branches } = useBranch();
 
-  // Loading State for fetching existing quotation (if copying)
+  // Loading State
   const [isLoading, setIsLoading] = useState(false);
 
   // Toast State
   const [toast, setToast] = useState<ToastMessage | null>(null);
-  const [navigateAfterToast, setNavigateAfterToast] = useState(false);
 
-  // 1. Core State
+  // Form State
   const [formData, setFormData] = useState({
     customerId: '',
     quotationDate: new Date().toISOString().split('T')[0],
-    expiryDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Default +2 months
+    expiryDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     shippingSameAsBilling: true,
     discountConfiguration: { mode: 'FIXED', type: 'PERCENTAGE', value: 0 },
     taxConfiguration: { mode: 'FIXED', customTaxActive: false, label: '', value: 0 },
@@ -211,8 +203,6 @@ export default function CreateQuotationPage() {
   const [branchTaxConfig, setBranchTaxConfig] = useState({ label: 'GST', tax: 0 });
   const [branchTaxes, setBranchTaxes] = useState<any[]>([]);
 
-
-
   // Preview & Processing State
   const [calculatedTotals, setCalculatedTotals] = useState({ subtotal: 0, discountAmount: 0, taxAmount: 0, grandTotal: 0 });
   const [calculatedItems, setCalculatedItems] = useState<any[]>([]);
@@ -228,15 +218,13 @@ export default function CreateQuotationPage() {
     }
   }, [error]);
 
-  // Track if initial data has been loaded (to avoid overwriting with branch defaults when copying)
   const initialLoadDone = useRef(false);
 
-  // Fetch existing quotation data if copyFromId is present
   useEffect(() => {
     if (copyFromId) {
       fetchQuotationToCopy(copyFromId);
     } else {
-      initialLoadDone.current = true; // Not copying, normal flow
+      initialLoadDone.current = true;
       if (selectedBranchId) fetchDocumentSettings(selectedBranchId);
     }
   }, [copyFromId, selectedBranchId]);
@@ -263,7 +251,6 @@ export default function CreateQuotationPage() {
       if (!res.ok) throw new Error('Failed to fetch quotation for copying');
       const data = await res.json();
 
-      // Map API response back to form state (excluding quotationDate, expiryDate to let them default to today/future)
       setFormData(prev => ({
         ...prev,
         customerId: data.customer?.id || '',
@@ -286,13 +273,11 @@ export default function CreateQuotationPage() {
           : (data.termsAndConditions || ''),
       }));
 
-      // Set customer
       if (data.customer) {
         setCustomerSearch(data.customer.customerName || '');
         setSelectedCustomerDetails(data.customer);
       }
 
-      // Set addresses
       if (data.billingAddress) {
         setBillingAddress({
           address: data.billingAddress.address || '',
@@ -310,7 +295,6 @@ export default function CreateQuotationPage() {
         });
       }
 
-      // Set items
       if (data.items && data.items.length > 0) {
         const mappedItems = data.items.map((item: any) => ({
           id: item.id || Math.random().toString(),
@@ -329,7 +313,6 @@ export default function CreateQuotationPage() {
         }));
         setItems(mappedItems);
 
-        // Initialize product search rows with existing names
         const searchRows: any = {};
         mappedItems.forEach((item: any) => {
           searchRows[item.id] = { query: item.name, results: [], show: false };
@@ -337,7 +320,6 @@ export default function CreateQuotationPage() {
         setProductSearchRows(searchRows);
       }
 
-      // Set calculated totals from existing data
       if (data.totals) {
         setCalculatedTotals({
           subtotal: data.totals.subtotal || 0,
@@ -355,7 +337,6 @@ export default function CreateQuotationPage() {
     }
   };
 
-  // Setup branch defaults
   useEffect(() => {
     if (selectedBranchId) {
       const branch: any = branches.find(b => b.id === selectedBranchId);
@@ -382,7 +363,6 @@ export default function CreateQuotationPage() {
     }
   }, [branchTaxConfig]);
 
-  // Preview API Trigger
   useEffect(() => {
     if (!selectedBranchId || !initialLoadDone.current) return;
     const handler = setTimeout(() => { fetchPreview(); }, 500);
@@ -393,7 +373,6 @@ export default function CreateQuotationPage() {
     try {
       setIsCalculating(true);
 
-      // Calculate effective tax value if global is used
       let effectiveTaxConfig = {
         mode: formData.taxConfiguration.mode,
         label: formData.taxConfiguration.customTaxActive ? formData.taxConfiguration.label : branchTaxConfig.label,
@@ -432,7 +411,6 @@ export default function CreateQuotationPage() {
     }
   };
 
-  // Customer Lookup
   useEffect(() => {
     if (!selectedCustomerDetails || customerSearch !== selectedCustomerDetails.customerName) {
       const delayFn = setTimeout(() => {
@@ -458,7 +436,6 @@ export default function CreateQuotationPage() {
     handleCustomerSelect(newCustomer);
   };
 
-  // Product Lookup
   const handleProductSearch = async (query: string, rowId: string) => {
     setProductSearchRows(prev => ({ ...prev, [rowId]: { ...prev[rowId], query, show: true } }));
     const res = await apiFetch(`/quotations/products/search?q=${query}&branchId=${selectedBranchId}`);
@@ -484,7 +461,7 @@ export default function CreateQuotationPage() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
 
-    setError(''); // clear previous errors
+    setError('');
     const allowedTypes = ['application/pdf'];
     const MAX_SIZE_MB = 5;
     const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
@@ -535,7 +512,6 @@ export default function CreateQuotationPage() {
       }
     }
 
-
     if (errors.length > 0) {
       const errorText = `Attachment errors:\n• ${errors.join('\n• ')}`;
       setError(errorText);
@@ -546,7 +522,7 @@ export default function CreateQuotationPage() {
       setAttachments([validFiles[0]]);
     }
 
-    e.target.value = ''; // reset input
+    e.target.value = '';
   };
 
   const handleSave = async () => {
@@ -584,11 +560,13 @@ export default function CreateQuotationPage() {
       for (const file of attachments) {
         const formData = new FormData();
         formData.append('file', file);
-        await apiFetch(`/quotations/${data.id}/attachments`, { method: 'POST', body: formData, headers: {} }); // empty headers allows fetch to set multipart boundary
+        await apiFetch(`/quotations/${data.id}/attachments`, { method: 'POST', body: formData, headers: {} });
       }
 
-      setToast({ type: 'success', text: 'Quotation created successfully!' });
-      setNavigateAfterToast(true);
+      sessionStorage.setItem('quotationToast', JSON.stringify({ type: 'success', text: 'Quotation created successfully!' }));
+      router.push('/quotations');
+      // Trigger a page refresh to guarantee the Toast fires immediately if Next.js soft-navigates
+      router.refresh();
     } catch (err: any) {
       const message = err.message || 'Something went wrong';
       setError(message);
@@ -615,13 +593,7 @@ export default function CreateQuotationPage() {
     <div className="flex-1 overflow-y-auto p-4 md:p-8 relative overflow-x-hidden selection:bg-primary/30 w-full max-w-full min-w-0">
       <Toast
         message={toast}
-        onClose={() => {
-          setToast(null);
-          if (navigateAfterToast) {
-            setNavigateAfterToast(false);
-            router.push('/quotations');
-          }
-        }}
+        onClose={() => setToast(null)}
       />
 
       <style dangerouslySetInnerHTML={{
@@ -861,21 +833,17 @@ export default function CreateQuotationPage() {
                   const calcItem = calculatedItems[index];
                   return (
                     <div key={item.id} className="relative group bg-surface-container/20 border border-outline-variant/10 rounded-xl p-4 md:p-5 hover:bg-surface-container/40 transition-colors shadow-sm">
-                      {/* Delete Button */}
                       <button onClick={() => removeItem(item.id)} className="absolute top-2 right-2 text-error hover:bg-error/10 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all z-10" title="Remove Item">
                         <span className="material-symbols-outlined text-[20px]">delete</span>
                       </button>
 
                       <div className="flex flex-col md:flex-row gap-5">
-                        {/* Left: Image Box */}
                         <div className="relative group/img w-20 h-20 md:w-24 md:h-24 rounded-lg border border-outline-variant/30 bg-surface-container overflow-hidden shrink-0 shadow-sm mx-auto md:mx-0 mt-2">
-                          {/* Placeholder (Always in background) */}
                           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10 z-0">
                             <span className="material-symbols-outlined text-primary/40 text-3xl mb-1">inventory_2</span>
                             <span className="text-[9px] font-bold text-primary/50 uppercase tracking-widest">No Image</span>
                           </div>
 
-                          {/* Image (Renders on top if available) */}
                           {item.image && item.image !== 'null' && item.image !== 'undefined' && (
                             <img src={getImageUrl(item.image)} alt="Product" className="absolute inset-0 w-full h-full object-cover z-10 transition-opacity duration-300" onError={(e) => { e.currentTarget.style.opacity = '0'; }} />
                           )}
@@ -893,9 +861,7 @@ export default function CreateQuotationPage() {
                           </label>
                         </div>
 
-                        {/* Right: Grid of Inputs */}
                         <div className="flex-1 flex flex-col gap-4">
-                          {/* Row 1: Search, Qty, Price */}
                           <div className="grid grid-cols-12 gap-3 md:gap-4 items-start">
                             <div className="col-span-12 md:col-span-6 relative">
                               <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1 block">Product Search</label>
@@ -954,7 +920,6 @@ export default function CreateQuotationPage() {
                             </div>
                           </div>
 
-                          {/* Row 2: Description, Discount, Tax, Total */}
                           <div className="grid grid-cols-12 gap-3 md:gap-4 items-end">
                             <div className={`col-span-12 ${(formData.discountConfiguration.mode === 'PER_PRODUCT' && formData.taxConfiguration.mode === 'PER_PRODUCT') ? 'md:col-span-4' :
                               (formData.discountConfiguration.mode === 'PER_PRODUCT' ? 'md:col-span-6' :
