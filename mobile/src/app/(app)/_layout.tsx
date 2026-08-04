@@ -5,6 +5,7 @@ export default function AppLayout() {
   return (
     <BranchProvider>
     <Tabs 
+      backBehavior="history"
       tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >

@@ -215,7 +215,7 @@ export default function CreateQuotationPage() {
       const branch: any = branches.find(b => b.id === selectedBranchId);
       if (branch?.taxes && Array.isArray(branch.taxes) && branch.taxes.length > 0) {
         setBranchTaxes(branch.taxes);
-        setBranchTaxConfig({ label: branch.taxes[0].label, tax: branch.taxes[0].percentage || 0 });
+        setBranchTaxConfig({ label: branch.taxes[0].label, tax: branch.taxes[0].percentage ?? branch.taxes[0].value ?? 0 });
       } else if (branch?.taxLabel) {
         setBranchTaxes([{ label: branch.taxLabel, percentage: branch.tax || 0 }]);
         setBranchTaxConfig({ label: branch.taxLabel, tax: branch.tax || 0 });
@@ -360,7 +360,7 @@ export default function CreateQuotationPage() {
       try {
         if (file.type.startsWith('image/') || isHeic) {
           let fileToCompress = file;
-          
+
           if (isHeic) {
             const heic2any = (await import('heic2any')).default;
             const convertedBlob = await heic2any({
@@ -448,7 +448,7 @@ export default function CreateQuotationPage() {
 
   if (isLoading) {
     return (
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 z-0 relative overflow-x-hidden selection:bg-primary/30">
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 relative overflow-x-hidden selection:bg-primary/30">
         <div className="flex flex-col items-center justify-center py-32">
           <div className="relative">
             <div className="w-16 h-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
@@ -460,7 +460,7 @@ export default function CreateQuotationPage() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 md:p-8 z-0 relative overflow-x-hidden selection:bg-primary/30 w-full max-w-full min-w-0">
+    <div className="flex-1 overflow-y-auto p-4 md:p-8 relative overflow-x-hidden selection:bg-primary/30 w-full max-w-full min-w-0">
       <style dangerouslySetInnerHTML={{
         __html: `
         @keyframes fadeSlideUp {
@@ -474,7 +474,7 @@ export default function CreateQuotationPage() {
       `}} />
 
       {/* Premium Background */}
-      <div className="fixed inset-0 z-0 bg-surface pointer-events-none">
+      <div className="fixed inset-0 bg-surface pointer-events-none">
         <div className="absolute top-[-10%] left-[-5%] w-[50%] h-[50%] rounded-full bg-primary/5 blur-[120px]"></div>
         <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] rounded-full bg-tertiary/10 blur-[120px]"></div>
         <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-secondary/5 blur-[100px]"></div>
@@ -580,7 +580,7 @@ export default function CreateQuotationPage() {
                     <div className="text-sm text-on-surface font-semibold">{selectedCustomerDetails.businessLabelValue || 'N/A'}</div>
                   </div>
                   <div className="col-span-2">
-                    <span className="text-[10px] uppercase font-bold text-on-surface-variant">Billing Address (Read Only)</span>
+                    <span className="text-[10px] uppercase font-bold text-on-surface-variant">Billing Address</span>
                     <div className="text-sm text-on-surface">{billingAddress.address || 'N/A'}</div>
                   </div>
                 </div>
@@ -660,19 +660,19 @@ export default function CreateQuotationPage() {
                           </div>
                         ) : (
                           <div className="relative">
-                            <select 
+                            <select
                               className="glass-input px-4 py-2.5 rounded-lg w-full text-sm font-semibold cursor-pointer focus:ring-0 focus:border-primary/50 appearance-none bg-surface-container/30 border-outline-variant/30 text-on-surface"
                               value={branchTaxConfig.label}
                               onChange={(e) => {
                                 const selectedTax = branchTaxes.find(t => t.label === e.target.value);
                                 if (selectedTax) {
-                                  setBranchTaxConfig({ label: selectedTax.label, tax: selectedTax.percentage || 0 });
+                                  setBranchTaxConfig({ label: selectedTax.label, tax: selectedTax.percentage ?? selectedTax.value ?? 0 });
                                 }
                               }}
                             >
                               {branchTaxes.length > 0 ? (
                                 branchTaxes.map((tax, idx) => (
-                                  <option key={idx} value={tax.label} className="text-on-surface bg-surface">{tax.label} ({tax.percentage || 0}%)</option>
+                                  <option key={idx} value={tax.label} className="text-on-surface bg-surface">{tax.label} ({tax.percentage ?? tax.value ?? 0}%)</option>
                                 ))
                               ) : (
                                 <option value="GST" className="text-on-surface bg-surface">GST (0%)</option>

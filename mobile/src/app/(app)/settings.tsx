@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Home, ChevronDown, Check, X, Sun, Moon, Laptop } from 'lucide-react-native';
+import { Home, ChevronDown, Check, X, Sun, Moon, Laptop, ChevronLeft } from 'lucide-react-native';
 import { router } from 'expo-router';
 
 // Branch & Theme Imports
@@ -26,7 +26,16 @@ import ProfileHeader from '../../components/ProfileHeader';
 import SettingsItem from '../../components/SettingsItem';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
-import { AppHeader } from '../../components/ui/AppHeader';
+import { apiClient } from '../../api/client';
+import { ENV } from '../../config/env';
+
+function getImageUrl(url?: string | null) {
+  if (!url || url === 'null' || url === 'undefined') return '';
+  const baseUrl = ENV.API_URL.replace('/api/v1', '');
+  if (url.startsWith('/uploads')) return `${baseUrl}${url}`;
+  if (url.startsWith('uploads/')) return `${baseUrl}/${url}`;
+  return url;
+}
 
 const { width } = Dimensions.get('window');
 const isTablet = width > 600;
@@ -37,10 +46,14 @@ export default function SettingsScreen() {
 
   const { branches, selectedBranchId, setSelectedBranchId, isLoadingBranches, refreshBranches } = useBranch();
   const [branchDropdownOpen, setBranchDropdownOpen] = useState(false);
+  const [company, setCompany] = useState<any>(null);
 
   // Auto-refresh branch data on screen focus
   useEffect(() => {
     refreshBranches();
+    apiClient.get('/company').then(res => {
+      if (res.data?.company) setCompany(res.data.company);
+    }).catch(console.error);
   }, []);
 
   // Safe Loose Comparison
@@ -101,8 +114,18 @@ export default function SettingsScreen() {
 
       <SafeAreaView style={styles.safeArea}>
         {/* Custom Header Bar */}
-        
-        <AppHeader title="BILLTEA" />
+        <View style={styles.customHeader}>
+          <Pressable 
+            onPress={() => router.canGoBack() ? router.back() : router.replace('/(app)/dashboard' as any)}
+            style={({ pressed }) => [
+              styles.backButton,
+              { backgroundColor: isDark ? 'rgba(20,28,46,0.6)' : 'rgba(255,255,255,0.6)', borderColor: colors.border },
+              pressed && { opacity: 0.7 }
+            ]}
+          >
+            <ChevronLeft color={colors.text} size={20} />
+          </Pressable>
+        </View>
 
         {/* Scrollable Content */}
         <ScrollView
@@ -114,43 +137,44 @@ export default function SettingsScreen() {
         >
           {/* Profile Header */}
           <ProfileHeader
-            name="Laxman Jadhav"
-            role="Admin"
-            avatarUri="https://lh3.googleusercontent.com/aida-public/AB6AXuCikZgFX6gEoglH2uQdLP1N5dN8spNucZQ_rb9lPo4yRYB6WWoo1e2d18EGDcdRpyk6rMoyi3kSH0WCvs2TRXMqJzVku5feWeHdAxhHqGZpK1ZVLRIZglACbHPBuVsWGRfoxvgFzav1frnHXFUiZX_jwyC2lsXhGDxVqlqecU4XtdOVVrXugOj6i6D0xaoAkMXIR3mpch0JEZTF_HpJyFioRw8zMBCpEflfUo0cOjDvK-RuLwAtxUsr"
-            planName="Premium Plan"
-            onEditPress={handleEditProfile}
+            name={company?.name || "Company Profile"}
+            role={company?.identifiers?.find((i: any) => i.label === 'TAGLINE' || i.key === 'TAGLINE')?.value || "Business Account"}
+            avatarUri={company?.logo ? getImageUrl(company.logo) : ''}
+            planName={company?.subscription?.status === 'EXPIRED' ? 'Membership Expired' : `${company?.subscription?.plan?.name || "TRIAL"} Membership`}
+            onEditPress={() => router.push('/settings/company-settings' as any)}
           />
 
           {/* Active Branch Picker Section */}
           <View style={styles.branchWrapper}>
             <Text style={[styles.branchLabel, { color: colors.textSecondary }]}>
-              ACTIVE BRANCH
+              {isLoadingBranches ? 'ACTIVE BRANCH (Loading...)' : 'ACTIVE BRANCH'}
             </Text>
 
-            <View style={styles.branchRow}>
+            {isLoadingBranches ? (
+              <ActivityIndicator
+                size="small"
+                color={colors.primary}
+                style={{ alignSelf: 'flex-start', marginVertical: 8 }}
+              />
+            ) : (
+              <View style={styles.branchRow}>
 
-              {/* Branch Dropdown */}
-              <Pressable
-                onPress={() => {
-                  refreshBranches();
-                  setBranchDropdownOpen(true);
-                }}
-                style={({ pressed }) => [
-                  styles.branchBtn,
-                  {
-                    backgroundColor:
-                      colors.glassBackground || 'rgba(15, 21, 36, 0.6)',
-                    borderColor:
-                      colors.glassBorder || 'rgba(125, 211, 252, 0.15)',
-                  },
-                  pressed && {
-                    backgroundColor: 'rgba(125, 211, 252, 0.08)',
-                  },
-                ]}
-              >
-                {isLoadingBranches ? (
-                  <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 6 }} />
-                ) : (
+                {/* Branch Dropdown */}
+                <Pressable
+                  onPress={() => setBranchDropdownOpen(true)}
+                  style={({ pressed }) => [
+                    styles.branchBtn,
+                    {
+                      backgroundColor:
+                        colors.glassBackground || 'rgba(15, 21, 36, 0.6)',
+                      borderColor:
+                        colors.glassBorder || 'rgba(125, 211, 252, 0.15)',
+                    },
+                    pressed && {
+                      backgroundColor: 'rgba(125, 211, 252, 0.08)',
+                    },
+                  ]}
+                >
                   <Text
                     numberOfLines={1}
                     ellipsizeMode="tail"
@@ -158,75 +182,75 @@ export default function SettingsScreen() {
                   >
                     {getDisplayBranchName()}
                   </Text>
-                )}
 
-                <ChevronDown size={16} color={colors.primary} />
-              </Pressable>
+                  <ChevronDown size={16} color={colors.primary} />
+                </Pressable>
 
 
-              {/* Theme Switcher */}
-              <View
-                style={[
-                  styles.themeToggle,
-                  {
-                    backgroundColor: colors.glassBackground,
-                    borderColor: colors.glassBorder,
-                  },
-                ]}
-              >
-                {(['System', 'Light', 'Dark'] as const).map((m) => {
-                  const isActive = mode === m;
+                {/* Theme Switcher */}
+                <View
+                  style={[
+                    styles.themeToggle,
+                    {
+                      backgroundColor: colors.glassBackground,
+                      borderColor: colors.glassBorder,
+                    },
+                  ]}
+                >
+                  {(['System', 'Light', 'Dark'] as const).map((m) => {
+                    const isActive = mode === m;
 
-                  return (
-                    <Pressable
-                      key={m}
-                      onPress={() => setMode(m)}
-                      style={[
-                        styles.themeBtn,
-                        isActive && {
-                          backgroundColor: colors.surfaceVariant,
-                          borderColor: colors.primary + '2E',
-                        },
-                      ]}
-                    >
-                      {m === 'System' && (
-                        <Laptop
-                          size={18}
-                          color={
-                            isActive
-                              ? colors.primary
-                              : colors.textSecondary
-                          }
-                        />
-                      )}
+                    return (
+                      <Pressable
+                        key={m}
+                        onPress={() => setMode(m)}
+                        style={[
+                          styles.themeBtn,
+                          isActive && {
+                            backgroundColor: colors.surfaceVariant,
+                            borderColor: colors.primary + '2E',
+                          },
+                        ]}
+                      >
+                        {m === 'System' && (
+                          <Laptop
+                            size={15}
+                            color={
+                              isActive
+                                ? colors.primary
+                                : colors.textSecondary
+                            }
+                          />
+                        )}
 
-                      {m === 'Light' && (
-                        <Sun
-                          size={18}
-                          color={
-                            isActive
-                              ? colors.primary
-                              : colors.textSecondary
-                          }
-                        />
-                      )}
+                        {m === 'Light' && (
+                          <Sun
+                            size={15}
+                            color={
+                              isActive
+                                ? colors.primary
+                                : colors.textSecondary
+                            }
+                          />
+                        )}
 
-                      {m === 'Dark' && (
-                        <Moon
-                          size={18}
-                          color={
-                            isActive
-                              ? colors.primary
-                              : colors.textSecondary
-                          }
-                        />
-                      )}
-                    </Pressable>
-                  );
-                })}
+                        {m === 'Dark' && (
+                          <Moon
+                            size={15}
+                            color={
+                              isActive
+                                ? colors.primary
+                                : colors.textSecondary
+                            }
+                          />
+                        )}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
               </View>
-
-            </View>
+            )}
           </View>
           {/* 1. Business Settings */}
           <View style={styles.sectionContainer}>
@@ -306,7 +330,7 @@ export default function SettingsScreen() {
               borderColor="rgba(200, 160, 240, 0.15)"
               onPress={() => router.push('/settings/plan-subscription' as any)}
             />
-            
+
           </View>
 
           {/* 5. Preferences & Support */}
@@ -331,20 +355,27 @@ export default function SettingsScreen() {
             />
 
             {/* Logout */}
-            <Animated.View style={[ { transform: [{ scale: logoutScaleAnim }] }]}>
+            <Animated.View style={[{ transform: [{ scale: logoutScaleAnim }] }]}>
               <Pressable
-  onPress={handleLogout}
-  onPressIn={handleLogoutPressIn}
-  onPressOut={handleLogoutPressOut}
-  style={({ pressed }) => [
-    styles.logoutButton,
-    pressed && styles.logoutButtonPressed
-  ]}
->
+                onPress={handleLogout}
+                onPressIn={handleLogoutPressIn}
+                onPressOut={handleLogoutPressOut}
+                style={({ pressed }) => [
+                  styles.logoutButton,
+                  pressed && styles.logoutButtonPressed
+                ]}
+              >
                 <MaterialIcons name="logout" size={20} color={colors.error} style={styles.logoutIcon} />
                 <Text style={[styles.logoutText, { color: colors.error }]}>Log Out</Text>
               </Pressable>
             </Animated.View>
+          </View>
+
+          {/* BillTea Branding Footer */}
+          <View style={styles.footerBranding}>
+            <Text style={[styles.footerText, { color: colors.textSecondary }]}>
+              BillTea by <Text style={[styles.footerTextBold, { color: colors.primary }]}>Indux Technology</Text>
+            </Text>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -421,6 +452,22 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0A0E1A' },
   safeArea: { flex: 1 },
+  customHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   topGlowContainer: {
     position: 'absolute',
     top: -150,
@@ -470,15 +517,16 @@ const styles = StyleSheet.create({
   themeToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
-    padding: 3,
-    gap: 3,
+    padding: 4,
+    gap: 4,
     zIndex: 10,
+    height: 48,
   },
   themeBtn: {
     width: 36,
-    height: 36,
+    height: 38,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -513,9 +561,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    height: 44,
-    borderRadius: 10,
+    paddingHorizontal: 14,
+    height: 48,
+    borderRadius: 12,
     borderWidth: 1,
     flex: 1,
   },
@@ -542,27 +590,41 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     opacity: 0.6,
   },
- 
- logoutButton: {
-  width: '100%',
-  minHeight: 60,
-  borderRadius: 16,
-  borderWidth: 1,
-  borderColor: 'rgba(255,107,107,0.25)',
-  paddingVertical: 16,
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginTop: 24,
-},
+
+  logoutButton: {
+    width: '100%',
+    minHeight: 60,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,107,107,0.25)',
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 24,
+  },
   logoutButtonPressed: { backgroundColor: 'rgba(255, 107, 107, 0.15)' },
   logoutIcon: { marginRight: 8 },
+  // ... (existing styles)
   logoutText: {
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
-
+  footerBranding: {
+    alignItems: 'center',
+    paddingTop: 20,
+    paddingBottom: 40,
+    opacity: 0.6,
+  },
+  footerText: {
+    fontSize: 13,
+    fontWeight: '500',
+    letterSpacing: 0.5,
+  },
+  footerTextBold: {
+    fontWeight: '700',
+  },
   /* Modal Specific Styles */
   modalOverlay: {
     flex: 1,

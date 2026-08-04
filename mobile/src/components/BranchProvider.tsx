@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiFetch, initAuthStore, subscribeAuth } from '../lib/auth';
 import { useAuthStore } from '../store/authStore';
+import { subscribeAuth } from '../lib/auth';
+import { getStorageItemAsync } from '../utils/storage';
+import { TOKEN_KEYS } from '../constants/keys';
 import { apiClient } from '../api/client';
 
 export interface Branch {
@@ -44,14 +46,33 @@ export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const fetchBranches = useCallback(async () => {
     setIsLoadingBranches(true);
     try {
-      let resData: any = null;
-      try {
-        const response = await apiClient.get('/branches?all=true');
-        if (response.status === 200) {
-          resData = response.data;
-        }
-      } catch (err) {
-        console.warn('BranchProvider: apiClient failed, trying apiFetch fallback...', err);
+      // 1. Try retrieving token from Zustand auth store first, then fallback to persistent storage
+      const authState = useAuthStore.getState() as any;
+      let token = authState?.token || authState?.accessToken;
+
+      if (!token) {
+        token = await getStorageItemAsync(TOKEN_KEYS.ACCESS);
+      }
+
+      if (!token) {
+        console.log('BranchProvider: No token found. Branches empty.');
+        setBranches([]);
+        setSelectedBranchIdState(null);
+        setIsLoadingBranches(false);
+        return;
+      }
+
+      console.log('BranchProvider: Fetching with token:', token.slice(0, 10) + '...');
+      // 2. Fetch branches using the global axios client
+      const response = await apiClient.get('/branches');
+      console.log('BranchProvider: Response Status:', response.status);
+
+      if (response.status === 401) {
+        console.warn('BranchProvider: Unauthorized response from /branches');
+        setBranches([]);
+        setSelectedBranchIdState(null);
+        setIsLoadingBranches(false);
+        return;
       }
 
       if (!resData) {

@@ -382,30 +382,27 @@ function BranchSettingsContent() {
 
       {/* Modal Overlay & Container */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-background/80 backdrop-blur-md animate-fade-slide-up" style={{ animationDuration: '0.4s' }}>
-          <div className="bg-surface w-full max-w-3xl max-h-[90vh] flex flex-col rounded-[2rem] relative shadow-2xl shadow-primary/10 border border-outline-variant/20 overflow-hidden">
-            
-            {/* Modal Header */}
-            <div className="px-6 py-5 sm:px-8 sm:py-6 border-b border-outline-variant/20 flex justify-between items-center bg-surface-container-lowest">
-              <div className="flex items-center gap-5">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary flex items-center justify-center border border-primary/20 shadow-inner shrink-0">
-                  <span className="material-symbols-outlined text-[24px] sm:text-[28px]">{modalMode === 'create' ? 'add_business' : 'edit_square'}</span>
-                </div>
-                <div>
-                  <h2 className="text-xl md:text-3xl font-black text-on-surface tracking-tight">{modalMode === 'create' ? 'Create New Branch' : 'Edit Branch'}</h2>
-                  <p className="text-xs sm:text-sm text-on-surface-variant mt-1 font-medium">{modalMode === 'create' ? 'Add a new operational location to your company.' : 'Update the details for this location.'}</p>
-                </div>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 sm:p-6 bg-background/80 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="glass-panel w-full max-w-3xl rounded-3xl border border-primary/20 shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300 relative overflow-hidden">
+            {/* Modal Ambient Glow */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] h-32 bg-primary/10 rounded-full blur-[60px] pointer-events-none"></div>
+
+            <div className="p-6 sm:px-8 sm:pt-8 sm:pb-6 border-b border-primary/10 flex justify-between items-center relative z-10">
+              <div>
+                <h2 className="text-2xl font-bold text-on-surface tracking-tight">{modalMode === 'create' ? 'Create New Branch' : 'Edit Branch'}</h2>
+                <p className="text-sm text-on-surface-variant/80 mt-1">{modalMode === 'create' ? 'Add a new operational location to your company.' : 'Update the details for this location.'}</p>
               </div>
               <button 
+                type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container rounded-full transition-all"
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container hover:bg-error/10 text-on-surface-variant hover:text-error transition-all group cursor-pointer"
               >
-                <span className="material-symbols-outlined">close</span>
+                <span className="material-symbols-outlined text-[20px] group-hover:rotate-90 transition-transform">close</span>
               </button>
             </div>
 
             {/* Modal Body (Scrollable) */}
-            <div className="p-6 sm:p-8 overflow-y-auto bg-surface">
+            <div className="p-6 sm:px-8 overflow-y-auto custom-scrollbar relative z-10">
               
               {/* Form Error Banner */}
               {formError && (
@@ -430,29 +427,29 @@ function BranchSettingsContent() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface-container-lowest p-4 sm:p-6 rounded-3xl border border-outline-variant/20">
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-bold text-on-surface mb-2">Branch Name <span className="text-red-500">*</span></label>
+                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2 block">Branch Name *</label>
                       <input 
                         type="text" name="name" required minLength={2}
                         value={formData.name} onChange={handleInputChange}
-                        className="w-full bg-surface-container border-2 border-transparent rounded-xl px-5 py-4 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                        className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container"
                         placeholder="e.g. Surat Main Branch"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-on-surface mb-2">Phone</label>
+                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2 block">Phone</label>
                       <input 
                         type="text" name="phone"
                         value={formData.phone} onChange={handleInputChange}
-                        className="w-full bg-surface-container border-2 border-transparent rounded-xl px-5 py-4 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                        className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container"
                         placeholder="+91 98765 43210"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-on-surface mb-2">Email</label>
+                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2 block">Email</label>
                       <input 
                         type="email" name="email"
                         value={formData.email} onChange={handleInputChange}
-                        className="w-full bg-surface-container border-2 border-transparent rounded-xl px-5 py-4 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                        className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container"
                         placeholder="branch@company.com"
                       />
                     </div>
@@ -469,38 +466,38 @@ function BranchSettingsContent() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface-container-lowest p-4 sm:p-6 rounded-3xl border border-outline-variant/20">
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-bold text-on-surface mb-2">Address Line</label>
+                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2 block">Address Line</label>
                       <input 
                         type="text" name="address"
                         value={formData.address} onChange={handleInputChange}
-                        className="w-full bg-surface-container border-2 border-transparent rounded-xl px-5 py-4 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                        className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container"
                         placeholder="Shop 101, Building Name, Street..."
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-on-surface mb-2">City</label>
+                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2 block">City</label>
                       <input 
                         type="text" name="city"
                         value={formData.city} onChange={handleInputChange}
-                        className="w-full bg-surface-container border-2 border-transparent rounded-xl px-5 py-4 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                        className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container"
                         placeholder="e.g. Surat"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-on-surface mb-2">State</label>
+                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2 block">State</label>
                       <input 
                         type="text" name="state"
                         value={formData.state} onChange={handleInputChange}
-                        className="w-full bg-surface-container border-2 border-transparent rounded-xl px-5 py-4 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                        className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container"
                         placeholder="e.g. Gujarat"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-on-surface mb-2">Pincode</label>
+                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2 block">Pincode</label>
                       <input 
                         type="text" name="pincode"
                         value={formData.pincode} onChange={handleInputChange}
-                        className="w-full bg-surface-container border-2 border-transparent rounded-xl px-5 py-4 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                        className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container"
                         placeholder="e.g. 395007"
                       />
                     </div>
@@ -527,7 +524,7 @@ function BranchSettingsContent() {
                                 type="text" 
                                 value={tax.label} 
                                 onChange={(e) => handleTaxChange(index, 'label', e.target.value)}
-                                className="w-full bg-surface-container border-2 border-transparent rounded-xl px-4 py-3 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all font-medium text-sm"
+                                className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container"
                                 placeholder="e.g. CGST @ 9%"
                               />
                             </div>
@@ -538,7 +535,7 @@ function BranchSettingsContent() {
                                   type="number" min={0} max={100} step="0.01"
                                   value={tax.value} 
                                   onChange={(e) => handleTaxChange(index, 'value', e.target.value)}
-                                  className="w-full bg-surface-container border-2 border-transparent rounded-xl px-4 py-3 pr-10 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all font-medium text-sm"
+                                  className="glass-input w-full px-4 py-3 pr-10 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container"
                                   placeholder="0.00"
                                 />
                                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center opacity-60">
@@ -576,38 +573,38 @@ function BranchSettingsContent() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-surface-container-lowest p-4 sm:p-6 rounded-3xl border border-outline-variant/20">
                     <div>
-                      <label className="block text-sm font-bold text-on-surface mb-2">Bank Name</label>
+                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2 block">Bank Name</label>
                       <input 
                         type="text" name="bankName"
                         value={formData.bankName} onChange={handleInputChange}
-                        className="w-full bg-surface-container border-2 border-transparent rounded-xl px-5 py-4 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                        className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container"
                         placeholder="e.g. HDFC Bank"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-on-surface mb-2">Account Number</label>
+                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2 block">Account Number</label>
                       <input 
                         type="text" name="accountNumber"
                         value={formData.accountNumber} onChange={handleInputChange}
-                        className="w-full bg-surface-container border-2 border-transparent rounded-xl px-5 py-4 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                        className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container"
                         placeholder="e.g. 50100200..."
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-on-surface mb-2">IFSC Code</label>
+                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2 block">IFSC Code</label>
                       <input 
                         type="text" name="ifscCode"
                         value={formData.ifscCode} onChange={handleInputChange}
-                        className="w-full bg-surface-container border-2 border-transparent rounded-xl px-5 py-4 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                        className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container"
                         placeholder="e.g. HDFC0001234"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-on-surface mb-2">UPI ID</label>
+                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2 block">UPI ID</label>
                       <input 
                         type="text" name="upiId"
                         value={formData.upiId} onChange={handleInputChange}
-                        className="w-full bg-surface-container border-2 border-transparent rounded-xl px-5 py-4 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                        className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container"
                         placeholder="e.g. business@upi"
                       />
                     </div>
@@ -627,11 +624,11 @@ function BranchSettingsContent() {
                   </div>
                   <div className="bg-surface-container-lowest p-4 sm:p-6 rounded-3xl border border-outline-variant/20">
                     <div>
-                      <label className="block text-sm font-bold text-on-surface mb-2">Signature Text</label>
+                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2 block">Signature Text</label>
                       <input 
                         type="text" name="signatureValue"
                         value={formData.signatureValue} onChange={handleInputChange}
-                        className="w-full bg-surface-container border-2 border-transparent rounded-xl px-5 py-4 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                        className="glass-input w-full px-4 py-3 rounded-xl text-sm border-outline-variant/30 focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all bg-surface-container/50 hover:bg-surface-container"
                         placeholder="e.g. For Business Name, Authorized Signatory"
                       />
                       <p className="text-sm text-on-surface-variant mt-3 flex items-center gap-2">
@@ -679,24 +676,24 @@ function BranchSettingsContent() {
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 sm:px-8 sm:py-6 border-t border-outline-variant/20 bg-surface-container-lowest flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="p-6 sm:px-8 border-t border-primary/10 flex justify-between items-center gap-4 bg-surface-container/30 relative z-10">
               <div>
                 {modalMode === 'edit' && !formData.isMainBranch && (
                   <button
                     type="button"
                     onClick={() => selectedBranchId && handleDeactivate(selectedBranchId, formData.name)}
-                    className="w-full sm:w-auto px-6 py-4 rounded-xl text-base font-bold text-red-500 hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2"
+                    className="px-6 py-2.5 rounded-xl text-sm font-bold text-error hover:bg-error/10 transition-colors flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <span className="material-symbols-outlined text-[20px]">delete</span>
+                    <span className="material-symbols-outlined text-[18px]">delete</span>
                     Delete
                   </button>
                 )}
               </div>
-              <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto justify-end">
+              <div className="flex gap-4">
                 <button 
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="w-full sm:w-auto px-8 py-4 rounded-xl text-base font-bold text-on-surface hover:bg-surface-container-high transition-colors"
+                  className="px-6 py-2.5 rounded-xl glass-button text-sm font-semibold text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -704,13 +701,12 @@ function BranchSettingsContent() {
                   type="submit"
                   form="branch-form"
                   disabled={isSubmitting}
-                  className="w-full sm:w-auto bg-primary text-on-primary px-10 py-4 rounded-xl text-base font-bold transition-all shadow-lg shadow-primary/30 hover:-translate-y-1 hover:shadow-primary/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-3 relative overflow-hidden group"
+                  className="px-6 py-2.5 rounded-xl bg-primary text-white text-sm font-bold shadow-[0_0_15px_rgba(125,211,252,0.4)] hover:shadow-[0_0_25px_rgba(125,211,252,0.6)] hover:brightness-110 hover:-translate-y-0.5 transition-all disabled:opacity-50 flex items-center gap-2 cursor-pointer"
                 >
-                  <div className="absolute inset-0 w-full h-full bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out" />
                   {isSubmitting ? (
-                    <><span className="material-symbols-outlined animate-spin text-[20px]">progress_activity</span> Saving...</>
+                    <><span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> Saving...</>
                   ) : (
-                    <><span className="material-symbols-outlined text-[20px]">save</span> Save Branch</>
+                    <><span className="material-symbols-outlined text-[18px]">check_circle</span> Save Branch</>
                   )}
                 </button>
               </div>

@@ -344,7 +344,7 @@ export default function ReportsPage() {
     <>
       
       <div
-        className="flex-1 overflow-y-auto p-4 md:p-8 z-0 relative overflow-x-hidden selection:bg-primary/30 [&::-webkit-scrollbar]:hidden"
+        className="flex-1 overflow-y-auto p-4 md:p-8 relative overflow-x-hidden selection:bg-primary/30 [&::-webkit-scrollbar]:hidden w-full max-w-full min-w-0"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         <style dangerouslySetInnerHTML={{
@@ -369,13 +369,13 @@ export default function ReportsPage() {
       `}} />
 
         {/* Premium Background */}
-        <div className="fixed inset-0 z-0 bg-surface pointer-events-none">
+        <div className="fixed inset-0 bg-surface pointer-events-none">
           <div className="absolute top-[-10%] left-[-5%] w-[50%] h-[50%] rounded-full bg-primary/5 blur-[120px]"></div>
           <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] rounded-full bg-tertiary/10 blur-[120px]"></div>
           <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-secondary/5 blur-[100px]"></div>
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto flex flex-col gap-12 pb-16">
+        <div className="relative z-10 max-w-7xl mx-auto flex flex-col gap-12 pb-16 w-full max-w-full min-w-0">
           {/* Header Section */}
           <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 animate-fade-slide-up" style={{ animationDelay: '0.1s' }}>
             <div className="max-w-2xl">
@@ -394,8 +394,8 @@ export default function ReportsPage() {
               </p>
             </div>
             <Link href="/profit" className="w-full md:w-auto">
-              <button className="w-full md:w-auto group relative h-14 px-8 rounded-2xl bg-surface border border-primary/20 text-primary font-bold flex items-center justify-center gap-3 overflow-hidden shadow-[0_0_15px_rgba(125,211,252,0.1)] hover:shadow-[0_0_25px_rgba(125,211,252,0.3)] transition-all hover:-translate-y-0.5 hover:border-primary/40 cursor-pointer">
-                <div className="absolute inset-0 w-full h-full bg-primary/5 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out" />
+              <button className="w-full md:w-auto group relative h-14 px-8 rounded-2xl bg-primary text-on-primary font-bold flex items-center justify-center gap-3 overflow-hidden shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5 cursor-pointer">
+                <div className="absolute inset-0 w-full h-full bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out" />
                 <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">analytics</span>
                 <span>Profit & Loss Report</span>
               </button>
@@ -443,35 +443,47 @@ export default function ReportsPage() {
           </div>
 
           {/* Filters Section */}
-          <section className="glass-panel p-6 md:p-8 rounded-3xl relative overflow-visible animate-fade-slide-up shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)] z-20" style={{ animationDelay: '0.2s' }}>
+          <section
+            className="glass-panel rounded-3xl p-6 transition-transform duration-300 hover:-translate-y-1 animate-fade-slide-up relative z-20 overflow-visible shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]"
+            style={{ animationDelay: '0.2s' }}
+          >
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
 
-            <div className="flex items-center justify-between gap-3 mb-6 flex-wrap relative z-10">
+            {/* Header */}
+            <div className="flex items-center justify-between gap-3 mb-6 relative z-10 flex-wrap">
               <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-primary p-2 rounded-lg bg-primary/10">filter_list</span>
+                <span className="material-symbols-outlined text-primary p-2 rounded-lg bg-primary/10">
+                  filter_list
+                </span>
                 <h2 className="text-xl font-bold text-on-surface">Filters</h2>
+                {hasActiveFilters && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold">
+                    <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                    Active
+                  </span>
+                )}
               </div>
               <div className="flex gap-2">
-                <button 
+                <button
                   type="button"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     handleExportPDF();
                   }}
-                  className="p-2 glass-button-icon rounded-lg hover:bg-primary/10 hover:text-primary transition-colors tooltip cursor-pointer" 
+                  className="p-2 glass-button-icon rounded-lg hover:bg-primary/10 hover:text-primary transition-colors tooltip cursor-pointer"
                   title="Export PDF"
                 >
                   <span className="material-symbols-outlined pointer-events-none">picture_as_pdf</span>
                 </button>
-                <button 
+                <button
                   type="button"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     handleExportExcel();
                   }}
-                  className="p-2 glass-button-icon rounded-lg hover:bg-primary/10 hover:text-primary transition-colors tooltip cursor-pointer" 
+                  className="p-2 glass-button-icon rounded-lg hover:bg-primary/10 hover:text-primary transition-colors tooltip cursor-pointer"
                   title="Export Excel"
                 >
                   <span className="material-symbols-outlined pointer-events-none">table_view</span>
@@ -479,46 +491,49 @@ export default function ReportsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">From Date</label>
+            {/* Filter Controls */}
+            <div className="flex flex-wrap items-end gap-4 lg:gap-5 relative z-10 w-full">
+              <div className="flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[140px] relative">
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">From Date</label>
                 <input
-                  className="w-full h-12 px-4 rounded-xl glass-input text-on-surface focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                  className="glass-input rounded-xl py-2.5 px-4 text-sm font-medium w-full focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface min-h-[42px] border border-outline-variant/30 text-on-surface"
                   type="date"
                   value={fromDate}
                   onChange={(e) => { setFromDate(e.target.value); setCurrentPage(1); }}
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">To Date</label>
+
+              <div className="flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[140px] relative">
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">To Date</label>
                 <input
-                  className="w-full h-12 px-4 rounded-xl glass-input text-on-surface focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all font-medium"
+                  className="glass-input rounded-xl py-2.5 px-4 text-sm font-medium w-full focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface min-h-[42px] border border-outline-variant/30 text-on-surface"
                   type="date"
                   value={toDate}
                   onChange={(e) => { setToDate(e.target.value); setCurrentPage(1); }}
                 />
               </div>
-              <div className="dropdown-container space-y-2 relative" style={{ zIndex: activeDropdown === 'customer' ? 50 : 10 }}>
-                <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Customer</label>
+
+              <div className="dropdown-container flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[140px] relative" style={{ zIndex: activeDropdown === 'customer' ? 50 : 10 }}>
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">Customer</label>
                 <div className="relative">
                   <button
                     type="button"
-                    className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer font-medium flex items-center justify-between"
+                    className="glass-input rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium cursor-pointer w-full focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface text-left flex items-center justify-between min-h-[42px]"
                     onClick={() => toggleDropdown('customer')}
                   >
-                    <span className="truncate pr-4">
+                    <span className="truncate">
                       {selectedCustomerId === 'ALL'
                         ? 'All Customers'
                         : uniqueCustomers.find(c => c?.id === selectedCustomerId)?.customerName || 'All Customers'}
                     </span>
-                    <span className={`material-symbols-outlined text-on-surface-variant text-[18px] transition-transform duration-200 ${activeDropdown === 'customer' ? 'rotate-180' : ''}`}>expand_more</span>
+                    <span className={`material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary text-[18px] transition-transform duration-200 ${activeDropdown === 'customer' ? 'rotate-180' : ''}`}>expand_more</span>
                   </button>
 
                   {activeDropdown === 'customer' && (
                     <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
                       <div
                         onMouseDown={() => { setSelectedCustomerId('ALL'); setCurrentPage(1); setActiveDropdown(null); }}
-                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedCustomerId === 'ALL' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
+                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedCustomerId === 'ALL' ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
                       >
                         All Customers
                       </div>
@@ -526,7 +541,7 @@ export default function ReportsPage() {
                         <div
                           key={customer?.id}
                           onMouseDown={() => { if (customer?.id) { setSelectedCustomerId(customer.id); setCurrentPage(1); } setActiveDropdown(null); }}
-                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedCustomerId === customer?.id ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
+                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedCustomerId === customer?.id ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
                         >
                           {customer?.customerName} {customer?.companyName ? `(${customer.companyName})` : ''}
                         </div>
@@ -535,49 +550,50 @@ export default function ReportsPage() {
                   )}
                 </div>
               </div>
-              <div className="dropdown-container space-y-2 relative" style={{ zIndex: activeDropdown === 'status' ? 50 : 10 }}>
-                <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Payment Status</label>
+
+              <div className="dropdown-container flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[140px] relative" style={{ zIndex: activeDropdown === 'status' ? 50 : 10 }}>
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">Payment Status</label>
                 <div className="relative">
                   <button
                     type="button"
-                    className="w-full h-12 px-4 rounded-xl bg-surface-container border border-outline-variant/30 text-on-surface focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer font-medium flex items-center justify-between"
+                    className="glass-input rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium cursor-pointer w-full focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface text-left flex items-center justify-between min-h-[42px]"
                     onClick={() => toggleDropdown('status')}
                   >
-                    <span>
+                    <span className="truncate">
                       {selectedStatus === 'ALL' ? 'All Status' : getStatusText(selectedStatus)}
                     </span>
-                    <span className={`material-symbols-outlined text-on-surface-variant text-[18px] transition-transform duration-200 ${activeDropdown === 'status' ? 'rotate-180' : ''}`}>expand_more</span>
+                    <span className={`material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary text-[18px] transition-transform duration-200 ${activeDropdown === 'status' ? 'rotate-180' : ''}`}>expand_more</span>
                   </button>
 
                   {activeDropdown === 'status' && (
-                    <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
+                    <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
                       <div
                         onMouseDown={() => { setSelectedStatus('ALL'); setCurrentPage(1); setActiveDropdown(null); }}
-                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedStatus === 'ALL' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
+                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedStatus === 'ALL' ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
                       >
                         All Status
                       </div>
                       <div
                         onMouseDown={() => { setSelectedStatus('PAID'); setCurrentPage(1); setActiveDropdown(null); }}
-                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedStatus === 'PAID' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
+                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedStatus === 'PAID' ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
                       >
                         Paid
                       </div>
                       <div
                         onMouseDown={() => { setSelectedStatus('UNPAID'); setCurrentPage(1); setActiveDropdown(null); }}
-                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedStatus === 'UNPAID' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
+                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedStatus === 'UNPAID' ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
                       >
                         Pending
                       </div>
                       <div
                         onMouseDown={() => { setSelectedStatus('PARTIAL'); setCurrentPage(1); setActiveDropdown(null); }}
-                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedStatus === 'PARTIAL' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
+                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedStatus === 'PARTIAL' ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
                       >
                         Partial
                       </div>
                       <div
                         onMouseDown={() => { setSelectedStatus('OVERDUE'); setCurrentPage(1); setActiveDropdown(null); }}
-                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedStatus === 'OVERDUE' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
+                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${selectedStatus === 'OVERDUE' ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
                       >
                         Overdue
                       </div>
@@ -585,22 +601,23 @@ export default function ReportsPage() {
                   )}
                 </div>
               </div>
-            </div>
 
-            <div className="mt-8 flex flex-wrap gap-4 relative z-10">
-              <button
-                disabled={!hasActiveFilters}
-                className="px-6 py-2.5 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface hover:text-on-surface border border-outline-variant/20 hover:border-outline-variant/40 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-on-surface-variant disabled:hover:border-outline-variant/20"
-                onClick={handleClearFilters}
-              >
-                <span className="material-symbols-outlined text-[18px]">undo</span>
-                Reset Filters
-              </button>
+              <div className="w-full lg:w-auto flex justify-end">
+                <button
+                  disabled={!hasActiveFilters}
+                  className="glass-button h-[42px] px-6 rounded-xl flex items-center justify-center gap-2 cursor-pointer hover:bg-surface-bright transition-all duration-300 text-sm font-bold text-on-surface hover:text-primary shadow-sm w-full lg:w-auto hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
+                  onClick={handleClearFilters}
+                  title="Reset Filters"
+                >
+                  <span className="material-symbols-outlined text-[18px]">undo</span>
+                  Reset
+                </button>
+              </div>
             </div>
           </section>
 
           {/* Glassmorphic Data Table Container */}
-          <div className="glass-panel rounded-3xl overflow-hidden relative z-10 animate-fade-slide-up shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]" style={{ animationDelay: '0.4s' }}>
+          <div className="glass-panel rounded-3xl overflow-hidden relative z-10 animate-fade-slide-up shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)] w-full max-w-full min-w-0" style={{ animationDelay: '0.4s' }}>
             {/* Glow Accent */}
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
 
@@ -656,7 +673,7 @@ export default function ReportsPage() {
             </div>
 
             {/* The Table */}
-            <div className="hidden md:block overflow-x-auto no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <div className="hidden md:block overflow-x-auto no-scrollbar w-full max-w-full" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               <table className="w-full text-left text-sm whitespace-nowrap border-separate border-spacing-0">
                 <thead className="text-xs text-on-surface-variant uppercase bg-surface-container-low/50 border-b border-primary/10">
                   <tr>

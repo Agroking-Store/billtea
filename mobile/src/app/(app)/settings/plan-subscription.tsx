@@ -34,7 +34,11 @@ if (
   Platform.OS === 'android' &&
   UIManager.setLayoutAnimationEnabledExperimental
 ) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
+  // Prevent warning in New Architecture
+  const isFabricEnabled = (global as any).nativeFabricUIManager != null;
+  if (!isFabricEnabled) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  }
 }
 
 type BillingType = 'monthly' | 'yearly';
