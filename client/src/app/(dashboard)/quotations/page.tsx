@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/auth';
 import PdfViewerModal from '@/components/PdfViewerModal';
@@ -32,6 +32,145 @@ interface SortConfig {
   direction: SortDirection;
 }
 
+interface ToastMessage {
+  type: 'success' | 'error';
+  text: string;
+}
+
+interface ToastProps {
+  message: ToastMessage | null;
+  onClose: () => void;
+  duration?: number;
+}
+
+function Toast({ message, onClose, duration = 4000 }: ToastProps) {
+  const [visible, setVisible] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const remainingRef = useRef(duration);
+  const startedAtRef = useRef<number>(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [progressKey, setProgressKey] = useState(0);
+
+  const clearTimer = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const scheduleClose = (ms: number) => {
+    clearTimer();
+    startedAtRef.current = Date.now();
+    remainingRef.current = ms;
+    timerRef.current = setTimeout(() => {
+      handleClose();
+    }, ms);
+  };
+
+  useEffect(() => {
+    if (!message) return;
+
+    setLeaving(false);
+    setPaused(false);
+    setProgressKey((k) => k + 1);
+    const enterTimer = setTimeout(() => setVisible(true), 10);
+
+    scheduleClose(duration);
+
+    return () => {
+      clearTimeout(enterTimer);
+      clearTimer();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [message]);
+
+  const handleClose = () => {
+    clearTimer();
+    setLeaving(true);
+    setVisible(false);
+    setTimeout(() => {
+      onClose();
+      setLeaving(false);
+    }, 300);
+  };
+
+  const handleMouseEnter = () => {
+    if (!message) return;
+    setPaused(true);
+    const elapsed = Date.now() - startedAtRef.current;
+    remainingRef.current = Math.max(remainingRef.current - elapsed, 0);
+    clearTimer();
+  };
+
+  const handleMouseLeave = () => {
+    if (!message) return;
+    setPaused(false);
+    scheduleClose(remainingRef.current);
+  };
+
+  if (!message && !leaving) return null;
+
+  const isSuccess = message?.type === 'success';
+
+  return (
+    <div
+      className="fixed top-6 right-6 z-[1100] pointer-events-none"
+      role="status"
+      aria-live="polite"
+    >
+      <div
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className={`pointer-events-auto relative overflow-hidden flex items-center gap-2.5 min-w-[220px] max-w-sm px-4 py-2.5 rounded-lg border shadow-xl backdrop-blur-sm transition-all duration-300 ease-out ${
+          isSuccess
+            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'
+            : 'bg-red-500/10 border-red-500/20 text-red-500'
+        } ${
+          visible
+            ? 'opacity-100 translate-x-0 translate-y-0'
+            : 'opacity-0 translate-x-4 -translate-y-1'
+        }`}
+      >
+        <span
+          className={`material-symbols-outlined text-[18px] shrink-0 ${
+            isSuccess ? 'text-emerald-600' : 'text-red-500'
+          }`}
+        >
+          {isSuccess ? 'check_circle' : 'error'}
+        </span>
+        <p className="flex-1 text-sm font-semibold leading-snug truncate">{message?.text}</p>
+        <button
+          onClick={handleClose}
+          aria-label="Dismiss notification"
+          className="shrink-0 p-0.5 rounded-full hover:bg-black/10 transition-colors cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-[16px]">close</span>
+        </button>
+
+        <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-black/5">
+          <div
+            key={progressKey}
+            className={`h-full ${isSuccess ? 'bg-emerald-500' : 'bg-red-500'}`}
+            style={{
+              animation: `toast-countdown ${duration}ms linear forwards`,
+              animationPlayState: paused ? 'paused' : 'running',
+            }}
+          />
+        </div>
+      </div>
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        @keyframes toast-countdown {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+      `}} />
+    </div>
+  );
+}
+
 export default function QuotationsPage() {
   const { selectedBranchId, isLoadingBranches } = useBranch();
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -47,6 +186,9 @@ export default function QuotationsPage() {
   const [isSendingId, setIsSendingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Toast State
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+
   // ---- Filters state (Customer / Date range) ----
   const [customerFilter, setCustomerFilter] = useState('');
   const [companyFilter, setCompanyFilter] = useState('');
@@ -54,7 +196,7 @@ export default function QuotationsPage() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
-  // ---- Sorting state (asc <-> desc toggle, same as Invoices/Customers/Products) ----
+  // ---- Sorting state ----
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
   // ---- Pagination state ----
@@ -88,6 +230,25 @@ export default function QuotationsPage() {
       setLoading(false);
     }
   }, [selectedBranchId]);
+
+  // Check for persistent toast messages (e.g. after redirecting from New Quotation)
+  const checkToast = () => {
+    try {
+      const stored = sessionStorage.getItem('quotationToast');
+      if (stored) {
+        setToast(JSON.parse(stored));
+        sessionStorage.removeItem('quotationToast');
+      }
+    } catch (e) {
+      // Ignore
+    }
+  };
+
+  useEffect(() => {
+    checkToast();
+    window.addEventListener('focus', checkToast);
+    return () => window.removeEventListener('focus', checkToast);
+  }, []);
 
   const stats = React.useMemo(() => {
     const total = quotations.length;
@@ -123,14 +284,16 @@ export default function QuotationsPage() {
       setIsDeleting(true);
       const res = await apiFetch(`/quotations/${quotationToDelete}`, { method: 'DELETE' });
       if (res.ok) {
-        fetchQuotations();
+        await fetchQuotations();
         setQuotationToDelete(null);
+        setToast({ type: 'success', text: 'Quotation deleted successfully!' });
       } else {
         const errData = await res.json();
-        alert(errData.message || 'Failed to delete quotation');
+        const msg = errData.message || 'Failed to delete quotation';
+        setToast({ type: 'error', text: msg });
       }
     } catch (err: any) {
-      alert('Failed to delete quotation');
+      setToast({ type: 'error', text: 'Failed to delete quotation' });
     } finally {
       setIsDeleting(false);
     }
@@ -151,12 +314,13 @@ export default function QuotationsPage() {
       if (res.ok) {
         setNotesModalData(null);
         fetchQuotations();
+        setToast({ type: 'success', text: 'Notes updated successfully!' });
       } else {
         const errData = await res.json();
-        alert(errData.message || 'Failed to save notes');
+        setToast({ type: 'error', text: errData.message || 'Failed to save notes' });
       }
     } catch (err: any) {
-      alert('Failed to save notes');
+      setToast({ type: 'error', text: 'Failed to save notes' });
     } finally {
       setIsSavingNotes(false);
     }
@@ -276,7 +440,7 @@ BillTea`;
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (err) {
-      alert('Failed to download PDF. Please try again.');
+      setToast({ type: 'error', text: 'Failed to download PDF. Please try again.' });
     }
   };
 
@@ -295,7 +459,7 @@ BillTea`;
       const url = window.URL.createObjectURL(blob);
       setViewerPdfUrl({ url, title: `Quotation-${quotationNumber}.pdf`, id });
     } catch (err) {
-      alert('Failed to load PDF preview. Please try again.');
+      setToast({ type: 'error', text: 'Failed to load PDF preview. Please try again.' });
     } finally {
       setIsLoadingPdf(false);
     }
@@ -318,7 +482,6 @@ BillTea`;
     }
   };
 
-  // ---- Unique customer list for the filter dropdown ----
   const uniqueCustomers = useMemo(() => {
     const names = new Set<string>();
     quotations.forEach((q) => {
@@ -327,7 +490,6 @@ BillTea`;
     return Array.from(names).sort((a, b) => a.localeCompare(b));
   }, [quotations]);
 
-  // ---- Unique company list for the filter dropdown ----
   const uniqueCompanies = useMemo(() => {
     const names = new Set<string>();
     quotations.forEach((q) => {
@@ -336,7 +498,6 @@ BillTea`;
     return Array.from(names).sort((a, b) => a.localeCompare(b));
   }, [quotations]);
 
-  // ---- Search / filter (text search + customer + date range) ----
   const filteredQuotations = quotations.filter((q) => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -384,9 +545,11 @@ BillTea`;
 
     return true;
   });
+
   const hasActiveFilters = Boolean(
     searchQuery || customerFilter || companyFilter || statusFilter || fromDate || toDate
   );
+
   const handleClearFilters = () => {
     setCustomerFilter('');
     setCompanyFilter('');
@@ -397,11 +560,6 @@ BillTea`;
     setCurrentPage(1);
   };
 
-
-
-  // The "most recent" quotation is the one you're allowed to delete.
-  // Derived from actual quotationDate (not row position/index), so it stays
-  // correct no matter how the table is sorted or paginated.
   const mostRecentQuotationId = useMemo(() => {
     if (quotations.length === 0) return null;
     return quotations.reduce((latest, q) =>
@@ -409,7 +567,6 @@ BillTea`;
     ).id;
   }, [quotations]);
 
-  // ---- Sort click handler: asc <-> desc toggle (consistent with other pages) ----
   const requestSort = useCallback((key: SortKey) => {
     if (!key) return;
     setCurrentPage(1);
@@ -421,7 +578,6 @@ BillTea`;
     });
   }, []);
 
-  // ---- Apply sort ----
   const sortedQuotations = useMemo(() => {
     if (!sortConfig) return filteredQuotations;
 
@@ -449,7 +605,6 @@ BillTea`;
     });
   }, [filteredQuotations, sortConfig]);
 
-  // ---- Apply pagination ----
   const totalItems = sortedQuotations.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 
@@ -457,7 +612,6 @@ BillTea`;
     if (currentPage > totalPages) setCurrentPage(totalPages);
   }, [totalPages, currentPage]);
 
-  // Reset to page 1 whenever the search query or filters change.
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, customerFilter, companyFilter, fromDate, toDate]);
@@ -479,7 +633,6 @@ BillTea`;
     setCurrentPage(Math.min(Math.max(1, page), totalPages));
   };
 
-  // ---- Small helper to render a sortable header cell (icons aligned with Invoices/Customers/Products) ----
   const renderSortableHeader = (label: string, key: SortKey, align: 'left' | 'right' = 'left') => {
     const isActive = sortConfig?.key === key;
     const icon = !isActive ? 'unfold_more' : sortConfig!.direction === 'asc' ? 'expand_less' : 'expand_more';
@@ -505,7 +658,8 @@ BillTea`;
 
   return (
     <>
-      
+      <Toast message={toast} onClose={() => setToast(null)} />
+
       <div
         className="flex-1 overflow-y-auto p-4 md:p-8 relative overflow-x-hidden selection:bg-primary/30 [&::-webkit-scrollbar]:hidden w-full max-w-full min-w-0"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
@@ -617,7 +771,6 @@ BillTea`;
             className="glass-panel rounded-3xl p-6 transition-transform duration-300 hover:-translate-y-1 animate-fade-slide-up relative z-20 overflow-visible shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]"
             style={{ animationDelay: '0.15s' }}
           >
-            
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
 
             {/* Header */}
@@ -638,7 +791,6 @@ BillTea`;
 
             {/* Filter Controls */}
             <div className="flex flex-wrap items-end gap-4 lg:gap-5 relative z-10 w-full">
-              
               <div className="dropdown-container flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[160px] relative" style={{ zIndex: activeDropdown === 'customer' ? 50 : 10 }}>
                 <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">
                   Customer
@@ -755,7 +907,7 @@ BillTea`;
                   )}
                 </div>
               </div>
-              
+
               <div className="flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[140px]">
                 <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">
                   From Date
@@ -796,7 +948,6 @@ BillTea`;
 
           {/* Glassmorphic Data Table Container */}
           <div className="glass-panel rounded-3xl overflow-hidden relative z-10 animate-fade-slide-up shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)] w-full max-w-full min-w-0" style={{ animationDelay: '0.3s' }}>
-            {/* Glow Accent */}
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
 
             {/* Table Controls */}
@@ -850,7 +1001,7 @@ BillTea`;
               </div>
             </div>
 
-            {/* The Table */}
+            {/* Desktop Table */}
             <div className="hidden lg:block overflow-x-auto w-full max-w-full">
               <table className="w-full text-left text-sm whitespace-nowrap border-separate border-spacing-0">
                 <thead className="text-xs text-on-surface-variant uppercase bg-surface-container-low/50 border-b border-primary/10">
@@ -1048,7 +1199,6 @@ BillTea`;
                         </div>
                       </div>
 
-                      {/* Actions Toggle Panel */}
                       <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-primary/5">
                         {openActionId === quotation.id ? (
                           <div className="flex flex-wrap items-center justify-end gap-2 w-full animate-in fade-in duration-300">
@@ -1165,7 +1315,6 @@ BillTea`;
           {quotationToDelete && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-background/80 backdrop-blur-md animate-fade-slide-up" style={{ animationDuration: '0.3s' }}>
               <div className="bg-surface w-full max-w-md rounded-[2rem] p-8 shadow-2xl shadow-error/10 border border-outline-variant/20 relative overflow-hidden">
-                {/* Glow effect */}
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-error/50 to-transparent"></div>
 
                 <div className="flex items-start gap-4">
@@ -1263,6 +1412,7 @@ BillTea`;
               </div>
             </div>
           )}
+
           {/* PDF Viewer Modal */}
           {viewerPdfUrl && (
             <PdfViewerModal

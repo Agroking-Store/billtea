@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import PdfViewerModal from '@/components/PdfViewerModal';
 import { apiFetch } from '@/lib/auth';
@@ -30,6 +30,145 @@ interface SortConfig {
   direction: SortDirection;
 }
 
+interface ToastMessage {
+  type: 'success' | 'error';
+  text: string;
+}
+
+interface ToastProps {
+  message: ToastMessage | null;
+  onClose: () => void;
+  duration?: number;
+}
+
+function Toast({ message, onClose, duration = 4000 }: ToastProps) {
+  const [visible, setVisible] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const remainingRef = useRef(duration);
+  const startedAtRef = useRef<number>(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [progressKey, setProgressKey] = useState(0);
+
+  const clearTimer = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const scheduleClose = (ms: number) => {
+    clearTimer();
+    startedAtRef.current = Date.now();
+    remainingRef.current = ms;
+    timerRef.current = setTimeout(() => {
+      handleClose();
+    }, ms);
+  };
+
+  useEffect(() => {
+    if (!message) return;
+
+    setLeaving(false);
+    setPaused(false);
+    setProgressKey((k) => k + 1);
+    const enterTimer = setTimeout(() => setVisible(true), 10);
+
+    scheduleClose(duration);
+
+    return () => {
+      clearTimeout(enterTimer);
+      clearTimer();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [message]);
+
+  const handleClose = () => {
+    clearTimer();
+    setLeaving(true);
+    setVisible(false);
+    setTimeout(() => {
+      onClose();
+      setLeaving(false);
+    }, 300);
+  };
+
+  const handleMouseEnter = () => {
+    if (!message) return;
+    setPaused(true);
+    const elapsed = Date.now() - startedAtRef.current;
+    remainingRef.current = Math.max(remainingRef.current - elapsed, 0);
+    clearTimer();
+  };
+
+  const handleMouseLeave = () => {
+    if (!message) return;
+    setPaused(false);
+    scheduleClose(remainingRef.current);
+  };
+
+  if (!message && !leaving) return null;
+
+  const isSuccess = message?.type === 'success';
+
+  return (
+    <div
+      className="fixed top-6 right-6 z-[1100] pointer-events-none"
+      role="status"
+      aria-live="polite"
+    >
+      <div
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className={`pointer-events-auto relative overflow-hidden flex items-center gap-2.5 min-w-[220px] max-w-sm px-4 py-2.5 rounded-lg border shadow-xl backdrop-blur-sm transition-all duration-300 ease-out ${
+          isSuccess
+            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'
+            : 'bg-red-500/10 border-red-500/20 text-red-500'
+        } ${
+          visible
+            ? 'opacity-100 translate-x-0 translate-y-0'
+            : 'opacity-0 translate-x-4 -translate-y-1'
+        }`}
+      >
+        <span
+          className={`material-symbols-outlined text-[18px] shrink-0 ${
+            isSuccess ? 'text-emerald-600' : 'text-red-500'
+          }`}
+        >
+          {isSuccess ? 'check_circle' : 'error'}
+        </span>
+        <p className="flex-1 text-sm font-semibold leading-snug truncate">{message?.text}</p>
+        <button
+          onClick={handleClose}
+          aria-label="Dismiss notification"
+          className="shrink-0 p-0.5 rounded-full hover:bg-black/10 transition-colors cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-[16px]">close</span>
+        </button>
+
+        <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-black/5">
+          <div
+            key={progressKey}
+            className={`h-full ${isSuccess ? 'bg-emerald-500' : 'bg-red-500'}`}
+            style={{
+              animation: `toast-countdown ${duration}ms linear forwards`,
+              animationPlayState: paused ? 'paused' : 'running',
+            }}
+          />
+        </div>
+      </div>
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        @keyframes toast-countdown {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+      `}} />
+    </div>
+  );
+}
+
 export default function InvoicesPage() {
   const { selectedBranchId, isLoadingBranches } = useBranch();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -39,6 +178,9 @@ export default function InvoicesPage() {
   const [isSendingId, setIsSendingId] = useState<string | null>(null);
   const [viewerPdfUrl, setViewerPdfUrl] = useState<{ url: string, title: string, id: string } | null>(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
+
+  // Toast State
+  const [toast, setToast] = useState<ToastMessage | null>(null);
 
   // Filter States
   const [fromDate, setFromDate] = useState('');
@@ -57,7 +199,7 @@ export default function InvoicesPage() {
     note: ''
   });
 
-  // ---- Sorting + Pagination state (inlined, no external hook needed) ----
+  // ---- Sorting + Pagination state ----
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
@@ -155,6 +297,25 @@ export default function InvoicesPage() {
     }
   }, [selectedBranchId]);
 
+  // Pick up a toast message handed off from another page
+  const checkToast = () => {
+    try {
+      const stored = sessionStorage.getItem('invoiceToast');
+      if (stored) {
+        setToast(JSON.parse(stored));
+        sessionStorage.removeItem('invoiceToast');
+      }
+    } catch (e) {
+      // Ignore
+    }
+  };
+
+  useEffect(() => {
+    checkToast();
+    window.addEventListener('focus', checkToast);
+    return () => window.removeEventListener('focus', checkToast);
+  }, []);
+
   const fetchInvoices = async () => {
     if (!selectedBranchId) return;
     try {
@@ -179,13 +340,15 @@ export default function InvoicesPage() {
     try {
       const res = await apiFetch(`/invoices/${id}`, { method: 'DELETE' });
       if (res.ok) {
-        fetchInvoices();
+        await fetchInvoices();
+        setToast({ type: 'success', text: 'Invoice deleted successfully!' });
       } else {
         const errData = await res.json();
-        alert(errData.message || 'Failed to delete invoice');
+        const msg = errData.message || 'Failed to delete invoice';
+        setToast({ type: 'error', text: msg });
       }
     } catch (err: any) {
-      alert('Failed to delete invoice');
+      setToast({ type: 'error', text: 'Failed to delete invoice' });
     }
   };
 
@@ -293,7 +456,7 @@ BillTea`;
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (err) {
-      alert('Failed to download PDF. Please try again.');
+      setToast({ type: 'error', text: 'Failed to download PDF. Please try again.' });
     }
   };
 
@@ -312,7 +475,7 @@ BillTea`;
       const url = window.URL.createObjectURL(blob);
       setViewerPdfUrl({ url, title: `Invoice-${invoiceNumber}.pdf`, id });
     } catch (err) {
-      alert('Failed to load PDF preview. Please try again.');
+      setToast({ type: 'error', text: 'Failed to load PDF preview. Please try again.' });
     } finally {
       setIsLoadingPdf(false);
     }
@@ -339,7 +502,7 @@ BillTea`;
     setSelectedInvoiceForPayment(invoice);
     const amountDue = Number((invoice.totals.grandTotal - invoice.amountPaid).toFixed(2));
     setPaymentForm({
-      amount: amountDue, // Default to due amount
+      amount: amountDue,
       method: 'CASH',
       date: new Date().toISOString().split('T')[0],
       note: ''
@@ -380,7 +543,6 @@ BillTea`;
 
       const data = await res.json();
 
-      // Upload attachment if present
       if (paymentAttachment && data.id) {
         const formData = new FormData();
         formData.append('file', paymentAttachment);
@@ -388,12 +550,13 @@ BillTea`;
         await apiFetch(`/invoices/${selectedInvoiceForPayment.id}/payments/${data.id}/attachment`, {
           method: 'POST',
           body: formData,
-          headers: {} // Let browser set multipart boundary
+          headers: {}
         });
       }
 
       setPaymentModalOpen(false);
-      fetchInvoices(); // Refresh list to update status/amounts
+      await fetchInvoices();
+      setToast({ type: 'success', text: 'Payment recorded successfully!' });
     } catch (err: any) {
       setPaymentError(err.message || 'An error occurred while adding the payment');
     } finally {
@@ -401,7 +564,6 @@ BillTea`;
     }
   };
 
-  // ---- Unique customers for the filter dropdown ----
   const uniqueCustomers = useMemo(() => {
     const map = new Map<string, { id: string; customerName: string; companyName: string }>();
     invoices.forEach((inv) => {
@@ -426,7 +588,6 @@ BillTea`;
     setCurrentPage(1);
   };
 
-  // ---- Search + Filters (customer, date range, status) ----
   const filteredInvoices = invoices.filter(invoice => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -464,9 +625,6 @@ BillTea`;
     return true;
   });
 
-  // The "most recent" invoice is the one you're allowed to delete/fully-edit inline.
-  // Derived from actual invoice dates (not row position), so it stays correct
-  // no matter how the table is sorted or paginated.
   const mostRecentInvoiceId = useMemo(() => {
     if (invoices.length === 0) return null;
     return invoices.reduce((latest, inv) =>
@@ -474,7 +632,6 @@ BillTea`;
     ).id;
   }, [invoices]);
 
-  // ---- Sorting ----
   const handleSort = (key: string) => {
     setCurrentPage(1);
     setSortConfig((prev) => {
@@ -513,7 +670,6 @@ BillTea`;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredInvoices, sortConfig]);
 
-  // ---- Pagination ----
   const totalCount = sortedInvoices.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / entriesPerPage));
 
@@ -521,7 +677,6 @@ BillTea`;
     if (currentPage > totalPages) setCurrentPage(totalPages);
   }, [totalPages, currentPage]);
 
-  // Reset to page 1 whenever the search query or any filter changes.
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, fromDate, toDate, selectedCustomerId, selectedStatus]);
@@ -548,7 +703,11 @@ BillTea`;
 
   return (
     <>
-      
+      <Toast
+        message={toast}
+        onClose={() => setToast(null)}
+      />
+
       <div
         className="flex-1 overflow-y-auto p-4 md:p-8 relative overflow-x-hidden selection:bg-primary/30 [&::-webkit-scrollbar]:hidden"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
@@ -692,7 +851,6 @@ BillTea`;
             className="glass-panel rounded-3xl p-6 transition-transform duration-300 hover:-translate-y-1 animate-fade-slide-up relative z-20 overflow-visible shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]"
             style={{ animationDelay: '0.15s' }}
           >
-            
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
 
             {/* Header */}
@@ -713,7 +871,6 @@ BillTea`;
 
             {/* Filter Controls */}
             <div className="flex flex-wrap items-end gap-4 lg:gap-5 relative z-10 w-full">
-              
               <div className="dropdown-container flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[160px] relative" style={{ zIndex: activeDropdown === 'customerFilter' ? 50 : 10 }}>
                 <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">
                   Customer
@@ -794,7 +951,7 @@ BillTea`;
                   )}
                 </div>
               </div>
-              
+
               <div className="flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[140px]">
                 <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">
                   From Date
@@ -835,7 +992,6 @@ BillTea`;
 
           {/* Glassmorphic Data Table Container */}
           <div className="glass-panel rounded-3xl overflow-hidden relative z-10 animate-fade-slide-up shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]" style={{ animationDelay: '0.3s' }}>
-            {/* Glow Accent */}
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
 
             {/* Table Controls */}
@@ -891,7 +1047,7 @@ BillTea`;
               </div>
             </div>
 
-            {/* The Table */}
+            {/* Desktop Table */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-sm whitespace-nowrap border-separate border-spacing-0">
                 <thead className="text-xs text-on-surface-variant uppercase bg-surface-container-low/50 border-b border-primary/10">
@@ -1072,7 +1228,6 @@ BillTea`;
                   const isMostRecent = invoice.id === mostRecentInvoiceId;
                   return (
                     <div key={invoice.id} className="p-5 flex flex-col gap-4 hover:bg-primary/5 transition-colors duration-200">
-                      {/* Header Row */}
                       <div className="flex justify-between items-center">
                         <span className="font-bold text-primary text-base">{invoice.invoiceNumber}</span>
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border ${getStatusColor(invoice.status)}`}>
@@ -1080,7 +1235,6 @@ BillTea`;
                         </span>
                       </div>
 
-                      {/* Body: Customer & Amount */}
                       <div className="flex justify-between items-start">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-surface border border-primary/20 flex items-center justify-center text-primary font-bold text-xs shrink-0">
@@ -1099,13 +1253,11 @@ BillTea`;
                         </div>
                       </div>
 
-                      {/* Date & Actions */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-primary/5">
                         <div className="text-xs text-on-surface-variant">
                           Date: {new Date(invoice.invoiceDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </div>
 
-                        {/* Action buttons */}
                         <div className="flex items-center gap-2 self-end flex-wrap">
                           <button onClick={() => handleViewPdf(invoice.id, invoice.invoiceNumber)} className="glass-button-icon p-2 rounded-lg transition-all hover:text-blue-400 hover:bg-blue-400/10 cursor-pointer" title="View">
                             <span className="material-symbols-outlined text-[18px]">visibility</span>

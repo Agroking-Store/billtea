@@ -4,6 +4,146 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '../../../../lib/auth';
 
+interface ToastMessage {
+  type: 'success' | 'error';
+  text: string;
+}
+
+interface ToastProps {
+  message: ToastMessage | null;
+  onClose: () => void;
+  duration?: number; // ms, auto-dismiss
+}
+
+function Toast({ message, onClose, duration = 4000 }: ToastProps) {
+  const [visible, setVisible] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const remainingRef = React.useRef(duration);
+  const startedAtRef = React.useRef<number>(0);
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [progressKey, setProgressKey] = useState(0);
+
+  const clearTimer = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const scheduleClose = (ms: number) => {
+    clearTimer();
+    startedAtRef.current = Date.now();
+    remainingRef.current = ms;
+    timerRef.current = setTimeout(() => {
+      handleClose();
+    }, ms);
+  };
+
+  useEffect(() => {
+    if (!message) return;
+
+    setLeaving(false);
+    setPaused(false);
+    setProgressKey((k) => k + 1);
+    const enterTimer = setTimeout(() => setVisible(true), 10);
+
+    scheduleClose(duration);
+
+    return () => {
+      clearTimeout(enterTimer);
+      clearTimer();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [message]);
+
+  const handleClose = () => {
+    clearTimer();
+    setLeaving(true);
+    setVisible(false);
+    setTimeout(() => {
+      onClose();
+      setLeaving(false);
+    }, 300);
+  };
+
+  const handleMouseEnter = () => {
+    if (!message) return;
+    setPaused(true);
+    const elapsed = Date.now() - startedAtRef.current;
+    remainingRef.current = Math.max(remainingRef.current - elapsed, 0);
+    clearTimer();
+  };
+
+  const handleMouseLeave = () => {
+    if (!message) return;
+    setPaused(false);
+    scheduleClose(remainingRef.current);
+  };
+
+  if (!message && !leaving) return null;
+
+  const isSuccess = message?.type === 'success';
+
+  return (
+    <div
+      className="fixed top-6 right-6 z-[1100] pointer-events-none"
+      role="status"
+      aria-live="polite"
+    >
+      <div
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className={`pointer-events-auto relative overflow-hidden flex items-center gap-2.5 min-w-[220px] max-w-sm px-4 py-2.5 rounded-lg border shadow-xl backdrop-blur-sm transition-all duration-300 ease-out ${
+          isSuccess
+            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'
+            : 'bg-red-500/10 border-red-500/20 text-red-500'
+        } ${
+          visible
+            ? 'opacity-100 translate-x-0 translate-y-0'
+            : 'opacity-0 translate-x-4 -translate-y-1'
+        }`}
+      >
+        <span
+          className={`material-symbols-outlined text-[18px] shrink-0 ${
+            isSuccess ? 'text-emerald-600' : 'text-red-500'
+          }`}
+        >
+          {isSuccess ? 'check_circle' : 'error'}
+        </span>
+        <p className="flex-1 text-sm font-semibold leading-snug truncate">{message?.text}</p>
+        <button
+          onClick={handleClose}
+          aria-label="Dismiss notification"
+          className="shrink-0 p-0.5 rounded-full hover:bg-black/10 transition-colors cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-[16px]">close</span>
+        </button>
+
+        {/* Countdown progress bar */}
+        <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-black/5">
+          <div
+            key={progressKey}
+            className={`h-full ${isSuccess ? 'bg-emerald-500' : 'bg-red-500'}`}
+            style={{
+              animation: `toast-countdown ${duration}ms linear forwards`,
+              animationPlayState: paused ? 'paused' : 'running',
+            }}
+          />
+        </div>
+      </div>
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        @keyframes toast-countdown {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+      `}} />
+    </div>
+  );
+}
+
 interface BranchInfo {
   _id: string;
   name: string;
@@ -47,9 +187,7 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ fullName: '', email: '', phoneNumber: '', profilePicture: '' });
   const [saving, setSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState({ type: '', text: '' });
-
-
+  const [toast, setToast] = useState<ToastMessage | null>(null);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -80,12 +218,25 @@ export default function ProfilePage() {
   }, [fetchProfile]);
 
   const handleSaveProfile = async () => {
+    // 1. Validate Phone Number (Must be exactly 10 digits)
+    const digitsOnly = editForm.phoneNumber.replace(/\D/g, '');
+    if (digitsOnly.length < 10) {
+      setToast({
+        type: 'error',
+        text: 'Phone number must be at least 10 digits long.',
+      });
+      return;
+    }
+
     setSaving(true);
-    setSaveMessage({ type: '', text: '' });
+    setToast(null);
     try {
       const res = await apiFetch('/profile', {
         method: 'PUT',
-        body: JSON.stringify(editForm),
+        body: JSON.stringify({
+          ...editForm,
+          phoneNumber: digitsOnly, // Ensure clean digits are sent
+        }),
       });
       let data;
       try {
@@ -96,16 +247,15 @@ export default function ProfilePage() {
       }
 
       if (data.success) {
-        // Update localStorage with the new user data so sidebar reflects changes
         localStorage.setItem('user', JSON.stringify(data.user));
-        setSaveMessage({ type: 'success', text: 'Profile updated successfully!' });
+        setToast({ type: 'success', text: 'Profile updated successfully!' });
         setEditing(false);
         await fetchProfile();
       } else {
-        setSaveMessage({ type: 'error', text: data.message || 'Update failed.' });
+        setToast({ type: 'error', text: data.message || 'Update failed.' });
       }
     } catch (err: any) {
-      setSaveMessage({ type: 'error', text: err.message || 'Failed to connect to server.' });
+      setToast({ type: 'error', text: err.message || 'Failed to connect to server.' });
     } finally {
       setSaving(false);
     }
@@ -115,9 +265,8 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Optional: add max size validation (e.g., 2MB)
     if (file.size > 2 * 1024 * 1024) {
-      setSaveMessage({ type: 'error', text: 'Image must be less than 2MB.' });
+      setToast({ type: 'error', text: 'Image must be less than 2MB.' });
       return;
     }
 
@@ -125,7 +274,7 @@ export default function ProfilePage() {
     reader.onloadend = async () => {
       const base64String = reader.result as string;
       setSaving(true);
-      setSaveMessage({ type: '', text: '' });
+      setToast(null);
       try {
         const res = await apiFetch('/profile', {
           method: 'PUT',
@@ -141,20 +290,19 @@ export default function ProfilePage() {
 
         if (data.success) {
           localStorage.setItem('user', JSON.stringify(data.user));
-          setSaveMessage({ type: 'success', text: 'Profile picture updated!' });
+          setToast({ type: 'success', text: 'Profile picture updated!' });
           await fetchProfile();
         } else {
-          setSaveMessage({ type: 'error', text: data.message || 'Update failed.' });
+          setToast({ type: 'error', text: data.message || 'Update failed.' });
         }
       } catch (err: any) {
-        setSaveMessage({ type: 'error', text: err.message || 'Failed to connect to server.' });
+        setToast({ type: 'error', text: err.message || 'Failed to connect to server.' });
       } finally {
         setSaving(false);
       }
     };
     reader.readAsDataURL(file);
   };
-
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return 'Never';
@@ -213,6 +361,8 @@ export default function ProfilePage() {
         }
       `}} />
 
+      <Toast message={toast} onClose={() => setToast(null)} />
+
       {/* Decorative Background */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/10 blur-[120px]" />
@@ -249,7 +399,7 @@ export default function ProfilePage() {
                       phoneNumber: user.phoneNumber,
                       profilePicture: user.profilePicture || '',
                     });
-                    setSaveMessage({ type: '', text: '' });
+                    setToast(null);
                   }}
                   className="h-14 px-6 rounded-2xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 text-on-surface font-bold transition-all cursor-pointer"
                 >
@@ -279,22 +429,6 @@ export default function ProfilePage() {
             )}
           </div>
         </div>
-
-        {/* Save message toast */}
-        {saveMessage.text && (
-          <div className={`mb-10 p-5 rounded-2xl border flex items-start gap-4 animate-fade-slide-up ${saveMessage.type === 'success'
-            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'
-            : 'bg-red-500/10 border-red-500/20 text-red-500'
-            }`}>
-            <span className={`material-symbols-outlined mt-0.5 p-1 rounded-full ${saveMessage.type === 'success' ? 'bg-emerald-500/20' : 'bg-red-500/20'}`}>
-              {saveMessage.type === 'success' ? 'check_circle' : 'error'}
-            </span>
-            <div>
-              <h4 className="font-bold text-lg mb-1">{saveMessage.type === 'success' ? 'Success' : 'Error'}</h4>
-              <p className="text-sm opacity-90 leading-relaxed">{saveMessage.text}</p>
-            </div>
-          </div>
-        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-slide-up" style={{ animationDelay: '0.2s' }}>
 
@@ -427,9 +561,13 @@ export default function ProfilePage() {
                   <div>
                     <label className="block text-sm font-bold text-on-surface mb-2">Phone Number</label>
                     <input
-                      type="text"
+                      type="tel"
                       value={editForm.phoneNumber}
-                      onChange={(e) => setEditForm({ ...editForm, phoneNumber: e.target.value })}
+                      onChange={(e) => {
+                        const onlyNums = e.target.value.replace(/\D/g, '');
+                        setEditForm({ ...editForm, phoneNumber: onlyNums });
+                      }}
+                      placeholder="Enter 10-digit phone number"
                       className="w-full bg-surface-container border-2 border-transparent rounded-xl px-5 py-4 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all font-medium"
                       maxLength={10}
                     />
@@ -528,8 +666,6 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
-
-        {/* Footer */}
 
       </div>
     </div>
