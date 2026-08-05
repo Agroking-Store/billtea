@@ -122,7 +122,7 @@ export function CustomTabBar({ state, descriptors, navigation }: any) {
     outputRange: [0, 0, 1],
   });
 
-  const { colors, isDark } = useTheme();
+  
 
   const hiddenRoutes = ['create-quotation', 'create-invoice', 'create-expense', 'create-customer'];
   if (hiddenRoutes.includes(currentRouteName)) {

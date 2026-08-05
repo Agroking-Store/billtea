@@ -114,7 +114,7 @@ function Toast({ message, onClose, duration = 4000 }: ToastProps) {
         >
           {isSuccess ? 'check_circle' : 'error'}
         </span>
-        <p className="flex-1 text-sm font-semibold leading-snug truncate">{message?.text}</p>
+        <p className="flex-1 text-sm font-semibold leading-snug whitespace-normal break-words">{message?.text}</p>
         <button
           type="button"
           onClick={handleClose}
@@ -235,7 +235,7 @@ export default function CustomerModal({ isOpen, onClose, branchId, editCustomerI
     // 1. Mobile Number Validation Check (< 10 Digits)
     const digitsOnly = formData.mobileNumber.replace(/\D/g, '');
     if (digitsOnly.length < 10) {
-      const errorMsg = 'Mobile number must be at least 10 digits long.';
+      const errorMsg = 'Mobile number must be at least 10 digit numbers.';
       // Show ONLY toast notification
       setToast({ type: 'error', text: errorMsg });
       return;

@@ -111,7 +111,7 @@ function Toast({ message, onClose, duration = 4000 }: ToastProps) {
         >
           {isSuccess ? 'check_circle' : 'error'}
         </span>
-        <p className="flex-1 text-sm font-semibold leading-snug truncate">{message?.text}</p>
+        <p className="flex-1 text-sm font-semibold leading-snug whitespace-normal break-words">{message?.text}</p>
         <button
           onClick={handleClose}
           aria-label="Dismiss notification"
@@ -223,7 +223,7 @@ export default function ProfilePage() {
     if (digitsOnly.length < 10) {
       setToast({
         type: 'error',
-        text: 'Phone number must be at least 10 digits long.',
+        text: 'Mobile number must be at least 10 digit numbers.',
       });
       return;
     }

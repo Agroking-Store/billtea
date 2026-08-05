@@ -5,7 +5,6 @@ import {
   Dimensions,
   FlatList,
   Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -22,21 +21,15 @@ import {
   Eye,
   PencilLine,
   Copy,
-  MessageCircle,
-  Download,
   Send,
   Trash2,
-  MessageSquare,
   Phone,
   Wallet,
   X,
   FileText,
-  Filter,
-  RotateCcw,
   Check,
   ChevronDown,
   Calendar,
-  ArrowUpDown,
   Search,
 } from "lucide-react-native";
 
@@ -181,20 +174,6 @@ export default function QuotationsScreen() {
   const [searchActive, setSearchActive] = useState(false);
   const [searchText, setSearchText] = useState("");
 
-  // ---- Inline Filter States (Matching reference code) ----
-  const [oldCustomerFilter, oldSetCustomerFilter] = useState("");
-  const [oldStatusFilter, oldSetStatusFilter] = useState("");
-  const [oldFromDate, oldSetFromDate] = useState("");
-  const [oldToDate, oldSetToDate] = useState("");
-
-  // Dropdown States for Filters
-  const [activeDropdown, setActiveDropdown] = useState<"customer" | "status" | null>(null);
-
-  // Toggle Dropdowns
-  const toggleDropdown = (dropdown: "customer" | "status") => {
-    setActiveDropdown((prev) => (prev === dropdown ? null : dropdown));
-  };
-
   // Fetch data lazily on tab switch
   useEffect(() => {
     if (fetchedTabs[activeTab]) return;
@@ -245,91 +224,6 @@ export default function QuotationsScreen() {
     };
   }, [activeTab, fetchedTabs]);
 
-  // Unique customer list for Customer filter dropdown
-  const oldUniqueCustomers = useMemo(() => {
-    const names = new Set<string>();
-    const sourceList = activeTab === "Quotations" ? quotations : activeTab === "Invoices" ? invoices : [];
-    sourceList.forEach((item: any) => {
-      if (item.customer?.customerName) names.add(item.customer.customerName);
-    });
-    return Array.from(names).sort((a, b) => a.localeCompare(b));
-  }, [activeTab, quotations, invoices]);
-
-  // Dynamic Statuses based on Active Tab
-  const statusOptions = useMemo(() => {
-    if (activeTab === "Quotations") return ["DRAFT", "SENT", "ACCEPTED", "EXPIRED"];
-    if (activeTab === "Invoices") return ["DRAFT", "SENT", "UNPAID", "PARTIAL", "PAID", "OVERDUE", "CANCELLED"];
-    return [];
-  }, [activeTab]);
-
-  // Check if any filter is active
-  const oldHasActiveFilters = Boolean(oldCustomerFilter || oldStatusFilter || oldFromDate || oldToDate || searchText);
-
-  // Clear all filters
-  const oldHandleClearFilters = () => {
-    oldSetCustomerFilter("");
-    oldSetStatusFilter("");
-    oldSetFromDate("");
-    oldSetToDate("");
-    setSearchText("");
-    setActiveDropdown(null);
-  };
-
-  // Helper date checker
-  const isDateInRange = (itemDateStr: string) => {
-    if (!oldFromDate && !oldToDate) return true;
-    const itemDate = new Date(itemDateStr);
-    if (isNaN(itemDate.getTime())) return true;
-
-    if (oldFromDate) {
-      const from = new Date(oldFromDate);
-      from.setHours(0, 0, 0, 0);
-      if (itemDate < from) return false;
-    }
-
-    if (oldToDate) {
-      const to = new Date(oldToDate);
-      to.setHours(23, 59, 59, 999);
-      if (itemDate > to) return false;
-    }
-
-    return true;
-  };
-
-  // Client-side search & inline filters
-  const oldFilteredQuotations = useMemo(() => {
-    const query = searchText.trim().toLowerCase();
-    return quotations.filter((q) => {
-      const qNum = (q.quotationNumber ?? "").toLowerCase();
-      const customerName = (q.customer?.customerName ?? "").toLowerCase();
-      const companyName = (q.customer?.companyName ?? "").toLowerCase();
-      const matchesSearch =
-        !query || qNum.includes(query) || customerName.includes(query) || companyName.includes(query);
-
-      const matchesCustomer = !oldCustomerFilter || q.customer?.customerName === oldCustomerFilter;
-      const matchesStatus = !oldStatusFilter || q.status === oldStatusFilter;
-      const matchesDate = isDateInRange(q.quotationDate);
-
-      return matchesSearch && matchesCustomer && matchesStatus && matchesDate;
-    });
-  }, [quotations, searchText, oldCustomerFilter, oldStatusFilter, oldFromDate, oldToDate]);
-
-  const oldFilteredInvoices = useMemo(() => {
-    const query = searchText.trim().toLowerCase();
-    return invoices.filter((i) => {
-      const iNum = (i.invoiceNumber ?? "").toLowerCase();
-      const customerName = (i.customer?.customerName ?? "").toLowerCase();
-      const companyName = (i.customer?.companyName ?? "").toLowerCase();
-      const matchesSearch =
-        !query || iNum.includes(query) || customerName.includes(query) || companyName.includes(query);
-
-      const matchesCustomer = !oldCustomerFilter || i.customer?.customerName === oldCustomerFilter;
-      const matchesStatus = !oldStatusFilter || i.status === oldStatusFilter;
-      const matchesDate = isDateInRange(i.invoiceDate);
-
-      return matchesSearch && matchesCustomer && matchesStatus && matchesDate;
-    });
-  }, [invoices, searchText, oldCustomerFilter, oldStatusFilter, oldFromDate, oldToDate]);
   // --- Filter & Sorting state for Quotations ---
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [customerFilter, setCustomerFilter] = useState("");
@@ -517,11 +411,6 @@ export default function QuotationsScreen() {
         }
       }
 
-      // Customer Filter mapping to Category for expenses
-      if (oldCustomerFilter && e.category?.name && !e.category.name.toLowerCase().includes(oldCustomerFilter.toLowerCase())) {
-        return false;
-      }
-
       // Date Range Filter
       if (fromDateFilter || toDateFilter) {
         const eDate = new Date(e.date);
@@ -539,7 +428,7 @@ export default function QuotationsScreen() {
 
       return true;
     });
-  }, [expenses, searchText, oldCustomerFilter, fromDateFilter, toDateFilter]);
+  }, [expenses, searchText, fromDateFilter, toDateFilter]);
 
   // Stats Row calculations
   const currentStats = useMemo(() => {
@@ -1189,11 +1078,6 @@ export default function QuotationsScreen() {
     return renderExpenseCard;
   }, [activeTab]);
 
-  const [filterActive, setFilterActive] = useState(false);
-  const handleFilterPress = () => {
-    setFilterActive((prev) => !prev);
-  };
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style={isDark ? "light" : "dark"} />
@@ -1386,7 +1270,7 @@ export default function QuotationsScreen() {
           </View>
         )}
 
-        {/* Header Expansion Filter Panel for Invoices (Matching Web Screenshot) */}
+        {/* Header Expansion Filter Panel for Invoices */}
         {showFilterPanel && activeTab === "Invoices" && (
           <View style={styles.headerFilterExpansion}>
             {/* Row 1: FROM DATE & TO DATE */}
@@ -1542,7 +1426,6 @@ export default function QuotationsScreen() {
               activeOption={activeTab}
               onOptionChange={(opt) => {
                 setActiveTab(opt as Tab);
-                oldHandleClearFilters();
               }}
               style={{ marginBottom: 16 }}
             />
@@ -1567,214 +1450,6 @@ export default function QuotationsScreen() {
                     </View>
                   </React.Fragment>
                 ))}
-              </View>
-            </GlassPanel>
-
-            {/* ---- INLINE FILTERS SECTION (Adapted from Reference Code) ---- */}
-            <GlassPanel style={styles.inlineFilterPanel}>
-              {/* Filter Section Header */}
-              <View style={styles.filterHeaderRow}>
-                <View style={styles.filterTitleGroup}>
-                  <View style={[styles.filterIconBadge, { backgroundColor: colors.primary + "1A" }]}>
-                    <Filter size={16} color={colors.primary} />
-                  </View>
-                  <Text style={[styles.filterHeaderText, { color: colors.text }]}>Filters</Text>
-                </View>
-
-                {oldHasActiveFilters && (
-                  <View style={[styles.activeBadge, { backgroundColor: colors.primary + "1A", borderColor: colors.primary + "30" }]}>
-                    <Check size={12} color={colors.primary} />
-                    <Text style={[styles.activeBadgeText, { color: colors.primary }]}>Active</Text>
-                  </View>
-                )}
-              </View>
-
-              {/* Filter Inputs Grid */}
-              <View style={styles.filterControlsGrid}>
-                {/* 1. Customer Filter Input */}
-                <View style={styles.filterField}>
-                  <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
-                    {activeTab === "Expenses" ? "Category / Keyword" : "Customer"}
-                  </Text>
-                  {activeTab === "Expenses" ? (
-                    <TextInput
-                      value={oldCustomerFilter}
-                      onChangeText={oldSetCustomerFilter}
-                      placeholder="Filter category..."
-                      placeholderTextColor={colors.textSecondary + "70"}
-                      style={[
-                        styles.dropdownButton,
-                        { color: colors.text, borderColor: colors.border, backgroundColor: colors.surfaceVariant },
-                      ]}
-                    />
-                  ) : (
-                    <View style={{ zIndex: activeDropdown === "customer" ? 50 : 1 }}>
-                      <TouchableOpacity
-                        style={[
-                          styles.dropdownButton,
-                          { borderColor: colors.border, backgroundColor: colors.surfaceVariant },
-                        ]}
-                        onPress={() => toggleDropdown("customer")}
-                      >
-                        <Text style={[styles.dropdownButtonText, { color: oldCustomerFilter ? colors.text : colors.textSecondary }]} numberOfLines={1}>
-                          {oldCustomerFilter || "All Customers"}
-                        </Text>
-                        <ChevronDown size={16} color={colors.textSecondary} />
-                      </TouchableOpacity>
-
-                      {activeDropdown === "customer" && (
-                        <View style={[styles.dropdownMenu, { backgroundColor: isDark ? "#0f172a" : colors.surface, borderColor: colors.border }]}>
-                          <ScrollView nestedScrollEnabled style={{ maxHeight: 180 }}>
-                            <TouchableOpacity
-                              style={[
-                                styles.dropdownOption,
-                                oldCustomerFilter === "" && { backgroundColor: colors.primary + "20" },
-                              ]}
-                              onPress={() => {
-                                oldSetCustomerFilter("");
-                                setActiveDropdown(null);
-                              }}
-                            >
-                              <Text style={[styles.dropdownOptionText, { color: oldCustomerFilter === "" ? colors.primary : colors.text }]}>
-                                All Customers
-                              </Text>
-                            </TouchableOpacity>
-
-                            {oldUniqueCustomers.map((name) => (
-                              <TouchableOpacity
-                                key={name}
-                                style={[
-                                  styles.dropdownOption,
-                                  oldCustomerFilter === name && { backgroundColor: colors.primary + "20" },
-                                ]}
-                                onPress={() => {
-                                  oldSetCustomerFilter(name);
-                                  setActiveDropdown(null);
-                                }}
-                              >
-                                <Text style={[styles.dropdownOptionText, { color: oldCustomerFilter === name ? colors.primary : colors.text }]}>
-                                  {name}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </ScrollView>
-                        </View>
-                      )}
-                    </View>
-                  )}
-                </View>
-
-                {/* 2. Status Filter Input */}
-                {activeTab !== "Expenses" && (
-                  <View style={styles.filterField}>
-                    <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Status</Text>
-                    <View style={{ zIndex: activeDropdown === "status" ? 50 : 1 }}>
-                      <TouchableOpacity
-                        style={[
-                          styles.dropdownButton,
-                          { borderColor: colors.border, backgroundColor: colors.surfaceVariant },
-                        ]}
-                        onPress={() => toggleDropdown("status")}
-                      >
-                        <Text style={[styles.dropdownButtonText, { color: oldStatusFilter ? colors.text : colors.textSecondary }]}>
-                          {oldStatusFilter || "All Status"}
-                        </Text>
-                        <ChevronDown size={16} color={colors.textSecondary} />
-                      </TouchableOpacity>
-
-                      {activeDropdown === "status" && (
-                        <View style={[styles.dropdownMenu, { backgroundColor: isDark ? "#0f172a" : colors.surface, borderColor: colors.border }]}>
-                          <ScrollView nestedScrollEnabled style={{ maxHeight: 180 }}>
-                            <TouchableOpacity
-                              style={[
-                                styles.dropdownOption,
-                                oldStatusFilter === "" && { backgroundColor: colors.primary + "20" },
-                              ]}
-                              onPress={() => {
-                                oldSetStatusFilter("");
-                                setActiveDropdown(null);
-                              }}
-                            >
-                              <Text style={[styles.dropdownOptionText, { color: oldStatusFilter === "" ? colors.primary : colors.text }]}>
-                                All Status
-                              </Text>
-                            </TouchableOpacity>
-
-                            {statusOptions.map((st) => (
-                              <TouchableOpacity
-                                key={st}
-                                style={[
-                                  styles.dropdownOption,
-                                  oldStatusFilter === st && { backgroundColor: colors.primary + "20" },
-                                ]}
-                                onPress={() => {
-                                  oldSetStatusFilter(st);
-                                  setActiveDropdown(null);
-                                }}
-                              >
-                                <Text style={[styles.dropdownOptionText, { color: oldStatusFilter === st ? colors.primary : colors.text }]}>
-                                  {st}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </ScrollView>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                )}
-
-                {/* 3. From Date Input */}
-                <View style={styles.filterField}>
-                  <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>From Date</Text>
-                  <View style={styles.inputWithIcon}>
-                    <TextInput
-                      value={oldFromDate}
-                      onChangeText={oldSetFromDate}
-                      placeholder="YYYY-MM-DD"
-                      placeholderTextColor={colors.textSecondary + "70"}
-                      style={[
-                        styles.dropdownButton,
-                        { color: colors.text, borderColor: colors.border, backgroundColor: colors.surfaceVariant },
-                      ]}
-                    />
-                    <Calendar size={14} color={colors.textSecondary} style={styles.fieldRightIcon} />
-                  </View>
-                </View>
-
-                {/* 4. To Date Input */}
-                <View style={styles.filterField}>
-                  <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>To Date</Text>
-                  <View style={styles.inputWithIcon}>
-                    <TextInput
-                      value={oldToDate}
-                      onChangeText={oldSetToDate}
-                      placeholder="YYYY-MM-DD"
-                      placeholderTextColor={colors.textSecondary + "70"}
-                      style={[
-                        styles.dropdownButton,
-                        { color: colors.text, borderColor: colors.border, backgroundColor: colors.surfaceVariant },
-                      ]}
-                    />
-                    <Calendar size={14} color={colors.textSecondary} style={styles.fieldRightIcon} />
-                  </View>
-                </View>
-              </View>
-
-              {/* Reset Action */}
-              <View style={styles.resetActionRow}>
-                <TouchableOpacity
-                  disabled={!oldHasActiveFilters}
-                  onPress={oldHandleClearFilters}
-                  style={[
-                    styles.resetInlineBtn,
-                    { borderColor: colors.border },
-                    !oldHasActiveFilters && { opacity: 0.4 },
-                  ]}
-                >
-                  <RotateCcw size={14} color={colors.textSecondary} />
-                  <Text style={[styles.resetInlineBtnText, { color: colors.textSecondary }]}>Reset Filters</Text>
-                </TouchableOpacity>
               </View>
             </GlassPanel>
           </>
@@ -2291,150 +1966,10 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "800",
   },
-
-  // ---- Inline Filter Styles ----
-  inlineFilterPanel: {
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 16,
-  },
-  filterHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 14,
-  },
-  filterTitleGroup: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  filterIconBadge: {
-    padding: 6,
-    borderRadius: 8,
-  },
-  filterHeaderText: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  activeBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  activeBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  filterControlsGrid: {
-    gap: 12,
-  },
-  filterField: {
-    width: "100%",
-  },
-  fieldLabel: {
-    fontSize: 10,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-    marginBottom: 4,
-    marginLeft: 2,
-  },
-  dropdownButton: {
-    height: 42,
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    fontSize: 13,
-  },
-  dropdownButtonText: {
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  dropdownMenu: {
-    position: "absolute",
-    top: 46,
-    left: 0,
-    right: 0,
-    borderRadius: 10,
-    borderWidth: 1,
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    zIndex: 999,
-  },
-  dropdownOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  dropdownOptionText: {
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  inputWithIcon: {
-    position: "relative",
-    justifyContent: "center",
-  },
-  fieldRightIcon: {
-    position: "absolute",
-    right: 12,
-  },
-  resetActionRow: {
-    marginTop: 14,
-    flexDirection: "row",
-    justifyContent: "flex-start",
-  },
-  resetInlineBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  resetInlineBtnText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-
   card: {
     borderRadius: 18,
     padding: 16,
     marginBottom: 12,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 12,
-  },
-  cardIdentity: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    minWidth: 0,
-  },
-  idPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "rgba(125, 211, 252, 0.15)",
-  },
-  idPillText: {
-    fontSize: 12,
-    fontWeight: "700",
   },
   invoiceNumberText: {
     fontSize: 15,
@@ -2518,11 +2053,6 @@ const styles = StyleSheet.create({
   noteText: {
     fontSize: 13,
     lineHeight: 18,
-  },
-  loggedByText: {
-    fontSize: 12,
-    fontStyle: "italic",
-    flex: 1,
   },
   stateCard: {
     borderRadius: 18,
@@ -2695,28 +2225,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
   },
-  filterSection: {
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "rgba(125, 211, 252, 0.15)",
-  },
-
-  filterTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  resetBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    backgroundColor: "rgba(125, 211, 252, 0.1)",
-  },
-  resetBtnText: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
   filterGridRow: {
     flexDirection: "row",
     gap: 12,
@@ -2752,20 +2260,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     padding: 0,
     margin: 0,
-  },
-  sortOrderToggleBtn: {
-    height: 42,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  sortOrderToggleText: {
-    fontSize: 12,
-    fontWeight: "600",
-    flex: 1,
   },
   pickerOptionItem: {
     flexDirection: "row",
@@ -2857,20 +2351,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
   },
-  cardTimeText: {
-    fontSize: 12,
-    fontWeight: "500",
-  },
   statusDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
     marginRight: 6,
-  },
-  customerSubtext: {
-    fontSize: 13,
-    fontWeight: "500",
-    marginTop: 2,
   },
   headerFilterExpansion: {
     paddingHorizontal: 16,

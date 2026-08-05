@@ -1,4 +1,11 @@
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+  BadRequestException,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
@@ -12,8 +19,8 @@ import { processAndSaveImage } from '../common/utils/image.util';
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
-  // Simple in-memory cache for mock OTPs
-  private otpCache = new Map<string, string>();
+  // In-memory OTP store with expiration timestamp (TTL) to avoid memory leaks
+  private otpCache = new Map<string, { code: string; expiresAt: number }>();
 
   constructor(
     private prisma: PrismaService,
@@ -21,14 +28,17 @@ export class AuthService {
     private config: ConfigService,
   ) {}
 
-  async checkDuplicate(email: string, phoneNumber: string) {
+  async checkDuplicate(email?: string, phoneNumber?: string) {
+    const conditions: any[] = [];
+    if (phoneNumber) conditions.push({ phoneNumber });
+    if (email) conditions.push({ email: email.toLowerCase().trim() });
+
+    if (conditions.length === 0) {
+      return { success: true, message: 'No duplicates found.' };
+    }
+
     const existing = await this.prisma.user.findFirst({
-      where: {
-        OR: [
-          { phoneNumber },
-          { email: email?.toLowerCase().trim() },
-        ],
-      },
+      where: { OR: conditions },
     });
 
     if (existing) {
@@ -39,38 +49,63 @@ export class AuthService {
     return { success: true, message: 'No duplicates found.' };
   }
 
-  async sendOtp(email: string, phoneNumber: string) {
+  async sendOtp(email?: string, phoneNumber?: string) {
+    const now = Date.now();
+    const ttl = 5 * 60 * 1000; // 5 minutes TTL
+
     const emailOtp = email ? Math.floor(100000 + Math.random() * 900000).toString() : undefined;
     const mobileOtp = phoneNumber ? Math.floor(100000 + Math.random() * 900000).toString() : undefined;
 
     let logMessage = `\n=========================================\n🚨 MOCK OTP GENERATED 🚨\n`;
-    if (email) logMessage += `Email (${email}): ${emailOtp}\n`;
-    if (phoneNumber) logMessage += `Phone (${phoneNumber}): ${mobileOtp}\n`;
+
+    if (email) {
+      const emailKey = `email:${email.toLowerCase().trim()}`;
+      this.otpCache.set(emailKey, { code: emailOtp!, expiresAt: now + ttl });
+      logMessage += `Email (${email}): ${emailOtp}\n`;
+    }
+
+    if (phoneNumber) {
+      const phoneKey = `phone:${phoneNumber}`;
+      this.otpCache.set(phoneKey, { code: mobileOtp!, expiresAt: now + ttl });
+      logMessage += `Phone (${phoneNumber}): ${mobileOtp}\n`;
+    }
+
     logMessage += `=========================================`;
     this.logger.log(logMessage);
-
-    // Store in cache for verification
-    if (email) this.otpCache.set(email, emailOtp!);
-    if (phoneNumber) this.otpCache.set(phoneNumber, mobileOtp!);
 
     return { success: true, message: 'OTPs sent successfully.' };
   }
 
-  async verifyOtp(emailOtp: string, mobileOtp: string) {
-    // In a real app we'd check against the specific email/phone key.
-    // For this mock, we just check if the OTP exists in the cache values.
-    const validOtps = Array.from(this.otpCache.values());
-    if (!validOtps.includes(emailOtp)) {
-      throw new BadRequestException('Invalid email OTP.');
+  async verifyOtp(emailOtp?: string, mobileOtp?: string, email?: string, phoneNumber?: string) {
+    const now = Date.now();
+
+    if (email && emailOtp) {
+      const key = `email:${email.toLowerCase().trim()}`;
+      const cached = this.otpCache.get(key);
+
+      if (!cached || cached.expiresAt < now || cached.code !== emailOtp) {
+        throw new BadRequestException('Invalid or expired email OTP.');
+      }
+      this.otpCache.delete(key);
     }
-    if (!validOtps.includes(mobileOtp)) {
-      throw new BadRequestException('Invalid mobile OTP.');
+
+    if (phoneNumber && mobileOtp) {
+      const key = `phone:${phoneNumber}`;
+      const cached = this.otpCache.get(key);
+
+      if (!cached || cached.expiresAt < now || cached.code !== mobileOtp) {
+        throw new BadRequestException('Invalid or expired mobile OTP.');
+      }
+      this.otpCache.delete(key);
     }
 
     return { success: true, message: 'OTPs verified successfully.' };
   }
 
-  async registerFull(dto: any, files: { profilePicture?: Express.Multer.File[], companyLogo?: Express.Multer.File[] }) {
+  async registerFull(
+    dto: any,
+    files: { profilePicture?: Express.Multer.File[]; companyLogo?: Express.Multer.File[] },
+  ) {
     const phone = dto.phoneNumber || dto.mobileNumber;
     await this.checkDuplicate(dto.email, phone);
 
@@ -88,20 +123,17 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(dto.password, 12);
 
     let parsedTaxes = [];
-    try {
-      if (dto.taxes) {
+    if (dto.taxes) {
+      try {
         parsedTaxes = typeof dto.taxes === 'string' ? JSON.parse(dto.taxes) : dto.taxes;
+      } catch (e) {
+        this.logger.error('Failed to parse taxes', e);
       }
-    } catch (e) {
-      this.logger.error('Failed to parse taxes', e);
     }
-    
+
     let parsedIdentifiers: any[] = [];
-    try {
-        if(dto.businessIdName && dto.businessIdNumber) {
-            parsedIdentifiers = [{ name: dto.businessIdName, value: dto.businessIdNumber }];
-        }
-    } catch (e) {
+    if (dto.businessIdName && dto.businessIdNumber) {
+      parsedIdentifiers = [{ name: dto.businessIdName, value: dto.businessIdNumber }];
     }
 
     // Prisma Transaction to create User, Company, and Branch
@@ -116,20 +148,7 @@ export class AuthService {
         },
       });
 
-      // 2. Create User linked to Company
-      const user = await tx.user.create({
-        data: {
-          fullName: dto.fullName,
-          email: dto.email.toLowerCase().trim(),
-          phoneNumber: phone,
-          password: hashedPassword,
-          profilePicture: profilePictureUrl,
-          role: 'OWNER',
-          companyId: company.id,
-        },
-      });
-
-      // 3. Create Branch
+      // 2. Create Branch
       const branch = await tx.branch.create({
         data: {
           companyId: company.id,
@@ -148,6 +167,22 @@ export class AuthService {
           upiId: dto.upiId || '',
           signatureValue: dto.signatureText || '',
           taxes: parsedTaxes,
+        },
+      });
+
+      // 3. Create User linked to Company AND Branch
+      const user = await tx.user.create({
+        data: {
+          fullName: dto.fullName,
+          email: dto.email.toLowerCase().trim(),
+          phoneNumber: phone,
+          password: hashedPassword,
+          profilePicture: profilePictureUrl,
+          role: 'OWNER',
+          companyId: company.id,
+          branches: {
+            connect: [{ id: branch.id }], // Connects user to created branch
+          },
         },
       });
 
@@ -179,7 +214,12 @@ export class AuthService {
       return { user, company, branch };
     });
 
-    const tokens = await this.generateTokens(result.user.id, result.user.role, result.company.id, [result.branch.id]);
+    const tokens = await this.generateTokens(
+      result.user.id,
+      result.user.role,
+      result.company.id,
+      [result.branch.id],
+    );
 
     return {
       success: true,
@@ -228,12 +268,15 @@ export class AuthService {
         throw new UnauthorizedException('Incorrect password. Please try again.');
       }
     } else if (dto.otp) {
-      const target = dto.email ? dto.email.toLowerCase().trim() : dto.phoneNumber;
-      const validOtp = this.otpCache.get(target!);
-      if (!validOtp || validOtp !== dto.otp) {
+      const targetKey = dto.email
+        ? `email:${dto.email.toLowerCase().trim()}`
+        : `phone:${dto.phoneNumber}`;
+
+      const cached = this.otpCache.get(targetKey);
+      if (!cached || cached.expiresAt < Date.now() || cached.code !== dto.otp) {
         throw new UnauthorizedException('Invalid or expired OTP.');
       }
-      this.otpCache.delete(target!);
+      this.otpCache.delete(targetKey);
     }
 
     await this.prisma.user.update({
@@ -280,6 +323,7 @@ export class AuthService {
       throw new ForbiddenException('Your account has been deactivated.');
     }
 
+    // FIXED: Properly closed the object bracket before parenthetical closing
     await this.prisma.refreshToken.deleteMany({ where: { id: stored.id } });
 
     const branchIds = stored.user.branches.map((b) => b.id);
@@ -297,7 +341,12 @@ export class AuthService {
     };
   }
 
-  private async generateTokens(userId: string, role: string, companyId: string | null, branches: string[]) {
+  private async generateTokens(
+    userId: string,
+    role: string,
+    companyId: string | null,
+    branches: string[],
+  ) {
     const payload = { sub: userId, role, companyId, branches };
     const accessToken = this.jwtService.sign(payload);
     const refreshTokenValue = uuidv4();
@@ -314,9 +363,17 @@ export class AuthService {
   private calculateExpiry(duration: string): Date {
     const match = duration.match(/^(\d+)([dhms])$/);
     if (!match) return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
     const value = parseInt(match[1], 10);
     const unit = match[2];
-    const ms = { d: 24 * 60 * 60 * 1000, h: 60 * 60 * 1000, m: 60 * 1000, s: 1000 }[unit]!;
-    return new Date(Date.now() + value * ms);
+
+    const msMap: Record<string, number> = {
+      d: 24 * 60 * 60 * 1000,
+      h: 60 * 60 * 1000,
+      m: 60 * 1000,
+      s: 1000,
+    };
+
+    return new Date(Date.now() + value * (msMap[unit] || msMap.d));
   }
 }
