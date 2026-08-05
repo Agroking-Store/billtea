@@ -84,7 +84,7 @@ export default function LoginScreen() {
   };
 
   const handleSignupPress = () => {
-    // Signup screen will be connected when the route is available.
+    router.push('/(auth)/signup');
   };
 
     const handleForgotPasswordPress = () => {
