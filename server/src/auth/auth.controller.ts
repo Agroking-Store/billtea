@@ -5,6 +5,8 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
+import { SendForgotPasswordOtpDto, VerifyForgotPasswordOtpDto, ResetPasswordDto } from './dto/forgot-password.dto';
+
 @Controller('auth')
 @ApiTags('Auth')
 export class AuthController {
@@ -19,16 +21,37 @@ export class AuthController {
 
   @Post('send-otp')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Mock Send OTP' })
-  async sendOtp(@Body() dto: { email: string; phoneNumber: string }) {
+  @ApiOperation({ summary: 'Send Email OTP via Nodemailer' })
+  async sendOtp(@Body() dto: { email: string; phoneNumber?: string }) {
     return this.authService.sendOtp(dto.email, dto.phoneNumber);
   }
 
   @Post('verify-otp')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Mock Verify OTP' })
-  async verifyOtp(@Body() dto: { emailOtp: string; mobileOtp: string }) {
-    return this.authService.verifyOtp(dto.emailOtp, dto.mobileOtp);
+  @ApiOperation({ summary: 'Verify Email OTP' })
+  async verifyOtp(@Body() dto: { emailOtp: string; mobileOtp?: string; email?: string }) {
+    return this.authService.verifyOtp(dto.emailOtp, dto.mobileOtp, dto.email);
+  }
+
+  @Post('forgot-password/send-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Send OTP for password reset' })
+  async sendForgotPasswordOtp(@Body() dto: SendForgotPasswordOtpDto) {
+    return this.authService.sendForgotPasswordOtp(dto.email);
+  }
+
+  @Post('forgot-password/verify-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify OTP for password reset' })
+  async verifyForgotPasswordOtp(@Body() dto: VerifyForgotPasswordOtpDto) {
+    return this.authService.verifyForgotPasswordOtp(dto.email, dto.otp);
+  }
+
+  @Post('forgot-password/reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset password with OTP' })
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto.email, dto.otp, dto.newPassword);
   }
 
   @Post('register')
