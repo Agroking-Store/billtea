@@ -37,4 +37,34 @@ export const authService = {
     });
     return response.data;
   },
-};
+
+  async checkDuplicate(email: string, phoneNumber: string) {
+    const response = await apiClient.post('/auth/check-duplicate', { email, phoneNumber });
+    return response.data;
+  },
+
+  async sendOtp(email: string, phoneNumber?: string) {
+    const response = await apiClient.post('/auth/send-otp', { email, phoneNumber });
+    return response.data;
+  },
+
+  async verifyOtp(emailOtp: string, email?: string) {
+    const response = await apiClient.post('/auth/verify-otp', { emailOtp, email });
+    return response.data;
+  },
+
+  async register(payload: any) {
+    const response = await apiClient.post('/auth/register', payload);
+
+    if (response.data && response.data.accessToken) {
+      await setStorageItemAsync(TOKEN_KEYS.ACCESS, response.data.accessToken);
+      await AsyncStorage.setItem('accessToken', response.data.accessToken);
+      if (response.data.refreshToken) {
+        await setStorageItemAsync(TOKEN_KEYS.REFRESH, response.data.refreshToken);
+        await AsyncStorage.setItem('refreshToken', response.data.refreshToken);
+      }
+    }
+
+    return response.data;
+  },
+};
