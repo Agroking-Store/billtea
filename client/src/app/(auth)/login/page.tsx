@@ -7,7 +7,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import Image from "next/image";
 export default function LoginPage() {
   const router = useRouter();
-
+  const { isDark, toggleTheme } = useTheme();
   // Login States
   const [loginEmail, setLoginEmail] = useState<string>('');
   const [loginPassword, setLoginPassword] = useState<string>('');
