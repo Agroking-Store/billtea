@@ -37,14 +37,21 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </div>
           
           {/* Brand Logo & Name */}
-          <div className="relative z-10 flex items-center space-x-3 text-on-surface pt-8">
-            <img 
-              className="h-10 w-10 rounded-xl object-contain shadow-lg shadow-primary/10 border border-primary/20" 
-              alt="BillTea Logo" 
-              src="/logo.jpg" 
-            />
-            <span className="text-3xl font-display font-semibold tracking-tight text-glow">BillTea</span>
-          </div>
+         <div className="relative z-10 flex items-center space-x-3 text-on-surface pt-8">
+  <img
+    className="h-10 w-10 rounded-xl object-contain shadow-lg shadow-primary/10 border border-primary/20"
+    alt="BillTea Logo"
+    src={
+      isDark
+        ? "/Biltea-white-03.png"
+        : "/BillTea-dark-04.png"
+    }
+  />
+
+  <span className="text-3xl font-display font-semibold tracking-tight text-glow leading-none">
+    BillTea
+  </span>
+</div>
 
           {/* Dynamic Tagline Paragraph based on active view */}
           <div className="relative z-10 mb-12">

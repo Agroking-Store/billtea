@@ -1,5 +1,5 @@
 'use client';
-
+import Image from "next/image";
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -26,7 +26,7 @@ export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [isUserLoggedIn, setIsUserLoggedIn] = useState<boolean>(false);
   const [formSubmitted, setFormSubmitted] = useState<boolean>(false);
-
+  
   useEffect(() => {
     setIsUserLoggedIn(isLoggedIn());
     document.body.classList.add('no-scrollbar');
@@ -61,12 +61,23 @@ export default function LandingPage() {
             className="flex items-center gap-3 cursor-pointer group"
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           >
-            <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-[0_0_15px_rgba(34,211,238,0.3)] dark:shadow-[0_0_20px_rgba(34,211,238,0.4)] group-hover:shadow-[0_0_20px_rgba(34,211,238,0.5)] transition-all">
-              <span className="text-white font-bold text-xl">B</span>
-            </div>
-            <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-300 transition-colors">
-              BillTea
-            </span>
+   <div className="relative flex h-10 w-10 items-center justify-center rounded-xl overflow-hidden transition-all">
+  <Image
+    src={
+      isDark
+        ? "/Biltea-white-03.png"
+        : "/BillTea-dark-04.png"
+    }
+    alt="BillTea Logo"
+    width={40}
+    height={40}
+    className="h-full w-full object-contain"
+  />
+</div>
+
+<span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-300 transition-colors">
+  BillTea
+</span>
           </motion.div>
 
           <nav className="hidden md:flex items-center gap-8">

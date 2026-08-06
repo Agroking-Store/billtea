@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveAuthData, API_BASE } from '../../../lib/auth';
-
+import { useTheme } from "@/components/ThemeProvider";
+import Image from "next/image";
 export default function LoginPage() {
   const router = useRouter();
 
@@ -218,10 +219,21 @@ export default function LoginPage() {
     <div className="w-full lg:w-7/12 lg:absolute lg:right-0 lg:top-0 lg:bottom-0 flex items-center justify-center p-6 sm:p-12 z-20">
       <div className="w-full max-w-md animate-fade-in">
         {/* Mobile Logo */}
-        <div className="flex lg:hidden items-center justify-center space-x-3 text-on-surface mb-10">
-          <img className="h-9 w-9 rounded-xl object-contain border border-primary/20" alt="BillTea Logo" src="/logo.jpg" />
-          <span className="text-2xl font-display font-semibold text-glow">BillTea</span>
-        </div>
+        <div className="flex items-center justify-center space-x-3 text-on-surface mb-10">
+  <img
+    className="h-9 w-9 rounded-xl object-contain border border-primary/20"
+    alt="BillTea Logo"
+    src={
+      isDark
+        ? "/Biltea-white-03.png"
+        : "/BillTea-dark-04.png"
+    }
+  />
+
+  <span className="text-2xl font-display font-semibold text-glow">
+    BillTea
+  </span>
+</div>
 
         <div className="glass-panel-elevated rounded-3xl p-8 sm:p-10 relative overflow-hidden transition-all duration-300">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-70"></div>
