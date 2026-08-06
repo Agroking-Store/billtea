@@ -5,6 +5,7 @@ export default function AuthLayout() {
     <BranchProvider>
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="login" options={{ title: 'Login' }} />
+      <Stack.Screen name="signup" options={{ title: 'Sign Up' }} />
     </Stack>
     </BranchProvider>
   );

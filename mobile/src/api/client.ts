@@ -66,9 +66,14 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = await getStorageItemAsync(TOKEN_KEYS.REFRESH);
+        let refreshToken = await getStorageItemAsync(TOKEN_KEYS.REFRESH);
         if (!refreshToken) {
-          throw new Error('No refresh token available');
+          refreshToken = await AsyncStorage.getItem('refreshToken');
+        }
+
+        if (!refreshToken) {
+          await useAuthStore.getState().logout();
+          return Promise.reject(error);
         }
 
         // FIX 2: Send ngrok header during token refresh as well
@@ -85,8 +90,10 @@ apiClient.interceptors.response.use(
 
         if (res.data?.accessToken) {
           await setStorageItemAsync(TOKEN_KEYS.ACCESS, res.data.accessToken);
+          await AsyncStorage.setItem('accessToken', res.data.accessToken);
           if (res.data.refreshToken) {
             await setStorageItemAsync(TOKEN_KEYS.REFRESH, res.data.refreshToken);
+            await AsyncStorage.setItem('refreshToken', res.data.refreshToken);
           }
 
           // Retry the original request
@@ -96,7 +103,6 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         // Clear tokens and update state if refresh fails
         await useAuthStore.getState().logout();
-        console.error('Refresh token expired or invalid', refreshError);
       }
     }
 

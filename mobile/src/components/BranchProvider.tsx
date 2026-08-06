@@ -66,24 +66,22 @@ export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       console.log('BranchProvider: Fetching with token:', token.slice(0, 10) + '...');
       
       // 2. Fetch branches using the global axios client
-      let resData: any = null;
+      const response = await apiClient.get('/branches');
+      console.log('BranchProvider: Response Status:', response.status);
 
-      try {
-        const response = await apiClient.get('/branches');
-        console.log('BranchProvider: Response Status:', response.status);
-        resData = response.data;
-      } catch (apiError: any) {
-        if (apiError.response?.status === 401) {
-          console.warn('BranchProvider: Unauthorized response from /branches');
-          setBranches([]);
-          setSelectedBranchIdState(null);
-          setIsLoadingBranches(false);
-          return;
-        }
+      if (response.status === 401) {
+        console.warn('BranchProvider: Unauthorized response from /branches');
+        setBranches([]);
+        setSelectedBranchIdState(null);
+        setIsLoadingBranches(false);
+        return;
+      }
 
-        // Fallback: try fetching with query params if initial request returns no data
+      let resData = response?.data;
+
+      if (!resData) {
         const fallbackRes = await apiClient.get('/branches?all=true');
-        resData = fallbackRes.data;
+        resData = fallbackRes?.data;
       }
 
       console.log('Branch Response Received:', resData);
@@ -103,10 +101,10 @@ export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       // Filter active branches for selection
       const activeBranchList = branchList.filter((b: any) => b.isActive !== false);
-      const displayBranches = activeBranchList.length > 0 ? activeBranchList : branchList;
-      setBranches(displayBranches);
+      const targetList = activeBranchList.length > 0 ? activeBranchList : branchList;
+      setBranches(targetList);
 
-      if (displayBranches.length > 0) {
+      if (targetList.length > 0) {
         let savedId: string | null = null;
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
           savedId = localStorage.getItem('selectedBranchId');
@@ -116,15 +114,17 @@ export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
 
         const exists = savedId
-          ? displayBranches.some((b: Branch) => String(b.id) === String(savedId))
+          ? targetList.some((b: Branch) => String(b.id) === String(savedId))
           : false;
 
         if (savedId && exists) {
           setSelectedBranchIdState(String(savedId));
         } else {
-          const mainBranch = displayBranches.find((b: Branch) => b.isMainBranch);
-          const defaultBranch = mainBranch || displayBranches[0];
-          await setSelectedBranchId(defaultBranch.id);
+          const mainBranch = targetList.find((b: Branch) => b.isMainBranch);
+          const defaultBranch = mainBranch || targetList[0];
+          if (defaultBranch && defaultBranch.id != null) {
+            await setSelectedBranchId(defaultBranch.id);
+          }
         }
       } else {
         setSelectedBranchIdState(null);

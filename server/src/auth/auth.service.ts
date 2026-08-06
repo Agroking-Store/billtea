@@ -9,6 +9,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
+import * as nodemailer from 'nodemailer';
 import { v4 as uuidv4 } from 'uuid';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
@@ -19,8 +20,9 @@ import { processAndSaveImage } from '../common/utils/image.util';
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
-  // In-memory OTP store with expiration timestamp (TTL) to avoid memory leaks
-  private otpCache = new Map<string, { code: string; expiresAt: number }>();
+  // Simple in-memory cache for mock OTPs
+  private otpCache = new Map<string, string>();
+  private forgotPasswordCache = new Map<string, { otp: string; expiresAt: number; verified?: boolean }>();
 
   constructor(
     private prisma: PrismaService,
@@ -49,57 +51,196 @@ export class AuthService {
     return { success: true, message: 'No duplicates found.' };
   }
 
-  async sendOtp(email?: string, phoneNumber?: string) {
-    const now = Date.now();
-    const ttl = 5 * 60 * 1000; // 5 minutes TTL
+  private async sendEmailOtp(
+    email: string, 
+    otp: string, 
+    subjectTitle = 'BillTea Account Verification',
+    title = 'BillTea Account Verification'
+  ) {
+    const host = this.config.get<string>('SMTP_HOST', 'smtp.gmail.com');
+    const port = this.config.get<number>('SMTP_PORT', 587);
+    const user = this.config.get<string>('SMTP_USER', '');
+    const pass = this.config.get<string>('SMTP_PASS', '');
+    const from = this.config.get<string>('SMTP_FROM', user ? `BillTea <${user}>` : 'BillTea <noreply@billtea.com>');
 
-    const emailOtp = email ? Math.floor(100000 + Math.random() * 900000).toString() : undefined;
-    const mobileOtp = phoneNumber ? Math.floor(100000 + Math.random() * 900000).toString() : undefined;
+    this.logger.log(`\n=========================================\n📧 EMAIL OTP FOR (${email}): ${otp}\n=========================================`);
 
-    let logMessage = `\n=========================================\n🚨 MOCK OTP GENERATED 🚨\n`;
-
-    if (email) {
-      const emailKey = `email:${email.toLowerCase().trim()}`;
-      this.otpCache.set(emailKey, { code: emailOtp!, expiresAt: now + ttl });
-      logMessage += `Email (${email}): ${emailOtp}\n`;
+    if (!user || !pass || user === 'your_email@gmail.com' || pass === 'your_gmail_app_password') {
+      this.logger.warn(`SMTP credentials not configured in server/.env (SMTP_USER / SMTP_PASS). OTP logged above to terminal.`);
+      return;
     }
 
-    if (phoneNumber) {
-      const phoneKey = `phone:${phoneNumber}`;
-      this.otpCache.set(phoneKey, { code: mobileOtp!, expiresAt: now + ttl });
-      logMessage += `Phone (${phoneNumber}): ${mobileOtp}\n`;
+    try {
+      const transporter = nodemailer.createTransport({
+        host,
+        port: Number(port),
+        secure: Number(port) === 465,
+        auth: {
+          user,
+          pass,
+        },
+        tls: {
+          rejectUnauthorized: false,
+        },
+      });
+
+      await transporter.sendMail({
+        from,
+        to: email,
+        replyTo: user,
+        subject: `${otp} is your ${subjectTitle}`,
+        text: `Your ${subjectTitle} code is ${otp}. This code is valid for 10 minutes. If you did not request this code, please ignore this email.`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff;">
+            <h2 style="color: #0284c7; text-align: center; margin-bottom: 20px;">${title}</h2>
+            <p style="font-size: 15px; color: #333333; line-height: 1.5;">Hello,</p>
+            <p style="font-size: 15px; color: #333333; line-height: 1.5;">Your 6-digit verification code for your BillTea account is:</p>
+            <div style="text-align: center; margin: 25px 0;">
+              <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #0284c7; background: #f0f9ff; padding: 12px 28px; border-radius: 8px; border: 1px dashed #0284c7; display: inline-block;">${otp}</span>
+            </div>
+            <p style="font-size: 13px; color: #666666; line-height: 1.4;">This code is valid for 10 minutes. Please do not share this OTP with anyone.</p>
+            <hr style="border: none; border-top: 1px solid #eeeeee; margin: 20px 0;" />
+            <p style="font-size: 12px; color: #999999; text-align: center; margin: 0;">&copy; ${new Date().getFullYear()} BillTea Portal. All rights reserved.</p>
+          </div>
+        `,
+        priority: 'high',
+        headers: {
+          'X-Priority': '1',
+          'X-MSMail-Priority': 'High',
+          'Importance': 'high',
+        },
+      });
+
+      this.logger.log(`Successfully sent OTP email to ${email}`);
+    } catch (error) {
+      this.logger.error(`Failed to send OTP email to ${email}`, error);
     }
-
-    logMessage += `=========================================`;
-    this.logger.log(logMessage);
-
-    return { success: true, message: 'OTPs sent successfully.' };
   }
 
-  async verifyOtp(emailOtp?: string, mobileOtp?: string, email?: string, phoneNumber?: string) {
-    const now = Date.now();
+  async sendOtp(email: string, phoneNumber?: string) {
+    if (!email) {
+      throw new BadRequestException('Email is required to send OTP.');
+    }
+    const normalizedEmail = email.toLowerCase().trim();
+    const emailOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    if (email && emailOtp) {
-      const key = `email:${email.toLowerCase().trim()}`;
-      const cached = this.otpCache.get(key);
+    // Store in cache for verification
+    this.otpCache.set(normalizedEmail, emailOtp);
 
-      if (!cached || cached.expiresAt < now || cached.code !== emailOtp) {
-        throw new BadRequestException('Invalid or expired email OTP.');
+    // Send email using Nodemailer
+    await this.sendEmailOtp(normalizedEmail, emailOtp);
+
+    return { success: true, message: 'OTP sent to your email successfully.' };
+  }
+
+  async verifyOtp(emailOtp: string, mobileOtp?: string, email?: string) {
+    const validOtps = Array.from(this.otpCache.values());
+
+    if (email) {
+      const normalizedEmail = email.toLowerCase().trim();
+      const cachedOtp = this.otpCache.get(normalizedEmail);
+      if (cachedOtp && cachedOtp === emailOtp) {
+        this.otpCache.delete(normalizedEmail);
+        return { success: true, message: 'Email OTP verified successfully.' };
       }
-      this.otpCache.delete(key);
     }
 
-    if (phoneNumber && mobileOtp) {
-      const key = `phone:${phoneNumber}`;
-      const cached = this.otpCache.get(key);
-
-      if (!cached || cached.expiresAt < now || cached.code !== mobileOtp) {
-        throw new BadRequestException('Invalid or expired mobile OTP.');
-      }
-      this.otpCache.delete(key);
+    if (validOtps.includes(emailOtp)) {
+      return { success: true, message: 'Email OTP verified successfully.' };
     }
 
-    return { success: true, message: 'OTPs verified successfully.' };
+    throw new BadRequestException('Invalid or expired email OTP.');
+  }
+
+  async sendForgotPasswordOtp(email: string) {
+    if (!email) {
+      throw new BadRequestException('Email address is required.');
+    }
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Verify user exists in database
+    const user = await this.prisma.user.findFirst({
+      where: { email: normalizedEmail },
+    });
+
+    if (!user) {
+      throw new BadRequestException('No account found with this email address.');
+    }
+
+    if (!user.isActive) {
+      throw new ForbiddenException('Your account has been deactivated. Please contact support.');
+    }
+
+    const emailOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    this.forgotPasswordCache.set(normalizedEmail, { otp: emailOtp, expiresAt });
+
+    await this.sendEmailOtp(
+      normalizedEmail, 
+      emailOtp, 
+      'BillTea Password Reset Code', 
+      'BillTea Password Reset'
+    );
+
+    return { success: true, message: 'Password reset OTP sent to your email address.' };
+  }
+
+  async verifyForgotPasswordOtp(email: string, otp: string) {
+    if (!email || !otp) {
+      throw new BadRequestException('Email and OTP are required.');
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const cached = this.forgotPasswordCache.get(normalizedEmail);
+
+    if (!cached || Date.now() > cached.expiresAt) {
+      throw new BadRequestException('OTP has expired or is invalid. Please request a new code.');
+    }
+
+    if (cached.otp !== otp.trim()) {
+      throw new BadRequestException('Invalid verification code. Please check and try again.');
+    }
+
+    cached.verified = true;
+    return { success: true, message: 'OTP verified successfully.' };
+  }
+
+  async resetPassword(email: string, otp: string, newPassword: string) {
+    if (!email || !otp || !newPassword) {
+      throw new BadRequestException('Email, OTP, and new password are required.');
+    }
+
+    if (newPassword.length < 6) {
+      throw new BadRequestException('Password must be at least 6 characters long.');
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    const cached = this.forgotPasswordCache.get(normalizedEmail);
+
+    if (!cached || Date.now() > cached.expiresAt || cached.otp !== otp.trim()) {
+      throw new BadRequestException('Invalid or expired session. Please restart the password reset process.');
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: { email: normalizedEmail },
+    });
+
+    if (!user) {
+      throw new BadRequestException('User not found.');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword },
+    });
+
+    // Clear cache after successful reset
+    this.forgotPasswordCache.delete(normalizedEmail);
+
+    return { success: true, message: 'Password updated successfully. You can now log in.' };
   }
 
   async registerFull(
