@@ -6,22 +6,34 @@ import {
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
+  ScrollView,
   Platform,
   ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { authService } from "../../services/auth.service";
+import { useAuthStore } from "../../store/authStore";
 
 export default function SignupPage() {
   const router = useRouter();
+  const { setAuthenticated, setUser } = useAuthStore();
 
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     email: "",
     mobileNumber: "",
+    password: "",
+    confirmPassword: "",
+    emailOtp: "",
+    mobileOtp: "",
     fullName: "",
     companyName: "",
     branchName: "",
-    bankDetails: "",
+    bankName: "",
+    accountName: "",
+    accountNumber: "",
+    ifscCode: "",
+    upiId: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,12 +42,61 @@ export default function SignupPage() {
   const updateData = (updates: Partial<typeof formData>) =>
     setFormData({ ...formData, ...updates });
 
-  const handleNext = () => {
+  const handleNext = async () => {
     setError(null);
-    if (step === 1 && (!formData.email || !formData.mobileNumber)) {
-      setError("Email and Mobile are required");
+
+    if (step === 1) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        setError("Please enter a valid email address.");
+        return;
+      }
+      if (!/^\d{10}$/.test(formData.mobileNumber)) {
+        setError("Please enter a valid 10-digit mobile number.");
+        return;
+      }
+      if (formData.password.length < 6) {
+        setError("Password must be at least 6 characters.");
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        setError("Passwords do not match.");
+        return;
+      }
+
+      try {
+        setLoading(true);
+        await authService.checkDuplicate(formData.email, formData.mobileNumber);
+        await authService.sendOtp(formData.email, formData.mobileNumber);
+        setLoading(false);
+        setStep(2);
+      } catch (err: any) {
+        setLoading(false);
+        setError(
+          err?.response?.data?.message || err?.message || "Could not validate details."
+        );
+      }
       return;
     }
+
+    if (step === 2) {
+      if (!formData.emailOtp || !formData.mobileOtp) {
+        setError("Please enter both OTPs.");
+        return;
+      }
+      try {
+        setLoading(true);
+        await authService.verifyOtp(formData.emailOtp, formData.mobileOtp);
+        setLoading(false);
+        setStep(3);
+      } catch (err: any) {
+        setLoading(false);
+        setError(
+          err?.response?.data?.message || err?.message || "Invalid OTP."
+        );
+      }
+      return;
+    }
+
     if (step === 3 && !formData.fullName) {
       setError("Full Name is required");
       return;
@@ -48,6 +109,7 @@ export default function SignupPage() {
       setError("Branch Name is required");
       return;
     }
+
     setStep(step + 1);
   };
 
@@ -55,14 +117,33 @@ export default function SignupPage() {
     try {
       setLoading(true);
       setError(null);
-      // simulate API call
-      setTimeout(() => {
-        setLoading(false);
-        setSuccessMsg("Registration complete! Redirecting...");
-        setTimeout(() => router.push("/home"), 1500);
-      }, 1500);
-    } catch {
-      setError("Network error during registration.");
+
+      const data = await authService.register({
+        email: formData.email,
+        phoneNumber: formData.mobileNumber,
+        password: formData.password,
+        fullName: formData.fullName,
+        companyName: formData.companyName,
+        branchName: formData.branchName,
+        bankName: formData.bankName,
+        accountName: formData.accountName,
+        accountNumber: formData.accountNumber,
+        ifscCode: formData.ifscCode,
+        upiId: formData.upiId,
+      });
+
+      if (data?.user) {
+        setUser(data.user);
+      }
+      setAuthenticated(true);
+
+      setLoading(false);
+      setSuccessMsg("Registration complete! Redirecting...");
+      setTimeout(() => router.replace("/(app)/dashboard"), 1200);
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.message || err?.message || "Network error during registration."
+      );
       setLoading(false);
     }
   };
@@ -76,6 +157,7 @@ export default function SignupPage() {
               style={styles.input}
               placeholder="Email Address"
               keyboardType="email-address"
+              autoCapitalize="none"
               value={formData.email}
               onChangeText={(val) => updateData({ email: val })}
             />
@@ -86,10 +168,44 @@ export default function SignupPage() {
               value={formData.mobileNumber}
               onChangeText={(val) => updateData({ mobileNumber: val })}
             />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              secureTextEntry
+              value={formData.password}
+              onChangeText={(val) => updateData({ password: val })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Confirm Password"
+              secureTextEntry
+              value={formData.confirmPassword}
+              onChangeText={(val) => updateData({ confirmPassword: val })}
+            />
           </>
         );
       case 2:
-        return <Text style={styles.info}>Verify OTP (demo step)</Text>;
+        return (
+          <>
+            <Text style={styles.info}>
+              Enter the OTPs sent to your email and mobile.
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Email OTP"
+              keyboardType="number-pad"
+              value={formData.emailOtp}
+              onChangeText={(val) => updateData({ emailOtp: val })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Mobile OTP"
+              keyboardType="number-pad"
+              value={formData.mobileOtp}
+              onChangeText={(val) => updateData({ mobileOtp: val })}
+            />
+          </>
+        );
       case 3:
         return (
           <TextInput
@@ -119,12 +235,41 @@ export default function SignupPage() {
         );
       case 6:
         return (
-          <TextInput
-            style={styles.input}
-            placeholder="Bank Details"
-            value={formData.bankDetails}
-            onChangeText={(val) => updateData({ bankDetails: val })}
-          />
+          <>
+            <TextInput
+              style={styles.input}
+              placeholder="Bank Name (optional)"
+              value={formData.bankName}
+              onChangeText={(val) => updateData({ bankName: val })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Account Name (optional)"
+              value={formData.accountName}
+              onChangeText={(val) => updateData({ accountName: val })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Account Number (optional)"
+              keyboardType="number-pad"
+              value={formData.accountNumber}
+              onChangeText={(val) => updateData({ accountNumber: val })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="IFSC Code (optional)"
+              autoCapitalize="characters"
+              value={formData.ifscCode}
+              onChangeText={(val) => updateData({ ifscCode: val })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="UPI ID (optional)"
+              autoCapitalize="none"
+              value={formData.upiId}
+              onChangeText={(val) => updateData({ upiId: val })}
+            />
+          </>
         );
       default:
         return null;
@@ -136,72 +281,76 @@ export default function SignupPage() {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <View style={styles.card}>
-        <Text style={styles.title}>Signup</Text>
-        <Text style={styles.subtitle}>Step {step}/6</Text>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.card}>
+          <Text style={styles.title}>Signup</Text>
+          <Text style={styles.subtitle}>Step {step}/6</Text>
 
-        {error && <Text style={styles.error}>{error}</Text>}
-        {successMsg && <Text style={styles.success}>{successMsg}</Text>}
+          {error && <Text style={styles.error}>{error}</Text>}
+          {successMsg && <Text style={styles.success}>{successMsg}</Text>}
 
-        <View style={{ marginVertical: 20 }}>{renderStep()}</View>
+          <View style={{ marginVertical: 20 }}>{renderStep()}</View>
 
-        <View style={styles.actions}>
-          {step > 1 && step < 6 && (
+          <View style={styles.actions}>
+            {step > 1 && step < 6 && (
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => setStep(step - 1)}
+                disabled={loading}
+              >
+                <Text style={styles.backText}>Back</Text>
+              </TouchableOpacity>
+            )}
+
+            {step < 6 ? (
+              <TouchableOpacity
+                style={styles.button}
+                onPress={handleNext}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.buttonText}>Continue</Text>
+                )}
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.button}
+                onPress={handleFinalSubmit}
+                disabled={loading || !!successMsg}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.buttonText}>Complete Setup</Text>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {step === 1 && (
             <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => setStep(step - 1)}
-              disabled={loading}
+              style={{ marginTop: 20 }}
+              onPress={() => router.push("/(auth)/login")}
             >
-              <Text style={styles.backText}>Back</Text>
-            </TouchableOpacity>
-          )}
-
-          {step < 6 ? (
-            <TouchableOpacity
-              style={styles.button}
-              onPress={handleNext}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Continue</Text>
-              )}
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              style={styles.button}
-              onPress={handleFinalSubmit}
-              disabled={loading || !!successMsg}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Complete Setup</Text>
-              )}
+              <Text style={styles.linkText}>
+                Already have an account? Login
+              </Text>
             </TouchableOpacity>
           )}
         </View>
-
-        {step === 1 && (
-          <TouchableOpacity
-            style={{ marginTop: 20 }}
-            onPress={() => router.push("/login")}
-          >
-            <Text style={styles.linkText}>
-              Already have an account? Login
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#f5f5f5" },
+  container: { flex: 1, backgroundColor: "#f5f5f5" },
+  scrollContent: { flexGrow: 1, justifyContent: "center", alignItems: "center", padding: 20 },
   card: {
-    width: "90%",
+    width: "100%",
+    maxWidth: 420,
     backgroundColor: "#fff",
     borderRadius: 20,
     padding: 20,
@@ -244,5 +393,5 @@ const styles = StyleSheet.create({
   error: { color: "red", textAlign: "center", marginBottom: 10 },
   success: { color: "green", textAlign: "center", marginBottom: 10 },
   linkText: { color: "#007AFF", textAlign: "center", fontWeight: "500" },
-  info: { textAlign: "center", color: "#555", fontSize: 14 },
+  info: { textAlign: "center", color: "#555", fontSize: 14, marginBottom: 8 },
 });
