@@ -12,6 +12,7 @@ export interface Branch {
   name: string;
   isMainBranch?: boolean;
   address?: string;
+  isActive?: boolean;
 }
 
 interface BranchContextType {
@@ -63,6 +64,7 @@ export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
 
       console.log('BranchProvider: Fetching with token:', token.slice(0, 10) + '...');
+      
       // 2. Fetch branches using the global axios client
       const response = await apiClient.get('/branches');
       console.log('BranchProvider: Response Status:', response.status);
