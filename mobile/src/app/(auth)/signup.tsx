@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Image } from "react-native";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -384,7 +385,11 @@ export default function SignupPage() {
             {/* Top Brand Header */}
             <View style={styles.header}>
               <View style={styles.logoBox}>
-                <Sparkles size={28} color={COLORS.primary} />
+                <Image
+                  source={require("../../../assets/images/Billtea-white-03.png")}
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
               </View>
               <Text style={styles.brandName}>BillTea</Text>
               <Text style={styles.tagline}>Business Suite Setup</Text>
@@ -1016,7 +1021,10 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
   },
-
+    logoImage: {
+  width: 55,
+  height: 55,
+},
   scrollContent: {
     flexGrow: 1,
   },
