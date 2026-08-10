@@ -14,7 +14,7 @@ export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
   // Simple in-memory cache for mock OTPs
-  private otpCache = new Map<string, string>();
+  private otpCache = new Map<string, { otp: string; expiresAt: number }>();
   private forgotPasswordCache = new Map<string, { otp: string; expiresAt: number; verified?: boolean }>();
 
   constructor(
@@ -113,9 +113,10 @@ export class AuthService {
     }
     const normalizedEmail = email.toLowerCase().trim();
     const emailOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes expiry
 
     // Store in cache for verification
-    this.otpCache.set(normalizedEmail, emailOtp);
+    this.otpCache.set(normalizedEmail, { otp: emailOtp, expiresAt });
 
     // Send email using Nodemailer
     await this.sendEmailOtp(normalizedEmail, emailOtp);
@@ -124,19 +125,35 @@ export class AuthService {
   }
 
   async verifyOtp(emailOtp: string, mobileOtp?: string, email?: string) {
-    const validOtps = Array.from(this.otpCache.values());
-
     if (email) {
       const normalizedEmail = email.toLowerCase().trim();
-      const cachedOtp = this.otpCache.get(normalizedEmail);
-      if (cachedOtp && cachedOtp === emailOtp) {
+      const cached = this.otpCache.get(normalizedEmail);
+
+      if (!cached) {
+        throw new BadRequestException('Invalid or expired email OTP. Please request a new code.');
+      }
+
+      if (Date.now() > cached.expiresAt) {
+        this.otpCache.delete(normalizedEmail);
+        throw new BadRequestException('OTP code has expired (valid for 10 minutes). Please click Resend OTP.');
+      }
+
+      if (cached.otp === emailOtp) {
         this.otpCache.delete(normalizedEmail);
         return { success: true, message: 'Email OTP verified successfully.' };
       }
     }
 
-    if (validOtps.includes(emailOtp)) {
-      return { success: true, message: 'Email OTP verified successfully.' };
+    const now = Date.now();
+    for (const [key, cached] of Array.from(this.otpCache.entries())) {
+      if (cached.otp === emailOtp) {
+        if (now > cached.expiresAt) {
+          this.otpCache.delete(key);
+          throw new BadRequestException('OTP code has expired (valid for 10 minutes). Please click Resend OTP.');
+        }
+        this.otpCache.delete(key);
+        return { success: true, message: 'Email OTP verified successfully.' };
+      }
     }
 
     throw new BadRequestException('Invalid or expired email OTP.');
@@ -392,11 +409,14 @@ export class AuthService {
       }
     } else if (dto.otp) {
       const target = dto.email ? dto.email.toLowerCase().trim() : dto.phoneNumber;
-      const validOtp = this.otpCache.get(target!);
-      if (!validOtp || validOtp !== dto.otp) {
+      const cached = target ? this.otpCache.get(target) : null;
+      if (!cached || Date.now() > cached.expiresAt || cached.otp !== dto.otp) {
+        if (cached && Date.now() > cached.expiresAt && target) {
+          this.otpCache.delete(target);
+        }
         throw new UnauthorizedException('Invalid or expired OTP.');
       }
-      this.otpCache.delete(target!);
+      if (target) this.otpCache.delete(target);
     }
 
     await this.prisma.user.update({
