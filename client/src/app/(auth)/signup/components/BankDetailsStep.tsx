@@ -3,7 +3,7 @@ import { StepProps } from './types';
 
 export function BankDetailsStep({ formData, updateData }: StepProps) {
   return (
-    <div className="space-y-4 animate-fade-in max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+    <div className="space-y-4 animate-fade-in">
       <div className="bg-emerald-500/10 p-4 rounded-xl border border-emerald-500/20 mb-4 text-sm text-emerald-800 dark:text-emerald-300">
         <div className="flex items-start gap-2">
           <span className="material-symbols-outlined text-emerald-500 mt-0.5">info</span>
