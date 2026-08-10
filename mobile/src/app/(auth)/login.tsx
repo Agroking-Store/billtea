@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Image } from "react-native";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -27,6 +28,7 @@ import { useAuthStore } from '../../store/authStore';
 import { authService } from '../../services/auth.service';
 
 export default function LoginScreen() {
+  
   const router = useRouter();
   const { setAuthenticated, setUser } = useAuthStore();
 
@@ -265,9 +267,14 @@ export default function LoginScreen() {
         >
           <View style={styles.container}>
             <View style={styles.header}>
-              <View style={styles.logoBox}>
-                <Text style={styles.logoText}>₹</Text>
-              </View>
+             
+<View style={styles.logoBox}>
+  <Image
+    source={require("../../../assets/images/Billtea-white-03.png")}
+    style={styles.logoImage}
+    resizeMode="contain"
+  />
+</View>
 
               <Text style={styles.brandName}>BillTea</Text>
               <Text style={styles.tagline}>Manage your business billing</Text>
@@ -753,6 +760,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 34,
   },
+  logoImage: {
+  width: 55,
+  height: 55,
+},
 
   logoBox: {
     width: 58,
