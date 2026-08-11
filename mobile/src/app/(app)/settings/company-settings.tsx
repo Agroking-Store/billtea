@@ -37,6 +37,7 @@ import { BlurView } from 'expo-blur';
 import * as ImagePicker from 'expo-image-picker';
 import { apiClient } from '@/api/client';
 import { ENV } from '@/config/env';
+import { getStoredUser } from '@/lib/auth';
 
 // Same logic as web's getImageUrl — turns a relative "/uploads/..." path
 // into a full URL pointing at the backend server.
@@ -58,6 +59,7 @@ interface Company {
   id: string;
   name: string;
   logo?: string;
+  tagline?: string;
   identifiers?: Identifier[];
   createdBy?: { fullName: string };
   branches?: { city: string; state: string }[];
@@ -80,8 +82,11 @@ export default function CompanySettingsScreen() {
   const [editUniqueIdName, setEditUniqueIdName] = useState('');
   const [editUniqueIdValue, setEditUniqueIdValue] = useState('');
 
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
   useEffect(() => {
     fetchCompany();
+    getStoredUser().then((u) => u && setCurrentUser(u));
   }, []);
 
   const fetchCompany = async () => {
@@ -94,8 +99,8 @@ export default function CompanySettingsScreen() {
         setEditName(c.name || '');
 
         const ids = c.identifiers || [];
-        const taglineObj = ids.find((i) => i.label === 'TAGLINE' || i.key === 'TAGLINE');
-        setEditTagline(taglineObj ? taglineObj.value : '');
+        const taglineObj = ids.find((i: any) => i.label === 'TAGLINE' || i.key === 'TAGLINE' || i.name === 'TAGLINE');
+        setEditTagline(taglineObj ? taglineObj.value : (c.tagline || ''));
 
         const uniqueIdObj = ids.find(
           (i) => (i.label || i.key) && i.label !== 'TAGLINE' && i.key !== 'TAGLINE'
@@ -142,6 +147,9 @@ export default function CompanySettingsScreen() {
     if (isEditing) {
       // Cancelling — reset back to the last loaded values
       setEditName(company?.name || '');
+      setEditTagline(
+        company?.identifiers?.find((i: any) => i.label === 'TAGLINE' || i.key === 'TAGLINE' || i.name === 'TAGLINE')?.value || company?.tagline || ''
+      );
     }
     setIsEditing((prev) => !prev);
   };
@@ -198,7 +206,7 @@ export default function CompanySettingsScreen() {
     : 'Location Not Set';
 
   const displayTagline =
-    company?.identifiers?.find((i) => i.label === 'TAGLINE' || i.key === 'TAGLINE')?.value || '';
+    company?.identifiers?.find((i: any) => i.label === 'TAGLINE' || i.key === 'TAGLINE' || i.name === 'TAGLINE')?.value || company?.tagline || '';
   const displayIdentifiers =
     company?.identifiers?.filter((i) => i.label !== 'TAGLINE' && i.key !== 'TAGLINE') || [];
 
@@ -433,7 +441,7 @@ export default function CompanySettingsScreen() {
 
               <BusinessField
                 label="Created By"
-                value={company?.createdBy?.fullName || ''}
+                value={company?.createdBy?.fullName || currentUser?.fullName || ''}
                 rightIcon={<User color={colors.textSecondary} size={14} opacity={0.6} />}
               />
 

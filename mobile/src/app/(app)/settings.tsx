@@ -138,7 +138,7 @@ export default function SettingsScreen() {
           {/* Profile Header */}
           <ProfileHeader
             name={company?.name || "Company Profile"}
-            role={company?.identifiers?.find((i: any) => i.label === 'TAGLINE' || i.key === 'TAGLINE')?.value || "Business Account"}
+            role={company?.identifiers?.find((i: any) => i.label === 'TAGLINE' || i.key === 'TAGLINE' || i.name === 'TAGLINE')?.value || (company as any)?.tagline || "Business Account"}
             avatarUri={company?.logo ? getImageUrl(company.logo) : ''}
             planName={company?.subscription?.status === 'EXPIRED' ? 'Membership Expired' : `${company?.subscription?.plan?.name || "TRIAL"} Membership`}
             onEditPress={() => router.push('/settings/company-settings' as any)}
