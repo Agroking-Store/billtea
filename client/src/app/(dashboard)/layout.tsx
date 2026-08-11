@@ -1,5 +1,5 @@
 'use client';
-
+import { getUser } from "@/lib/auth";
 import React, { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from '../../components/ThemeProvider';
@@ -11,6 +11,7 @@ import { isLoggedIn, logout, API_BASE } from '../../lib/auth';
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const { isDark, toggleTheme } = useTheme();
   const pathname = usePathname();
+  
   const router = useRouter();
   const { branches, selectedBranchId, setSelectedBranchId, isLoadingBranches } = useBranch();
   const { isExpired, daysRemaining, isLoading: isLoadingSub } = useSubscription();
@@ -95,11 +96,14 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             ) : (
               <img
   src={
-    isDark
+    user.company?.logo ||
+    user.companyLogo ||
+    user.profilePicture ||
+    (isDark
       ? "/Biltea-white-03.png"
-      : "/BillTea-dark-04.png"
+      : "/BillTea-dark-04.png")
   }
-  alt="BillTea Logo"
+  alt={user.company?.name || user.companyName || "BillTea Logo"}
   className="size-full object-contain"
 />
             )}
