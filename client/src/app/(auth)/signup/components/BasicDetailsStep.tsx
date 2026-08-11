@@ -14,6 +14,7 @@ export function BasicDetailsStep({ formData, updateData, errors, clearError }: S
           <span className="material-symbols-outlined text-on-surface-variant mr-3 text-xl select-none">mail</span>
           <input
             type="email"
+            maxLength={100}
             value={formData.email}
             onChange={(e) => { clearError('email'); updateData({ email: e.target.value }); }}
             placeholder="you@company.com"
@@ -51,6 +52,7 @@ export function BasicDetailsStep({ formData, updateData, errors, clearError }: S
           <span className="material-symbols-outlined text-on-surface-variant mr-3 text-xl select-none">lock</span>
           <input
             type={showPassword ? 'text' : 'password'}
+            maxLength={64}
             value={formData.password}
             onChange={(e) => { clearError('password'); updateData({ password: e.target.value }); }}
             placeholder="Min. 6 characters"
@@ -71,6 +73,7 @@ export function BasicDetailsStep({ formData, updateData, errors, clearError }: S
           <span className="material-symbols-outlined text-on-surface-variant mr-3 text-xl select-none">lock</span>
           <input
             type={showConfirm ? 'text' : 'password'}
+            maxLength={64}
             value={formData.confirmPassword}
             onChange={(e) => { clearError('confirmPassword'); updateData({ confirmPassword: e.target.value }); }}
             placeholder="Re-enter password"

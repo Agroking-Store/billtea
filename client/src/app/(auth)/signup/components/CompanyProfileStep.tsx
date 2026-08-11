@@ -17,6 +17,7 @@ export function CompanyProfileStep({ formData, updateData, errors, clearError }:
           <span className="material-symbols-outlined text-on-surface-variant mr-3 text-xl select-none">domain</span>
           <input
             type="text"
+            maxLength={100}
             value={formData.companyName}
             onChange={(e) => { clearError('companyName'); updateData({ companyName: e.target.value }); }}
             placeholder="Acme Corp"
@@ -51,6 +52,7 @@ export function CompanyProfileStep({ formData, updateData, errors, clearError }:
           <span className="material-symbols-outlined text-on-surface-variant mr-3 text-xl select-none">subtitles</span>
           <input
             type="text"
+            maxLength={100}
             value={formData.tagline}
             onChange={(e) => { clearError('tagline'); updateData({ tagline: e.target.value }); }}
             placeholder="Innovating the future"
@@ -66,6 +68,7 @@ export function CompanyProfileStep({ formData, updateData, errors, clearError }:
           <span className="material-symbols-outlined text-on-surface-variant mr-3 text-xl select-none">badge</span>
           <input
             type="text"
+            maxLength={50}
             value={formData.businessIdName}
             onChange={(e) => { clearError('businessIdName'); updateData({ businessIdName: e.target.value }); }}
             placeholder="e.g. GSTIN, PAN, VAT"
@@ -81,6 +84,7 @@ export function CompanyProfileStep({ formData, updateData, errors, clearError }:
           <span className="material-symbols-outlined text-on-surface-variant mr-3 text-xl select-none">pin</span>
           <input
             type="text"
+            maxLength={20}
             value={formData.businessIdNumber}
             onChange={(e) => { clearError('businessIdNumber'); updateData({ businessIdNumber: e.target.value }); }}
             placeholder="22AAAAA0000A1Z5"
