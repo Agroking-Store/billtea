@@ -12,6 +12,7 @@ export interface Branch {
   name: string;
   isMainBranch?: boolean;
   address?: string;
+  isActive?: boolean;
 }
 
 interface BranchContextType {
@@ -63,6 +64,7 @@ export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
 
       console.log('BranchProvider: Fetching with token:', token.slice(0, 10) + '...');
+      
       // 2. Fetch branches using the global axios client
       const response = await apiClient.get('/branches');
       console.log('BranchProvider: Response Status:', response.status);
@@ -75,11 +77,11 @@ export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return;
       }
 
+      let resData = response?.data;
+
       if (!resData) {
-        const res = await apiFetch('/branches?all=true');
-        if (res.ok) {
-          resData = await res.json();
-        }
+        const fallbackRes = await apiClient.get('/branches?all=true');
+        resData = fallbackRes?.data;
       }
 
       console.log('Branch Response Received:', resData);
@@ -99,9 +101,10 @@ export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       // Filter active branches for selection
       const activeBranchList = branchList.filter((b: any) => b.isActive !== false);
-      setBranches(activeBranchList.length > 0 ? activeBranchList : branchList);
+      const targetList = activeBranchList.length > 0 ? activeBranchList : branchList;
+      setBranches(targetList);
 
-      if (activeBranchList.length > 0) {
+      if (targetList.length > 0) {
         let savedId: string | null = null;
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
           savedId = localStorage.getItem('selectedBranchId');
@@ -111,15 +114,17 @@ export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
 
         const exists = savedId
-          ? branchList.some((b: Branch) => String(b.id) === String(savedId))
+          ? targetList.some((b: Branch) => String(b.id) === String(savedId))
           : false;
 
         if (savedId && exists) {
           setSelectedBranchIdState(String(savedId));
         } else {
-          const mainBranch = branchList.find((b: Branch) => b.isMainBranch);
-          const defaultBranch = mainBranch || branchList[0];
-          await setSelectedBranchId(defaultBranch.id);
+          const mainBranch = targetList.find((b: Branch) => b.isMainBranch);
+          const defaultBranch = mainBranch || targetList[0];
+          if (defaultBranch && defaultBranch.id != null) {
+            await setSelectedBranchId(defaultBranch.id);
+          }
         }
       } else {
         setSelectedBranchIdState(null);

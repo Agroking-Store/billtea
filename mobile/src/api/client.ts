@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { ENV } from '../config/env';
 import { getStorageItemAsync, setStorageItemAsync } from '../utils/storage';
@@ -9,14 +11,12 @@ export const apiClient = axios.create({
   timeout: 10000, // 10 seconds timeout
   headers: {
     'Content-Type': 'application/json',
-    'Bypass-Tunnel-Reminder': 'true'
+    'ngrok-skip-browser-warning': 'true', // FIX 1: Required for ngrok tunnels
+    'Bypass-Tunnel-Reminder': 'true',     // Kept in case localtunnel is used
   },
 });
 
 console.log('API_URL is:', ENV.API_URL);
-
-import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Add request interceptor for auth token and selected branch
 apiClient.interceptors.request.use(
@@ -66,20 +66,34 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true;
 
       try {
-        const refreshToken = await getStorageItemAsync(TOKEN_KEYS.REFRESH);
+        let refreshToken = await getStorageItemAsync(TOKEN_KEYS.REFRESH);
         if (!refreshToken) {
-          throw new Error('No refresh token available');
+          refreshToken = await AsyncStorage.getItem('refreshToken');
         }
 
-        // Try to refresh token
-        const res = await axios.post(`${ENV.API_URL}/auth/refresh`, {
-          refreshToken,
-        });
+        if (!refreshToken) {
+          await useAuthStore.getState().logout();
+          return Promise.reject(error);
+        }
+
+        // FIX 2: Send ngrok header during token refresh as well
+        const res = await axios.post(
+          `${ENV.API_URL}/auth/refresh`,
+          { refreshToken },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'ngrok-skip-browser-warning': 'true',
+            },
+          }
+        );
 
         if (res.data?.accessToken) {
           await setStorageItemAsync(TOKEN_KEYS.ACCESS, res.data.accessToken);
+          await AsyncStorage.setItem('accessToken', res.data.accessToken);
           if (res.data.refreshToken) {
             await setStorageItemAsync(TOKEN_KEYS.REFRESH, res.data.refreshToken);
+            await AsyncStorage.setItem('refreshToken', res.data.refreshToken);
           }
 
           // Retry the original request
@@ -87,14 +101,16 @@ apiClient.interceptors.response.use(
           return apiClient(originalRequest);
         }
       } catch (refreshError) {
-        // If refresh fails, we should logout the user (clear tokens and update state)
+        // Clear tokens and update state if refresh fails
         await useAuthStore.getState().logout();
-        console.error('Refresh token expired or invalid', refreshError);
       }
     }
 
     if (!error.response) {
-      console.error(`Network Error attempting to reach ${ENV.API_URL}${error.config?.url || ''}:`, error.message);
+      console.error(
+        `Network Error attempting to reach ${ENV.API_URL}${error.config?.url || ''}:`,
+        error.message
+      );
     }
 
     return Promise.reject(error);

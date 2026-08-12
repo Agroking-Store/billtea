@@ -108,8 +108,8 @@ export default function SignupPage() {
   };
 
   const validateStep2 = async () => {
-    if (!formData.emailOtp || !formData.mobileOtp) {
-      setGlobalError('Please enter both OTPs');
+    if (!formData.emailOtp) {
+      setGlobalError('Please enter the 6-digit email OTP');
       return false;
     }
     
@@ -117,7 +117,7 @@ export default function SignupPage() {
       setLoading(true);
       const res = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ emailOtp: formData.emailOtp, mobileOtp: formData.mobileOtp })
+        body: JSON.stringify({ email: formData.email, emailOtp: formData.emailOtp })
       });
       const data = await res.json();
       setLoading(false);

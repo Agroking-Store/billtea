@@ -93,7 +93,15 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             {(user.company?.logo || user.companyLogo) ? (
               <img src={`${API_BASE.replace('/api/v1', '')}${(user.company?.logo || user.companyLogo)}`} alt="Company Logo" className="size-full object-cover bg-white" />
             ) : (
-              <span className="material-symbols-outlined text-primary text-xl select-none font-medium">apartment</span>
+              <img
+  src={
+    isDark
+      ? "/Biltea-white-03.png"
+      : "/BillTea-dark-04.png"
+  }
+  alt="BillTea Logo"
+  className="size-full object-contain"
+/>
             )}
           </div>
           <div className={`z-10 flex-1 flex flex-col min-w-0 transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
