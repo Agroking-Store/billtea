@@ -231,7 +231,9 @@ export default function QuotationsScreen() {
   const [statusFilter, setStatusFilter] = useState("");
   const [fromDateFilter, setFromDateFilter] = useState("");
   const [toDateFilter, setToDateFilter] = useState("");
-  const [sortBy, setSortBy] = useState<"quotationNumber" | "customer" | "quotationDate" | "grandTotal">("quotationDate");
+  const [sortBy, setSortBy] = useState<
+    "quotationNumber" | "customer" | "quotationDate" | "grandTotal" | "invoiceNumber" | "invoiceDate"
+  >("quotationDate");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   // Pickers state for selection modals
@@ -258,8 +260,11 @@ export default function QuotationsScreen() {
     quotations.forEach((q) => {
       if (q.customer?.companyName) names.add(q.customer.companyName);
     });
+    invoices.forEach((i) => {
+      if (i.customer?.companyName) names.add(i.customer.companyName);
+    });
     return Array.from(names).sort((a, b) => a.localeCompare(b));
-  }, [quotations]);
+  }, [quotations, invoices]);
 
   const hasActiveFilters = Boolean(
     customerFilter ||
@@ -353,7 +358,7 @@ export default function QuotationsScreen() {
   const filteredInvoices = useMemo(() => {
     const query = searchText.trim().toLowerCase();
 
-    return invoices.filter((i) => {
+    let list = invoices.filter((i) => {
       // Text Search Query
       if (query) {
         const iNum = (i.invoiceNumber ?? "").toLowerCase();
@@ -370,6 +375,11 @@ export default function QuotationsScreen() {
 
       // Customer Filter
       if (customerFilter && i.customer?.customerName !== customerFilter) {
+        return false;
+      }
+
+      // Company Filter
+      if (companyFilter && i.customer?.companyName !== companyFilter) {
         return false;
       }
 
@@ -395,7 +405,24 @@ export default function QuotationsScreen() {
 
       return true;
     });
-  }, [invoices, searchText, customerFilter, statusFilter, fromDateFilter, toDateFilter]);
+
+    // Column Sorting
+    return [...list].sort((a, b) => {
+      let comparison = 0;
+      if (sortBy === "invoiceNumber" || sortBy === "quotationNumber") {
+        comparison = (a.invoiceNumber || "").localeCompare(b.invoiceNumber || "");
+      } else if (sortBy === "customer") {
+        const nameA = a.customer?.customerName || "";
+        const nameB = b.customer?.customerName || "";
+        comparison = nameA.localeCompare(nameB);
+      } else if (sortBy === "invoiceDate" || sortBy === "quotationDate") {
+        comparison = new Date(a.invoiceDate).getTime() - new Date(b.invoiceDate).getTime();
+      } else if (sortBy === "grandTotal") {
+        comparison = (a.totals?.grandTotal || 0) - (b.totals?.grandTotal || 0);
+      }
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+  }, [invoices, searchText, customerFilter, companyFilter, statusFilter, fromDateFilter, toDateFilter, sortBy, sortOrder]);
 
   const filteredExpenses = useMemo(() => {
     const query = searchText.trim().toLowerCase();
@@ -1304,7 +1331,7 @@ export default function QuotationsScreen() {
               </View>
             </View>
 
-            {/* Row 2: CUSTOMER & PAYMENT STATUS */}
+            {/* Row 2: Customer Name & Company Name Dropdowns */}
             <View style={styles.filterGridRow}>
               <View style={styles.filterFieldContainer}>
                 <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>CUSTOMER</Text>
@@ -1313,38 +1340,106 @@ export default function QuotationsScreen() {
                   style={[styles.filterSelectBtn, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}
                 >
                   <Text style={[styles.filterSelectText, { color: customerFilter ? colors.text : colors.textSecondary }]} numberOfLines={1}>
-                    {customerFilter || "All Customers"}
+                    {customerFilter || "Customer Name"}
                   </Text>
                   <ChevronDown size={16} color={colors.textSecondary} />
                 </TouchableOpacity>
               </View>
 
               <View style={styles.filterFieldContainer}>
-                <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>PAYMENT STATUS</Text>
+                <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>COMPANY</Text>
                 <TouchableOpacity
-                  onPress={() => setShowInvoiceStatusPicker(true)}
+                  onPress={() => setShowCompanyPicker(true)}
                   style={[styles.filterSelectBtn, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}
                 >
-                  <Text style={[styles.filterSelectText, { color: statusFilter ? colors.text : colors.textSecondary }]} numberOfLines={1}>
-                    {statusFilter === "" && "All Status"}
-                    {statusFilter === "PAID" && "Paid"}
-                    {statusFilter === "UNPAID" && "Unpaid"}
-                    {statusFilter === "PARTIAL" && "Partial"}
-                    {statusFilter === "OVERDUE" && "Overdue"}
-                    {statusFilter === "CANCELLED" && "Cancelled"}
+                  <Text style={[styles.filterSelectText, { color: companyFilter ? colors.text : colors.textSecondary }]} numberOfLines={1}>
+                    {companyFilter || "Company Name"}
                   </Text>
                   <ChevronDown size={16} color={colors.textSecondary} />
                 </TouchableOpacity>
               </View>
             </View>
 
-            {/* Row 3: Action Buttons */}
+            {/* Row 3: STATUS Pill Chips */}
+            <View style={{ marginBottom: 14 }}>
+              <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>STATUS</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                {[
+                  { label: "All", value: "" },
+                  { label: "Draft", value: "DRAFT" },
+                  { label: "Sent", value: "SENT" },
+                  { label: "Unpaid", value: "UNPAID" },
+                  { label: "Partial", value: "PARTIAL" },
+                  { label: "Paid", value: "PAID" },
+                  { label: "Overdue", value: "OVERDUE" },
+                  { label: "Cancelled", value: "CANCELLED" },
+                ].map((chip) => {
+                  const isSelected = statusFilter === chip.value;
+                  return (
+                    <TouchableOpacity
+                      key={chip.label}
+                      onPress={() => setStatusFilter(chip.value)}
+                      style={[
+                        styles.statusChipBtn,
+                        isSelected
+                          ? { backgroundColor: colors.primary + "25", borderColor: colors.primary }
+                          : { backgroundColor: colors.surfaceVariant, borderColor: colors.border },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.statusChipText,
+                          { color: isSelected ? colors.primary : colors.textSecondary },
+                        ]}
+                      >
+                        {chip.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            {/* Row 4: Sort By & Order Dropdowns */}
+            <View style={styles.filterGridRow}>
+              <View style={styles.filterFieldContainer}>
+                <TouchableOpacity
+                  onPress={() => setShowSortPicker(true)}
+                  style={[styles.filterSelectBtn, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}
+                >
+                  <Text style={[styles.filterSelectText, { color: colors.text }]} numberOfLines={1}>
+                    {sortBy === "invoiceNumber" || sortBy === "quotationNumber"
+                      ? "Sort By: Number"
+                      : sortBy === "customer"
+                      ? "Sort By: Customer"
+                      : sortBy === "invoiceDate" || sortBy === "quotationDate"
+                      ? "Sort By: Date"
+                      : "Sort By: Amount"}
+                  </Text>
+                  <ChevronDown size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.filterFieldContainer}>
+                <TouchableOpacity
+                  onPress={() => setShowOrderPicker(true)}
+                  style={[styles.filterSelectBtn, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}
+                >
+                  <Text style={[styles.filterSelectText, { color: colors.text }]} numberOfLines={1}>
+                    {sortOrder === "asc" ? "Ascending" : "Descending"}
+                  </Text>
+                  <ChevronDown size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Row 5: Action Buttons */}
             <View style={styles.filterActionButtonsRow}>
               <TouchableOpacity
                 onPress={handleResetFilters}
                 style={[styles.resetOutlineBtn, { borderColor: colors.border }]}
               >
-                <Text style={[styles.resetOutlineText, { color: colors.text }]}>Reset Filters</Text>
+                <Text style={[styles.resetOutlineText, { color: colors.text }]}>Reset</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
