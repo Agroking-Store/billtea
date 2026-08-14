@@ -4,7 +4,9 @@ import {
   Alert,
   Dimensions,
   FlatList,
+  Linking,
   Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -801,7 +803,15 @@ export default function QuotationsScreen() {
       setIsSavingNotes(false);
     }
   };
-
+  const handleCallCustomer = (phoneNumber?: string) => {
+    if (!phoneNumber) {
+      Alert.alert("No Phone Number", "This customer doesn't have a phone number on file.");
+      return;
+    }
+    Linking.openURL(`tel:${phoneNumber}`).catch(() => {
+      Alert.alert("Unable to Place Call", "Your device couldn't open the phone dialer.");
+    });
+  };
   const handleSearchIconPress = () => {
     setSearchActive((current) => {
       const next = !current;
@@ -1012,7 +1022,7 @@ export default function QuotationsScreen() {
           />
           <ActionIconButton
             icon={Phone}
-            onPress={() => handleComingSoon("Call")}
+            onPress={() => handleCallCustomer(item.customer?.mobileNumber)}
             color="#34D399"
           />
           <ActionIconButton
