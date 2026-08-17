@@ -13,9 +13,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
+  AlertCircle,
   ArrowLeft,
   Building,
   CheckCircle,
+  Clock,
   CreditCard,
   Eye,
   EyeOff,
@@ -54,8 +56,10 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
 
-  // Resend Timer for OTP
+  // Resend Timer for OTP (30s cooldown)
   const [resendTimer, setResendTimer] = useState<number>(0);
+  // Main OTP Expiration Timer (10 minutes = 600s)
+  const [otpExpiryTimer, setOtpExpiryTimer] = useState<number>(600);
 
   // Form Data (Identical to Web Signup)
   const [formData, setFormData] = useState({
@@ -100,7 +104,7 @@ export default function SignupPage() {
   const [newTaxLabel, setNewTaxLabel] = useState('');
   const [newTaxPercentage, setNewTaxPercentage] = useState('');
 
-  // Resend Timer Effect
+  // Resend Timer Effect (30s cooldown)
   useEffect(() => {
     let interval: any = null;
     if (resendTimer > 0) {
@@ -112,6 +116,25 @@ export default function SignupPage() {
     }
     return () => clearInterval(interval);
   }, [resendTimer]);
+
+  // Main OTP Expiration Timer Effect (10 minutes)
+  useEffect(() => {
+    let interval: any = null;
+    if (otpExpiryTimer > 0) {
+      interval = setInterval(() => {
+        setOtpExpiryTimer((prev) => Math.max(0, prev - 1));
+      }, 1000);
+    } else if (otpExpiryTimer === 0 && interval) {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [otpExpiryTimer]);
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   const updateData = (updates: Partial<typeof formData>) => {
     setError(null);
@@ -152,6 +175,7 @@ export default function SignupPage() {
 
       setLoading(false);
       setResendTimer(30);
+      setOtpExpiryTimer(600);
       setStep(2);
       return true;
     } catch (err: any) {
@@ -195,6 +219,7 @@ export default function SignupPage() {
       await authService.sendOtp(formData.email.trim(), formData.mobileNumber.trim());
       setLoading(false);
       setResendTimer(30);
+      setOtpExpiryTimer(600);
       setSuccessMsg('OTP code resent to your email address.');
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err: any) {
@@ -554,12 +579,37 @@ export default function SignupPage() {
                         </Text>
                         . Please check your inbox and enter the code below.
                       </Text>
+
+                      {/* Timer status badge */}
+                      <View style={styles.timerBadgeContainer}>
+                        <Text style={styles.timerLabelText}>Code Validity:</Text>
+                        {otpExpiryTimer === 0 ? (
+                          <View style={styles.expiredBadge}>
+                            <AlertCircle size={14} color="#EF4444" />
+                            <Text style={styles.expiredBadgeText}>
+                              OTP Expired (Please Resend)
+                            </Text>
+                          </View>
+                        ) : (
+                          <View style={styles.validBadge}>
+                            <Clock size={14} color={COLORS.primary} />
+                            <Text style={styles.validBadgeText}>
+                              Expires in {formatTime(otpExpiryTimer)}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
 
                     <View style={styles.inputGroup}>
                       <Text style={styles.label}>Email Verification Code</Text>
-                      <View style={styles.inputContainer}>
-                        <ShieldCheck size={20} color={COLORS.muted} />
+                      <View
+                        style={[
+                          styles.inputContainer,
+                          otpExpiryTimer === 0 && styles.inputContainerExpired,
+                        ]}
+                      >
+                        <ShieldCheck size={20} color={otpExpiryTimer === 0 ? '#EF4444' : COLORS.muted} />
                         <TextInput
                           style={[styles.input, styles.otpInput]}
                           placeholder="6-digit code"
@@ -1185,6 +1235,63 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     lineHeight: 19,
+  },
+
+  timerBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(103,232,249,0.15)',
+  },
+
+  timerLabelText: {
+    fontSize: 12,
+    color: COLORS.muted,
+    fontWeight: '500',
+  },
+
+  validBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(103,232,249,0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(103,232,249,0.25)',
+  },
+
+  validBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+
+  expiredBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(239,68,68,0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.25)',
+  },
+
+  expiredBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#EF4444',
+  },
+
+  inputContainerExpired: {
+    borderColor: 'rgba(239,68,68,0.5)',
+    backgroundColor: 'rgba(239,68,68,0.05)',
   },
 
   highlightText: {
