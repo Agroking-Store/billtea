@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { apiFetch, API_BASE } from '@/lib/auth';
+import { apiFetch, API_BASE, getUser } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -166,6 +166,7 @@ const getImageUrl = (url?: string) => {
 
 export default function CompanySettingsPage() {
   const router = useRouter();
+  const currentUser = getUser();
   const [company, setCompany] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -193,8 +194,8 @@ export default function CompanySettingsPage() {
         setEditName(data.company.name || "");
 
         const ids = data.company.identifiers || [];
-        const taglineObj = ids.find((i: any) => i.label === 'TAGLINE' || i.key === 'TAGLINE');
-        setEditTagline(taglineObj ? taglineObj.value : "");
+        const taglineObj = ids.find((i: any) => i.label === 'TAGLINE' || i.key === 'TAGLINE' || i.name === 'TAGLINE');
+        setEditTagline(taglineObj ? taglineObj.value : (data.company.tagline || ""));
 
         const uniqueIdObj = ids.find((i: any) => (i.label || i.key) && (i.label !== 'TAGLINE' && i.key !== 'TAGLINE'));
         if (uniqueIdObj) {
@@ -271,7 +272,7 @@ export default function CompanySettingsPage() {
   const location = company?.branches?.[0] ? `${company.branches[0].city}, ${company.branches[0].state}` : 'Location Not Set';
 
   // Display variables
-  const displayTagline = company?.identifiers?.find((i: any) => i.label === 'TAGLINE' || i.key === 'TAGLINE')?.value || '';
+  const displayTagline = company?.identifiers?.find((i: any) => i.label === 'TAGLINE' || i.key === 'TAGLINE' || i.name === 'TAGLINE')?.value || company?.tagline || '';
   const displayIdentifiers = company?.identifiers?.filter((i: any) => i.label !== 'TAGLINE' && i.key !== 'TAGLINE') || [];
 
   const isActive = company?.subscription?.status === 'ACTIVE' || company?.subscription?.status === 'TRIAL';
@@ -327,7 +328,7 @@ export default function CompanySettingsPage() {
                     onClick={() => {
                       setEditName(company?.name || "");
                       setEditLogo(null);
-                      setEditTagline(company?.identifiers?.find((i: any) => i.label === 'TAGLINE' || i.key === 'TAGLINE')?.value || "");
+                      setEditTagline(company?.identifiers?.find((i: any) => i.label === 'TAGLINE' || i.key === 'TAGLINE' || i.name === 'TAGLINE')?.value || company?.tagline || "");
                       setIsEditing(false);
                     }}
                     className="h-14 px-6 rounded-2xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 text-on-surface font-bold transition-all cursor-pointer"
@@ -520,7 +521,7 @@ export default function CompanySettingsPage() {
                         <input
                           type="text"
                           readOnly
-                          defaultValue={company?.id || ""}
+                          value={company?.id || ""}
                           className="w-full bg-surface-container border-2 border-transparent rounded-xl pl-5 pr-12 py-4 text-on-surface font-mono opacity-80"
                         />
                         <span className="material-symbols-outlined absolute right-5 top-1/2 -translate-y-1/2 text-on-surface-variant/50">lock</span>
@@ -533,7 +534,7 @@ export default function CompanySettingsPage() {
                         <input
                           type="text"
                           readOnly
-                          defaultValue={company?.createdBy?.fullName || ""}
+                          value={company?.createdBy?.fullName || currentUser?.fullName || ""}
                           className="w-full bg-surface-container border-2 border-transparent rounded-xl pl-5 pr-12 py-4 text-on-surface opacity-80 font-medium"
                         />
                         <span className="material-symbols-outlined absolute right-5 top-1/2 -translate-y-1/2 text-on-surface-variant/50">person</span>
@@ -572,7 +573,7 @@ export default function CompanySettingsPage() {
                             <input
                               type="text"
                               readOnly
-                              defaultValue={ident.value}
+                              value={ident.value || ""}
                               className="w-full bg-surface-container border-2 border-transparent rounded-xl px-5 py-4 text-on-surface font-mono uppercase opacity-80 transition-all font-medium"
                             />
                           </div>
