@@ -17,8 +17,13 @@ export function UserProfileStep({ formData, updateData, errors, clearError }: St
           <span className="material-symbols-outlined text-on-surface-variant mr-3 text-xl select-none">person</span>
           <input
             type="text"
+            maxLength={50}
             value={formData.fullName}
-            onChange={(e) => { clearError('fullName'); updateData({ fullName: e.target.value }); }}
+            onChange={(e) => {
+              const val = e.target.value.replace(/[^A-Za-z\s.'-]/g, '');
+              clearError('fullName');
+              updateData({ fullName: val });
+            }}
             placeholder="John Doe"
             className="w-full bg-transparent border-none text-on-surface placeholder-on-surface-variant/40 focus:ring-0 focus:outline-none py-2 text-sm"
           />

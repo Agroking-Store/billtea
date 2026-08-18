@@ -133,6 +133,70 @@ export default function SignupPage() {
     }
   };
 
+  const validateStep3 = () => {
+    const newErrors: any = {};
+    const name = formData.fullName.trim();
+    if (!name) newErrors.fullName = 'Name is required';
+    else if (name.length > 50) newErrors.fullName = 'Max 50 characters allowed';
+    else if (!/^[A-Za-z\s.'-]+$/.test(name)) newErrors.fullName = 'Only letters and spaces allowed';
+
+    if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return false; }
+    return true;
+  };
+
+  const validateStep4 = () => {
+    const newErrors: any = {};
+    const company = formData.companyName.trim();
+    if (!company) newErrors.companyName = 'Company Name is required';
+    else if (company.length > 100) newErrors.companyName = 'Max 100 characters allowed';
+
+    if (formData.tagline.length > 100) newErrors.tagline = 'Max 100 characters allowed';
+    if (formData.businessIdName.length > 50) newErrors.businessIdName = 'Max 50 characters allowed';
+    if (formData.businessIdNumber.length > 20) newErrors.businessIdNumber = 'Max 20 characters allowed';
+
+    if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return false; }
+    return true;
+  };
+
+  const validateStep5 = () => {
+    const newErrors: any = {};
+    const branch = formData.branchName.trim();
+    if (!branch) newErrors.branchName = 'Branch Name is required';
+    else if (branch.length > 100) newErrors.branchName = 'Max 100 characters allowed';
+
+    if (formData.address.length > 200) newErrors.address = 'Max 200 characters allowed';
+    if (formData.city && (formData.city.length > 50 || !/^[A-Za-z\s.'-]+$/.test(formData.city)))
+      newErrors.city = 'Enter a valid city (max 50 letters)';
+    if (formData.state && (formData.state.length > 50 || !/^[A-Za-z\s.'-]+$/.test(formData.state)))
+      newErrors.state = 'Enter a valid state (max 50 letters)';
+    if (formData.pincode && !/^\d{6}$/.test(formData.pincode))
+      newErrors.pincode = 'Enter a valid 6-digit pincode';
+    if (formData.branchPhone && !/^\d{10}$/.test(formData.branchPhone))
+      newErrors.branchPhone = 'Enter a valid 10-digit phone number';
+    if (formData.branchEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.branchEmail))
+      newErrors.branchEmail = 'Enter a valid email address';
+    if (formData.signatureText.length > 100)
+      newErrors.signatureText = 'Max 100 characters allowed';
+
+    if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return false; }
+    return true;
+  };
+
+  const validateStep6 = () => {
+    const newErrors: any = {};
+    if (formData.accountNumber && !/^\d{6,18}$/.test(formData.accountNumber))
+      newErrors.accountNumber = 'Account number must be 6-18 digits';
+    if (formData.ifscCode && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.ifscCode))
+      newErrors.ifscCode = 'Enter a valid IFSC code (e.g. HDFC0001234)';
+    if (formData.upiId && !/^[\w.-]{2,256}@[a-zA-Z]{2,64}$/.test(formData.upiId))
+      newErrors.upiId = 'Enter a valid UPI ID';
+    if (formData.bankName.length > 100) newErrors.bankName = 'Max 100 characters allowed';
+    if (formData.accountName.length > 100) newErrors.accountName = 'Max 100 characters allowed';
+
+    if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return false; }
+    return true;
+  };
+
   const handleNext = async () => {
     setGlobalError('');
     if (step === 1) {
@@ -142,14 +206,11 @@ export default function SignupPage() {
       const isValid = await validateStep2();
       if (isValid) setStep(3);
     } else if (step === 3) {
-      if (!formData.fullName) { setErrors({ fullName: 'Name is required' }); return; }
-      setStep(4);
+      if (validateStep3()) setStep(4);
     } else if (step === 4) {
-      if (!formData.companyName) { setErrors({ companyName: 'Company Name is required' }); return; }
-      setStep(5);
+      if (validateStep4()) setStep(5);
     } else if (step === 5) {
-      if (!formData.branchName) { setErrors({ branchName: 'Branch Name is required' }); return; }
-      setStep(6);
+      if (validateStep5()) setStep(6);
     }
   };
 
@@ -162,11 +223,12 @@ export default function SignupPage() {
       updateData({ branchName: formData.branchName || 'Main Branch' });
       setStep(6);
     } else if (step === 6) {
-      handleFinalSubmit(); // Submit registration
+      if (validateStep6()) handleFinalSubmit(); // Submit registration
     }
   };
 
   const handleFinalSubmit = async () => {
+    if (!validateStep6()) return;
     try {
       setLoading(true);
       setGlobalError('');
