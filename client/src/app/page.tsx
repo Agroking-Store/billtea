@@ -240,10 +240,10 @@ export default function LandingPage() {
               transition={{ duration: 0.7, delay: 0.3 }}
               className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8"
             >
-              <button
-                onClick={() => router.push('/signup')}
-                className="group relative px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-black rounded-full font-bold text-lg overflow-hidden transition-all hover:scale-105 shadow-xl shadow-slate-200/50 dark:shadow-none"
-              >
+             <button
+  onClick={() => router.push(isUserLoggedIn ? '/home' : '/signup')}
+  className="group relative px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-black rounded-full font-bold text-lg overflow-hidden transition-all hover:scale-105 shadow-xl shadow-slate-200/50 dark:shadow-none"
+>
                 <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-600 dark:from-cyan-300 dark:to-blue-400 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <span className="relative flex items-center gap-2 text-white dark:text-black group-hover:text-white transition-colors">
                   Launch Platform <span className="material-symbols-outlined text-xl group-hover:translate-x-1 transition-transform">arrow_forward</span>
