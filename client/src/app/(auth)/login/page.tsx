@@ -220,15 +220,6 @@ export default function LoginPage() {
       <div className="w-full max-w-md animate-fade-in">
         {/* Mobile Logo */}
         <div className="flex items-center justify-center space-x-3 text-on-surface mb-10">
-  <img
-    className="h-9 w-9 rounded-xl object-contain border border-primary/20"
-    alt="BillTea Logo"
-    src={
-      isDark
-        ? "/Biltea-white-03.png"
-        : "/BillTea-dark-04.png"
-    }
-  />
 
   <span className="text-2xl font-display font-semibold text-glow">
     BillTea

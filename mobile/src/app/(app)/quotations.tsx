@@ -5,6 +5,7 @@ import {
   Dimensions,
   FlatList,
   Linking,
+  ListRenderItem,
   Modal,
   Pressable,
   ScrollView,
@@ -226,11 +227,12 @@ export default function QuotationsScreen() {
     };
   }, [activeTab, fetchedTabs]);
 
-  // --- Filter & Sorting state for Quotations ---
+  // --- Filter & Sorting state ---
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [customerFilter, setCustomerFilter] = useState("");
   const [companyFilter, setCompanyFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState("");
   const [fromDateFilter, setFromDateFilter] = useState("");
   const [toDateFilter, setToDateFilter] = useState("");
   const [sortBy, setSortBy] = useState<
@@ -243,6 +245,7 @@ export default function QuotationsScreen() {
   const [showCompanyPicker, setShowCompanyPicker] = useState(false);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [showInvoiceStatusPicker, setShowInvoiceStatusPicker] = useState(false);
+  const [showExpenseMethodPicker, setShowExpenseMethodPicker] = useState(false);
   const [showSortPicker, setShowSortPicker] = useState(false);
   const [showOrderPicker, setShowOrderPicker] = useState(false);
 
@@ -272,6 +275,7 @@ export default function QuotationsScreen() {
     customerFilter ||
       companyFilter ||
       statusFilter ||
+      paymentMethodFilter ||
       fromDateFilter ||
       toDateFilter ||
       sortBy !== "quotationDate" ||
@@ -282,6 +286,7 @@ export default function QuotationsScreen() {
     setCustomerFilter("");
     setCompanyFilter("");
     setStatusFilter("");
+    setPaymentMethodFilter("");
     setFromDateFilter("");
     setToDateFilter("");
     setSortBy("quotationDate");
@@ -292,7 +297,6 @@ export default function QuotationsScreen() {
     const query = searchText.trim().toLowerCase();
 
     let list = quotations.filter((q) => {
-      // Text Search Query
       if (query) {
         const qNum = (q.quotationNumber ?? "").toLowerCase();
         const customerName = (q.customer?.customerName ?? "").toLowerCase();
@@ -306,22 +310,18 @@ export default function QuotationsScreen() {
         if (!matchesSearch) return false;
       }
 
-      // Customer Filter
       if (customerFilter && q.customer?.customerName !== customerFilter) {
         return false;
       }
 
-      // Company Filter
       if (companyFilter && q.customer?.companyName !== companyFilter) {
         return false;
       }
 
-      // Status Filter
       if (statusFilter && q.status !== statusFilter) {
         return false;
       }
 
-      // Date Range Filter
       if (fromDateFilter || toDateFilter) {
         const qDate = new Date(q.quotationDate);
         if (fromDateFilter) {
@@ -339,7 +339,6 @@ export default function QuotationsScreen() {
       return true;
     });
 
-    // Column Sorting
     return [...list].sort((a, b) => {
       let comparison = 0;
       if (sortBy === "quotationNumber") {
@@ -362,6 +361,7 @@ export default function QuotationsScreen() {
 
     let list = invoices.filter((i) => {
       // Text Search Query
+    return invoices.filter((i) => {
       if (query) {
         const iNum = (i.invoiceNumber ?? "").toLowerCase();
         const customerName = (i.customer?.customerName ?? "").toLowerCase();
@@ -375,7 +375,6 @@ export default function QuotationsScreen() {
         if (!matchesSearch) return false;
       }
 
-      // Customer Filter
       if (customerFilter && i.customer?.customerName !== customerFilter) {
         return false;
       }
@@ -390,7 +389,6 @@ export default function QuotationsScreen() {
         return false;
       }
 
-      // Date Range Filter
       if (fromDateFilter || toDateFilter) {
         const iDate = new Date(i.invoiceDate);
         if (fromDateFilter) {
@@ -430,7 +428,6 @@ export default function QuotationsScreen() {
     const query = searchText.trim().toLowerCase();
 
     return expenses.filter((e) => {
-      // Text Search Query
       if (query) {
         const categoryName = (e.category?.name ?? "").toLowerCase();
         const noteText = (e.note ?? "").toLowerCase();
@@ -440,7 +437,10 @@ export default function QuotationsScreen() {
         }
       }
 
-      // Date Range Filter
+      if (paymentMethodFilter && e.paymentMethod !== paymentMethodFilter) {
+        return false;
+      }
+
       if (fromDateFilter || toDateFilter) {
         const eDate = new Date(e.date);
         if (fromDateFilter) {
@@ -457,7 +457,7 @@ export default function QuotationsScreen() {
 
       return true;
     });
-  }, [expenses, searchText, fromDateFilter, toDateFilter]);
+  }, [expenses, searchText, paymentMethodFilter, fromDateFilter, toDateFilter]);
 
   // Stats Row calculations
   const currentStats = useMemo(() => {
@@ -570,7 +570,6 @@ export default function QuotationsScreen() {
   };
 
   const handleEditInvoice = (item: Invoice) => {
-    // Opens the same create-invoice screen, in edit mode via the id param.
     router.push({ pathname: "/create-invoice", params: { id: item.id } });
   };
 
@@ -616,7 +615,6 @@ export default function QuotationsScreen() {
       });
 
       if (res.status === 200 || res.status === 201) {
-        // Update this invoice locally so the card reflects the new balance right away
         setInvoices((current) =>
           current.map((inv) =>
             inv.id === selectedInvoiceForPayment.id
@@ -846,7 +844,6 @@ export default function QuotationsScreen() {
 
     return (
       <GlassPanel style={styles.card}>
-        {/* Row 1: Quotation Number Badge (Left) & Grand Total Price (Right) */}
         <View style={styles.cardHeaderRow}>
           <View style={[styles.numberPillBadge, { borderColor: "#38bdf8" + "40", backgroundColor: "#38bdf8" + "15" }]}>
             <Text style={styles.numberPillText}>#{item.quotationNumber}</Text>
@@ -857,7 +854,6 @@ export default function QuotationsScreen() {
           </Text>
         </View>
 
-        {/* Row 2: Company Name (Left) & Status Badge (Right) */}
         <View style={[styles.cardRow, { marginTop: 8, alignItems: "center" }]}>
           <Text style={[styles.cardTitleText, { color: colors.text, flex: 1, marginRight: 8 }]} numberOfLines={1}>
             {companyName}
@@ -879,16 +875,14 @@ export default function QuotationsScreen() {
           </View>
         </View>
 
-        {/* Row 3: Customer Contact Person & Quotation Date */}
         <View style={[styles.cardRow, { marginTop: 4, alignItems: "center" }]}>
           <Text style={[styles.cardSubtitleText, { color: colors.textSecondary, flex: 1 }]} numberOfLines={1}>
-            {customerPerson ? `${customerPerson}  •  ` : ""}{formatDate(item.quotationDate)}
+            {customerPerson ? `${customerPerson} • ` : ""}{formatDate(item.quotationDate)}
           </Text>
         </View>
 
         <View style={[styles.innerDivider, { backgroundColor: colors.border }]} />
 
-        {/* Actions Row */}
         <View style={[styles.actionsRow, { justifyContent: "space-between" }]}>
           <ActionIconButton icon={Eye} onPress={() => handleComingSoon("View")} />
           <ActionIconButton
@@ -951,7 +945,6 @@ export default function QuotationsScreen() {
       <GlassPanel
         style={[styles.card, isCancelled && { opacity: 0.5 }]}
       >
-        {/* Row 1: Invoice Number & Amount */}
         <View style={styles.cardRow}>
           <Text style={[styles.invoiceNumberText, { color: statusColor }]}>
             {item.invoiceNumber}
@@ -961,7 +954,6 @@ export default function QuotationsScreen() {
           </Text>
         </View>
 
-        {/* Row 2: Customer Name & Balance */}
         <View style={[styles.cardRow, { marginTop: 6 }]}>
           <Text style={[styles.cardTitleText, { color: colors.text }]} numberOfLines={1}>
             {customerName}
@@ -971,7 +963,6 @@ export default function QuotationsScreen() {
           </Text>
         </View>
 
-        {/* Row 3: Date & Status */}
         <View style={[styles.cardRow, { marginTop: 8, alignItems: "center" }]}>
           <Text
             style={[
@@ -1002,7 +993,6 @@ export default function QuotationsScreen() {
 
         <View style={[styles.innerDivider, { backgroundColor: colors.border }]} />
 
-        {/* Actions Row */}
         <View style={[styles.actionsRow, { justifyContent: "space-between" }]}>
           <ActionIconButton
             icon={PencilLine}
@@ -1044,7 +1034,6 @@ export default function QuotationsScreen() {
 
     return (
       <GlassPanel style={styles.card}>
-        {/* Row 1: ID & Amount */}
         <View style={styles.cardRow}>
           <Text style={[styles.expenseNumberText, { color: colors.textSecondary }]}>
             #EXP-{shortId}
@@ -1054,7 +1043,6 @@ export default function QuotationsScreen() {
           </Text>
         </View>
 
-        {/* Row 2: Date & Creator */}
         <View style={[styles.cardRow, { marginTop: 6 }]}>
           <Text style={[styles.cardSubtitleText, { color: colors.textSecondary }]}>
             {formatDate(item.date)}
@@ -1064,16 +1052,21 @@ export default function QuotationsScreen() {
           </Text>
         </View>
 
-        {/* Row 3: Category Badge */}
-        <View style={[styles.cardRow, { marginTop: 8, justifyContent: "flex-start" }]}>
+        <View style={[styles.cardRow, { marginTop: 8, justifyContent: "flex-start", gap: 8 }]}>
           <View style={[styles.categoryBadge, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
             <Text style={[styles.categoryBadgeText, { color: colors.text }]}>
               {categoryName}
             </Text>
           </View>
+          {item.paymentMethod ? (
+            <View style={[styles.categoryBadge, { backgroundColor: colors.primary + "15", borderColor: colors.primary + "30" }]}>
+              <Text style={[styles.categoryBadgeText, { color: colors.primary }]}>
+                {item.paymentMethod.replace("_", " ")}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
-        {/* Row 4: Note */}
         {item.note ? (
           <View style={[styles.noteContainer, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
             <Text style={[styles.noteText, { color: colors.textSecondary }]}>
@@ -1084,7 +1077,6 @@ export default function QuotationsScreen() {
 
         <View style={[styles.innerDivider, { backgroundColor: colors.border }]} />
 
-        {/* Actions Row */}
         <View style={[styles.actionsRow, { justifyContent: "flex-start", gap: 12 }]}>
           <ActionIconButton icon={Copy} onPress={() => handleComingSoon("Copy")} />
           <ActionIconButton
@@ -1109,17 +1101,20 @@ export default function QuotationsScreen() {
     return filteredExpenses;
   }, [activeTab, filteredQuotations, filteredInvoices, filteredExpenses]);
 
-  const activeCardRenderer = useMemo<any>(() => {
-    if (activeTab === "Quotations") return renderQuotationCard;
-    if (activeTab === "Invoices") return renderInvoiceCard;
-    return renderExpenseCard;
+  const activeCardRenderer: ListRenderItem<Quotation | Invoice | Expense> = useMemo(() => {
+    if (activeTab === "Quotations") {
+      return renderQuotationCard as ListRenderItem<Quotation | Invoice | Expense>;
+    }
+    if (activeTab === "Invoices") {
+      return renderInvoiceCard as ListRenderItem<Quotation | Invoice | Expense>;
+    }
+    return renderExpenseCard as ListRenderItem<Quotation | Invoice | Expense>;
   }, [activeTab]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style={isDark ? "light" : "dark"} />
 
-      {/* Ambient background glow blobs */}
       <View style={styles.bgEffectsWrapper} pointerEvents="none">
         <View style={[styles.bgEffectTop, { backgroundColor: colors.primary + "12" }]} />
         <View style={[styles.bgEffectBottom, { backgroundColor: colors.tertiary + "12" }]} />
@@ -1140,10 +1135,9 @@ export default function QuotationsScreen() {
         searchPlaceholder={`Search ${activeTab.toLowerCase()}...`}
         onSearchBlur={() => setSearchActive(false)}
       >
-        {/* Header Expansion Filter Panel (Embedded in AppHeader) */}
+        {/* Quotations Header Filter */}
         {showFilterPanel && activeTab === "Quotations" && (
           <View style={styles.headerFilterExpansion}>
-            {/* 1. Search Box Input */}
             <View style={[styles.filterSearchInputBox, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}>
               <Search size={18} color={colors.textSecondary} style={{ marginRight: 8 }} />
               <TextInput
@@ -1160,7 +1154,6 @@ export default function QuotationsScreen() {
               ) : null}
             </View>
 
-            {/* 2. Customer Name & Company Name Dropdowns */}
             <View style={styles.filterGridRow}>
               <View style={styles.filterFieldContainer}>
                 <TouchableOpacity
@@ -1187,7 +1180,6 @@ export default function QuotationsScreen() {
               </View>
             </View>
 
-            {/* 3. FROM & TO Date Inputs */}
             <View style={styles.filterGridRow}>
               <View style={styles.filterFieldContainer}>
                 <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>FROM</Text>
@@ -1218,7 +1210,6 @@ export default function QuotationsScreen() {
               </View>
             </View>
 
-            {/* 4. STATUS Pill Chips */}
             <View style={{ marginBottom: 14 }}>
               <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>STATUS</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
@@ -1255,7 +1246,6 @@ export default function QuotationsScreen() {
               </ScrollView>
             </View>
 
-            {/* 5. Sort By & Order Dropdowns */}
             <View style={styles.filterGridRow}>
               <View style={styles.filterFieldContainer}>
                 <TouchableOpacity
@@ -1288,7 +1278,6 @@ export default function QuotationsScreen() {
               </View>
             </View>
 
-            {/* 6. Action Buttons: Reset & Apply Filters */}
             <View style={styles.filterActionButtonsRow}>
               <TouchableOpacity
                 onPress={handleResetFilters}
@@ -1307,10 +1296,9 @@ export default function QuotationsScreen() {
           </View>
         )}
 
-        {/* Header Expansion Filter Panel for Invoices */}
+        {/* Invoices Header Filter */}
         {showFilterPanel && activeTab === "Invoices" && (
           <View style={styles.headerFilterExpansion}>
-            {/* Row 1: FROM DATE & TO DATE */}
             <View style={styles.filterGridRow}>
               <View style={styles.filterFieldContainer}>
                 <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>FROM DATE</Text>
@@ -1462,7 +1450,7 @@ export default function QuotationsScreen() {
           </View>
         )}
 
-        {/* Header Expansion Filter Panel for Expenses */}
+        {/* Expenses Header Filter */}
         {showFilterPanel && activeTab === "Expenses" && (
           <View style={styles.headerFilterExpansion}>
             {/* Row 1: FROM DATE & TO DATE */}
@@ -1496,7 +1484,23 @@ export default function QuotationsScreen() {
               </View>
             </View>
 
-            {/* Row 2: Action Buttons */}
+            {/* Row 2: PAYMENT METHOD Dropdown */}
+            <View style={styles.filterGridRow}>
+              <View style={styles.filterFieldContainer}>
+                <Text style={[styles.filterFieldLabel, { color: colors.textSecondary }]}>PAYMENT METHOD</Text>
+                <TouchableOpacity
+                  onPress={() => setShowExpenseMethodPicker(true)}
+                  style={[styles.filterSelectBtn, { borderColor: colors.border, backgroundColor: colors.surfaceVariant }]}
+                >
+                  <Text style={[styles.filterSelectText, { color: paymentMethodFilter ? colors.text : colors.textSecondary }]} numberOfLines={1}>
+                    {paymentMethodFilter ? paymentMethodFilter.replace("_", " ") : "All Payment Methods"}
+                  </Text>
+                  <ChevronDown size={16} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Row 3: Action Buttons */}
             <View style={styles.filterActionButtonsRow}>
               <TouchableOpacity
                 onPress={handleResetFilters}
@@ -1517,7 +1521,7 @@ export default function QuotationsScreen() {
       </AppHeader>
 
       <FlatList
-        data={loading ? [] : (activeDataList as any[])}
+        data={loading ? [] : activeDataList}
         keyExtractor={(item) => item.id}
         renderItem={activeCardRenderer}
         showsVerticalScrollIndicator={false}
@@ -1525,7 +1529,6 @@ export default function QuotationsScreen() {
         keyboardDismissMode="on-drag"
         ListHeaderComponent={
           <>
-            {/* Pill Segmented Tab Control */}
             <SegmentedControl
               options={["Quotations", "Invoices", "Expenses"]}
               activeOption={activeTab}
@@ -1535,7 +1538,6 @@ export default function QuotationsScreen() {
               style={{ marginBottom: 16 }}
             />
 
-            {/* Unified Stats Row */}
             <GlassPanel style={styles.statsPanel}>
               <View style={styles.statsContainer}>
                 {currentStats.map((stat, idx) => (
@@ -1576,6 +1578,47 @@ export default function QuotationsScreen() {
           )
         }
       />
+
+      {/* Expense Payment Method Selection Modal */}
+      <Modal
+        visible={showExpenseMethodPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowExpenseMethodPicker(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          style={styles.modalOverlay}
+          onPress={() => setShowExpenseMethodPicker(false)}
+        >
+          <View style={[styles.modalContent, { backgroundColor: isDark ? "#0f172a" : colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Payment Method</Text>
+              <TouchableOpacity onPress={() => setShowExpenseMethodPicker(false)} style={styles.closeBtn}>
+                <X size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            {[
+              { label: "All Payment Methods", value: "" },
+              { label: "Cash", value: "CASH" },
+              { label: "Bank Transfer", value: "BANK_TRANSFER" },
+              { label: "Cheque", value: "CHEQUE" },
+              { label: "Credit Card", value: "CREDIT_CARD" },
+              { label: "UPI", value: "UPI" },
+              { label: "Other", value: "OTHER" },
+            ].map((item) => (
+              <TouchableOpacity
+                key={item.value}
+                style={[styles.pickerOptionItem, paymentMethodFilter === item.value && { backgroundColor: colors.primary + "15" }]}
+                onPress={() => { setPaymentMethodFilter(item.value); setShowExpenseMethodPicker(false); }}
+              >
+                <Text style={[styles.pickerOptionText, { color: paymentMethodFilter === item.value ? colors.primary : colors.text }]}>{item.label}</Text>
+                {paymentMethodFilter === item.value && <Check size={18} color={colors.primary} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Add Payment Modal */}
       <Modal
@@ -1698,7 +1741,6 @@ export default function QuotationsScreen() {
               },
             ]}
           >
-            {/* Modal Header */}
             <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 <FileText size={20} color={colors.primary} />
@@ -1709,7 +1751,6 @@ export default function QuotationsScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Follow-up Date Field */}
             <View style={styles.modalInputGroup}>
               <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Follow-up Date (YYYY-MM-DD)</Text>
               <TextInput
@@ -1726,7 +1767,6 @@ export default function QuotationsScreen() {
               />
             </View>
 
-            {/* Notes Field */}
             <View style={styles.modalInputGroup}>
               <Text style={[styles.modalLabel, { color: colors.textSecondary }]}>Notes</Text>
               <TextInput
@@ -1745,7 +1785,6 @@ export default function QuotationsScreen() {
               />
             </View>
 
-            {/* Modal Footer Buttons */}
             <View style={styles.modalFooter}>
               <TouchableOpacity
                 onPress={() => setNotesModalData(null)}
@@ -2016,7 +2055,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   bgEffectsWrapper: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
     overflow: "hidden",
   },
   bgEffectTop: {
@@ -2132,6 +2171,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     justifyContent: "center",
     alignItems: "center",
+    flexDirection: "row",
   },
   statusText: {
     fontSize: 9,
@@ -2183,9 +2223,9 @@ const styles = StyleSheet.create({
   paymentModalCard: {
     borderRadius: 20,
     padding: 20,
-    width: '100%',
+    width: "100%",
     maxWidth: 420,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   paymentModalHeader: {
     flexDirection: "row",

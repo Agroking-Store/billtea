@@ -71,6 +71,24 @@ export function isLoggedIn(): boolean {
   return !!inMemoryToken;
 }
 
+export async function getStoredUser(): Promise<any | null> {
+  try {
+    let userStr: string | null = null;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      userStr = localStorage.getItem('user');
+    }
+    if (!userStr) {
+      userStr = await AsyncStorage.getItem('user');
+    }
+    if (userStr) {
+      return JSON.parse(userStr);
+    }
+  } catch (e) {
+    return null;
+  }
+  return null;
+}
+
 export async function saveAuthData(accessToken: string, refreshToken: string, user: any): Promise<void> {
   inMemoryToken = accessToken;
   isStorageInitialized = true;
