@@ -361,7 +361,6 @@ export default function QuotationsScreen() {
 
     let list = invoices.filter((i) => {
       // Text Search Query
-    return invoices.filter((i) => {
       if (query) {
         const iNum = (i.invoiceNumber ?? "").toLowerCase();
         const customerName = (i.customer?.customerName ?? "").toLowerCase();
