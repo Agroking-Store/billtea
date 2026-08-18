@@ -3,6 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiFetch, API_BASE } from '@/lib/auth';
+import heic2any from 'heic2any';
+import imageCompression from 'browser-image-compression';
+import { useBranch } from '@/components/BranchProvider';
+import CustomerModal from '@/components/CustomerModal';
 
 const getImageUrl = (url?: string) => {
   if (!url || url === 'null' || url === 'undefined') return '';
@@ -16,7 +20,142 @@ const getImageUrl = (url?: string) => {
   }
   return url;
 };
-import { useBranch } from '@/components/BranchProvider';
+
+interface ToastMessage {
+  type: 'success' | 'error';
+  text: string;
+}
+
+interface ToastProps {
+  message: ToastMessage | null;
+  onClose: () => void;
+  duration?: number;
+}
+
+function Toast({ message, onClose, duration = 4000 }: ToastProps) {
+  const [visible, setVisible] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const remainingRef = useRef(duration);
+  const startedAtRef = useRef<number>(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [progressKey, setProgressKey] = useState(0);
+
+  const clearTimer = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const scheduleClose = (ms: number) => {
+    clearTimer();
+    startedAtRef.current = Date.now();
+    remainingRef.current = ms;
+    timerRef.current = setTimeout(() => {
+      handleClose();
+    }, ms);
+  };
+
+  useEffect(() => {
+    if (!message) return;
+
+    setLeaving(false);
+    setPaused(false);
+    setProgressKey((k) => k + 1);
+    const enterTimer = setTimeout(() => setVisible(true), 10);
+
+    scheduleClose(duration);
+
+    return () => {
+      clearTimeout(enterTimer);
+      clearTimer();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [message]);
+
+  const handleClose = () => {
+    clearTimer();
+    setLeaving(true);
+    setVisible(false);
+    setTimeout(() => {
+      onClose();
+      setLeaving(false);
+    }, 300);
+  };
+
+  const handleMouseEnter = () => {
+    if (!message) return;
+    setPaused(true);
+    const elapsed = Date.now() - startedAtRef.current;
+    remainingRef.current = Math.max(remainingRef.current - elapsed, 0);
+    clearTimer();
+  };
+
+  const handleMouseLeave = () => {
+    if (!message) return;
+    setPaused(false);
+    scheduleClose(remainingRef.current);
+  };
+
+  if (!message && !leaving) return null;
+
+  const isSuccess = message?.type === 'success';
+
+  return (
+    <div
+      className="fixed top-6 right-6 z-[100] pointer-events-none"
+      role="status"
+      aria-live="polite"
+    >
+      <div
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className={`pointer-events-auto relative overflow-hidden flex items-center gap-3 min-w-[280px] max-w-sm px-4 py-3 rounded-lg border shadow-lg backdrop-blur-sm transition-all duration-300 ease-out ${
+          isSuccess
+            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'
+            : 'bg-red-500/10 border-red-500/20 text-red-500'
+        } ${
+          visible
+            ? 'opacity-100 translate-x-0 translate-y-0'
+            : 'opacity-0 translate-x-4 -translate-y-1'
+        }`}
+      >
+        <span className="material-symbols-outlined text-[18px] shrink-0">
+          {isSuccess ? 'check_circle' : 'error'}
+        </span>
+        <p className="flex-1 text-sm font-semibold leading-snug whitespace-pre-line">{message?.text}</p>
+        <button
+          onClick={handleClose}
+          aria-label="Dismiss notification"
+          className="shrink-0 p-1 rounded-full hover:bg-black/5 transition-colors cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-[16px]">close</span>
+        </button>
+
+        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-black/5">
+          <div
+            key={progressKey}
+            className={`h-full ${isSuccess ? 'bg-emerald-500' : 'bg-red-500'}`}
+            style={{
+              animation: `toast-countdown ${duration}ms linear forwards`,
+              animationPlayState: paused ? 'paused' : 'running',
+            }}
+          />
+        </div>
+      </div>
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        @keyframes toast-countdown {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+      `}} />
+    </div>
+  );
+}
+
 
 export default function CreateInvoicePage() {
   const router = useRouter();
@@ -24,11 +163,14 @@ export default function CreateInvoicePage() {
   const copyFromQuotationId = searchParams.get('copyFromQuotation');
   const { selectedBranchId, branches } = useBranch();
 
+  // Toast State
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+
   // 1. Core State
   const [formData, setFormData] = useState({
     customerId: '',
     invoiceDate: new Date().toISOString().split('T')[0],
-    dueDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Default +2 months
+    dueDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     shippingSameAsBilling: true,
     discountConfiguration: { mode: 'FIXED', type: 'PERCENTAGE', value: 0 },
     taxConfiguration: { mode: 'FIXED', customTaxActive: false, label: '', value: 0 },
@@ -49,6 +191,7 @@ export default function CreateInvoicePage() {
   const [customerResults, setCustomerResults] = useState<any[]>([]);
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [selectedCustomerDetails, setSelectedCustomerDetails] = useState<any>(null);
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
 
   // Address State
   const [billingAddress, setBillingAddress] = useState({ address: '', city: '', state: '', pincode: '' });
@@ -65,6 +208,7 @@ export default function CreateInvoicePage() {
   const [paymentAttachment, setPaymentAttachment] = useState<File | null>(null);
 
   // Branch Settings
+  const [branchTaxes, setBranchTaxes] = useState<any[]>([]);
   const [branchTaxConfig, setBranchTaxConfig] = useState({ label: 'GST', tax: 0 });
 
   // Preview & Processing State
@@ -77,6 +221,19 @@ export default function CreateInvoicePage() {
   const toggleDropdown = (name: string) => {
     setActiveDropdown(prev => prev === name ? null : name);
   };
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.dropdown-container')) {
+        setActiveDropdown(null);
+      }
+    };
+    if (activeDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeDropdown]);
   
   const errorRef = useRef<HTMLDivElement>(null);
 
@@ -90,9 +247,39 @@ export default function CreateInvoicePage() {
   useEffect(() => {
     if (selectedBranchId) {
       const branch: any = branches.find(b => b.id === selectedBranchId);
-      if (branch?.taxLabel) setBranchTaxConfig({ label: branch.taxLabel, tax: branch.tax || 0 });
+      if (branch?.taxes && Array.isArray(branch.taxes) && branch.taxes.length > 0) {
+        setBranchTaxes(branch.taxes);
+        setBranchTaxConfig({ label: branch.taxes[0].label, tax: branch.taxes[0].percentage ?? branch.taxes[0].value ?? 0 });
+      } else if (branch?.taxLabel) {
+        setBranchTaxes([{ label: branch.taxLabel, percentage: branch.tax || 0 }]);
+        setBranchTaxConfig({ label: branch.taxLabel, tax: branch.tax || 0 });
+      } else {
+        setBranchTaxes([]);
+        setBranchTaxConfig({ label: 'GST', tax: 0 });
+      }
     }
   }, [selectedBranchId, branches]);
+
+  // Fetch default invoice settings for terms
+  useEffect(() => {
+    if (!selectedBranchId || copyFromQuotationId) return;
+    
+    const fetchDefaultSettings = async () => {
+      try {
+        const res = await apiFetch(`/document-settings/${selectedBranchId}?type=INVOICE`);
+        const data = await res.json();
+        if (data && data.settings && data.settings.terms) {
+          setFormData(prev => ({
+            ...prev,
+            termsAndConditions: data.settings.terms
+          }));
+        }
+      } catch (e) {
+        // Ignore errors
+      }
+    };
+    fetchDefaultSettings();
+  }, [selectedBranchId, copyFromQuotationId]);
 
   useEffect(() => {
     if (selectedBranchId && branchTaxConfig.tax > 0) {
@@ -114,7 +301,6 @@ export default function CreateInvoicePage() {
     try {
       setIsCalculating(true);
 
-      // Calculate effective tax value if global is used
       let effectiveTaxConfig = { 
         mode: formData.taxConfiguration.mode,
         label: formData.taxConfiguration.customTaxActive ? formData.taxConfiguration.label : branchTaxConfig.label,
@@ -197,13 +383,10 @@ export default function CreateInvoicePage() {
       setQuotationSearch(quotationSummary.quotationNumber);
       setSelectedQuotation(quotationSummary);
       
-      // Fetch full quotation details
       const res = await apiFetch(`/quotations/${quotationSummary.id}`);
       if (res.ok) {
         const fullQuotation = await res.json();
-        console.log("Full quotation fetched:", fullQuotation);
         
-        // Auto-populate invoice state
         setQuotationSearch(fullQuotation.quotationNumber);
         setSelectedQuotation(fullQuotation);
         setCustomerSearch(fullQuotation.customer.customerName);
@@ -248,11 +431,11 @@ export default function CreateInvoicePage() {
           setProductSearchRows(prev => ({ ...prev, ...newProductSearchRows }));
         }
       } else {
-        alert("Failed to fetch quotation details from server.");
+        setToast({ type: 'error', text: 'Failed to fetch quotation details from server.' });
       }
     } catch (e: any) {
       console.error("Error in handleQuotationSelect:", e);
-      alert("Error selecting quotation: " + e.message);
+      setToast({ type: 'error', text: 'Error selecting quotation: ' + e.message });
     }
   };
 
@@ -262,6 +445,10 @@ export default function CreateInvoicePage() {
     setSelectedCustomerDetails(customer);
     setBillingAddress({ address: customer.address || '', city: '', state: '', pincode: '' });
     setShowCustomerDropdown(false);
+  };
+
+  const handleCustomerCreated = (newCustomer: any) => {
+    handleCustomerSelect(newCustomer);
   };
 
   // Product Lookup
@@ -278,7 +465,7 @@ export default function CreateInvoicePage() {
     setItems(items.map(i => i.id === rowId ? {
       ...i, productId: product.id, name: product.name, description: product.description, price: product.price,
       originalPrice: product.price, originalDescription: product.description, image: product.image || '',
-      sku: product.sku || '', hsnCode: product.hsnCode || ''
+      sku: product.skuNumber || product.sku || '', hsnCode: product.hsnNumber || product.hsnCode || ''
     } : i));
     setProductSearchRows(prev => ({ ...prev, [rowId]: { ...prev[rowId], show: false, query: product.name } }));
   };
@@ -342,34 +529,49 @@ export default function CreateInvoicePage() {
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
-    
-    setError(''); // clear previous errors
-    const allowedTypes = [
-      'application/pdf', 
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation'
-    ];
+
+    setError('');
+    const allowedTypes = ['application/pdf'];
     const MAX_SIZE_MB = 5;
     const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
-    
+
     const validFiles: File[] = [];
     const errors: string[] = [];
 
     for (const file of Array.from(e.target.files)) {
-      const isHeic = file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif');
+      const isHeic = file.name.toLowerCase().endsWith('.heic');
       if (!allowedTypes.includes(file.type) && !file.type.startsWith('image/') && !isHeic) {
-        errors.push(`${file.name}: Invalid format. (PDF, Excel, Word, PPT or Images only)`);
+        errors.push(`${file.name}: Invalid format. (PDF or Images only)`);
         continue;
       }
       if (file.size > MAX_SIZE_BYTES) {
         errors.push(`${file.name}: Exceeds ${MAX_SIZE_MB}MB.`);
         continue;
       }
-      
+
       try {
         if (file.type.startsWith('image/') || isHeic) {
-          const compressed = await compressImage(file);
+          let fileToCompress = file;
+          
+          if (isHeic) {
+            const heic2any = (await import('heic2any')).default;
+            const convertedBlob = await heic2any({
+              blob: file,
+              toType: 'image/jpeg',
+              quality: 0.8
+            });
+            const blobArray = Array.isArray(convertedBlob) ? convertedBlob : [convertedBlob];
+            fileToCompress = new File(blobArray, file.name.replace(/\.heic$/i, '.jpg'), {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+          }
+
+          const compressed = await imageCompression(fileToCompress, {
+            maxSizeMB: 1,
+            maxWidthOrHeight: 1920,
+            useWebWorker: true
+          });
           validFiles.push(compressed);
         } else {
           validFiles.push(file);
@@ -380,30 +582,38 @@ export default function CreateInvoicePage() {
     }
 
     if (errors.length > 0) {
-      setError(`Attachment errors:\n• ${errors.join('\n• ')}`);
+      const errorText = `Attachment errors:\n• ${errors.join('\n• ')}`;
+      setError(errorText);
+      setToast({ type: 'error', text: errorText });
     }
     
     if (validFiles.length > 0) {
       setAttachments(prev => [...prev, ...validFiles]);
     }
     
-    e.target.value = ''; // reset input
+    e.target.value = '';
   };
 
   const handleSave = async () => {
     if (!formData.customerId || items.length === 0) {
-      setError('Please select a customer and add at least one item.');
+      const msg = 'Please select a customer and add at least one item.';
+      setError(msg);
+      setToast({ type: 'error', text: msg });
       return;
     }
     if (formData.paymentConfiguration.addPayment) {
       const paymentAmount = Number(Number(formData.paymentConfiguration.amount).toFixed(2));
       const grandTotal = Number(Number(calculatedTotals?.grandTotal || 0).toFixed(2));
       if (paymentAmount <= 0) {
-        setError('Payment amount must be greater than 0.');
+        const msg = 'Payment amount must be greater than 0.';
+        setError(msg);
+        setToast({ type: 'error', text: msg });
         return;
       }
       if (paymentAmount > grandTotal) {
-        setError('Payment amount cannot exceed the grand total.');
+        const msg = 'Payment amount cannot exceed the grand total.';
+        setError(msg);
+        setToast({ type: 'error', text: msg });
         return;
       }
     }
@@ -411,7 +621,6 @@ export default function CreateInvoicePage() {
     try {
       setIsSaving(true); setError('');
 
-      // Resolve tax config same as preview
       const effectiveTaxConfig = {
         mode: formData.taxConfiguration.mode,
         label: formData.taxConfiguration.customTaxActive ? formData.taxConfiguration.label : branchTaxConfig.label,
@@ -445,7 +654,7 @@ export default function CreateInvoicePage() {
       for (const file of attachments) {
         const fileFormData = new FormData();
         fileFormData.append('file', file);
-        await apiFetch(`/invoices/${data.id}/attachments`, { method: 'POST', body: fileFormData, headers: {} }); // empty headers allows fetch to set multipart boundary
+        await apiFetch(`/invoices/${data.id}/attachments`, { method: 'POST', body: fileFormData, headers: {} });
       }
 
       // Upload Payment Attachment
@@ -455,9 +664,13 @@ export default function CreateInvoicePage() {
         await apiFetch(`/invoices/${data.id}/payments/${data.payments[0].id}/attachment`, { method: 'POST', body: paymentFormData, headers: {} });
       }
 
+      sessionStorage.setItem('invoiceToast', JSON.stringify({ type: 'success', text: 'Invoice created successfully!' }));
       router.push('/invoices');
+      router.refresh();
     } catch (err: any) {
-      setError(err.message || 'Something went wrong');
+      const message = err.message || 'Something went wrong';
+      setError(message);
+      setToast({ type: 'error', text: message });
     } finally {
       setIsSaving(false);
     }
@@ -465,13 +678,12 @@ export default function CreateInvoicePage() {
 
   return (
     <>
-      {activeDropdown && (
-        <div 
-          className="fixed inset-0 z-40 cursor-default" 
-          onClick={() => setActiveDropdown(null)} 
-        />
-      )}
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 z-0 relative overflow-x-hidden selection:bg-primary/30">
+      <Toast
+        message={toast}
+        onClose={() => setToast(null)}
+      />
+
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 relative overflow-x-hidden selection:bg-primary/30">
       <style dangerouslySetInnerHTML={{
         __html: `
         @keyframes fadeSlideUp {
@@ -485,7 +697,7 @@ export default function CreateInvoicePage() {
       `}} />
 
       {/* Premium Background */}
-      <div className="fixed inset-0 z-0 bg-surface pointer-events-none">
+      <div className="fixed inset-0 bg-surface pointer-events-none">
         <div className="absolute top-[-10%] left-[-5%] w-[50%] h-[50%] rounded-full bg-primary/5 blur-[120px]"></div>
         <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] rounded-full bg-tertiary/10 blur-[120px]"></div>
         <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-secondary/5 blur-[100px]"></div>
@@ -580,34 +792,39 @@ export default function CreateInvoicePage() {
 
             <div className="mb-6 relative">
               <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1 block">Search Customer *</label>
-              <div className="relative">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50">search</span>
-                <input 
-                  type="text" 
-                  value={customerSearch} 
-                  onChange={(e) => { setCustomerSearch(e.target.value); if (e.target.value === '') setSelectedCustomerDetails(null); }} 
-                  onFocus={() => setShowCustomerDropdown(true)}
-                  onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
-                  className="glass-input pl-10 pr-4 py-2.5 rounded-lg text-sm text-on-surface w-full focus:ring-primary/50 font-semibold" 
-                  placeholder="Type to search..." 
-                />
-                {showCustomerDropdown && customerResults.length > 0 && (
-                  <div className="absolute top-full left-0 w-full mt-2 bg-surface/95 backdrop-blur-xl shadow-2xl rounded-xl border border-outline-variant/30 z-[100] max-h-60 overflow-y-auto overflow-x-hidden flex flex-col p-1">
-                    {customerResults.map(c => (
-                      <div key={c.id} onMouseDown={(e) => { e.preventDefault(); handleCustomerSelect(c); }} className="px-3 py-2.5 hover:bg-primary/5 rounded-lg cursor-pointer transition-all duration-200 group flex items-center gap-3 border-b border-outline-variant/10 last:border-0">
-                        <div className="text-primary/70 flex items-center justify-center">
-                          <span className="material-symbols-outlined text-[20px]">person</span>
+              <div className="flex gap-2 items-center">
+                <div className="relative flex-1">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50">search</span>
+                  <input 
+                    type="text" 
+                    value={customerSearch} 
+                    onChange={(e) => { setCustomerSearch(e.target.value); if (e.target.value === '') setSelectedCustomerDetails(null); }} 
+                    onFocus={() => setShowCustomerDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
+                    className="glass-input pl-10 pr-4 py-2.5 rounded-lg text-sm text-on-surface w-full focus:ring-primary/50 font-semibold" 
+                    placeholder="Type to search..." 
+                  />
+                  {showCustomerDropdown && customerResults.length > 0 && (
+                    <div className="absolute top-full left-0 w-full mt-2 bg-surface/95 backdrop-blur-xl shadow-2xl rounded-xl border border-outline-variant/30 z-[100] max-h-60 overflow-y-auto overflow-x-hidden flex flex-col p-1">
+                      {customerResults.map(c => (
+                        <div key={c.id} onMouseDown={(e) => { e.preventDefault(); handleCustomerSelect(c); }} className="px-3 py-2.5 hover:bg-primary/5 rounded-lg cursor-pointer transition-all duration-200 group flex items-center gap-3 border-b border-outline-variant/10 last:border-0">
+                          <div className="text-primary/70 flex items-center justify-center">
+                            <span className="material-symbols-outlined text-[20px]">person</span>
+                          </div>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-bold text-sm text-on-surface group-hover:text-primary transition-colors">{c.customerName}</span>
+                            <span className="text-[11px] text-on-surface-variant">
+                              {[c.companyName, c.email, c.mobileNumber].filter(Boolean).join(' • ')}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex flex-col gap-0.5">
-                          <span className="font-bold text-sm text-on-surface group-hover:text-primary transition-colors">{c.customerName}</span>
-                          <span className="text-[11px] text-on-surface-variant">
-                            {[c.companyName, c.email, c.mobileNumber].filter(Boolean).join(' • ')}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button type="button" onClick={() => setIsCustomerModalOpen(true)} className="w-11 h-11 shrink-0 rounded-xl bg-primary text-white flex items-center justify-center hover:bg-primary/90 transition-all shadow-md" title="Add New Customer">
+                  <span className="material-symbols-outlined text-[20px]">add</span>
+                </button>
               </div>
             </div>
 
@@ -659,49 +876,24 @@ export default function CreateInvoicePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
               {/* Discount Rules */}
               <div className="flex flex-col">
-                <h3 className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-4">Discount Method</h3>
-                <div className="flex gap-6 mb-5">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="discMode" checked={formData.discountConfiguration.mode === 'FIXED'} onChange={() => setFormData({ ...formData, discountConfiguration: { ...formData.discountConfiguration, mode: 'FIXED' } })} className="text-primary w-4 h-4" />
-                    <span className="text-sm font-semibold text-on-surface">Fixed for all</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="discMode" checked={formData.discountConfiguration.mode === 'PER_PRODUCT'} onChange={() => setFormData({ ...formData, discountConfiguration: { ...formData.discountConfiguration, mode: 'PER_PRODUCT' } })} className="text-primary w-4 h-4" />
-                    <span className="text-sm font-semibold text-on-surface">Per Product</span>
-                  </label>
+                <h3 className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-3">Discount Method</h3>
+                <div className="flex bg-surface-container/50 p-1 rounded-xl mb-6 w-full border border-outline-variant/20">
+                  <button type="button" onClick={() => setFormData({ ...formData, discountConfiguration: { ...formData.discountConfiguration, mode: 'FIXED' } })} className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all ${formData.discountConfiguration.mode === 'FIXED' ? 'bg-surface shadow-sm text-primary border border-outline-variant/10' : 'text-on-surface-variant hover:text-on-surface'}`}>
+                    Fixed for all
+                  </button>
+                  <button type="button" onClick={() => setFormData({ ...formData, discountConfiguration: { ...formData.discountConfiguration, mode: 'PER_PRODUCT' } })} className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all ${formData.discountConfiguration.mode === 'PER_PRODUCT' ? 'bg-surface shadow-sm text-primary border border-outline-variant/10' : 'text-on-surface-variant hover:text-on-surface'}`}>
+                    Per Product
+                  </button>
                 </div>
-                
-                <div className="h-[70px]">
+
+                <div className="h-[50px]">
                   {formData.discountConfiguration.mode === 'FIXED' && (
-                    <div className="flex relative">
+                    <div className="flex">
                       <input type="number" value={formData.discountConfiguration.value} onChange={(e) => setFormData({ ...formData, discountConfiguration: { ...formData.discountConfiguration, value: parseFloat(e.target.value) || 0 } })} className="glass-input px-4 py-2.5 rounded-l-lg w-full text-sm font-semibold border-r-0 focus:ring-0 focus:border-primary/50" placeholder="Amount" />
-                      <div className="relative shrink-0" style={{ zIndex: activeDropdown === 'discountType' ? 100 : 10 }}>
-                        <button
-                          type="button"
-                          className="glass-input px-3 py-2.5 rounded-r-lg text-sm font-bold bg-surface-container/30 cursor-pointer focus:ring-0 focus:border-primary/50 flex items-center justify-between gap-1 min-w-[65px] h-[46px] text-left"
-                          onClick={() => toggleDropdown('discountType')}
-                        >
-                          <span>{formData.discountConfiguration.type === 'PERCENTAGE' ? '%' : '₹'}</span>
-                          <span className={`material-symbols-outlined text-[16px] transition-transform duration-200 ${activeDropdown === 'discountType' ? 'rotate-180' : ''}`}>expand_more</span>
-                        </button>
-                        
-                        {activeDropdown === 'discountType' && (
-                          <div className="absolute right-0 top-full mt-1 z-[110] bg-surface-container-highest rounded-lg border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 min-w-[65px]">
-                            <div 
-                              onClick={() => { setFormData({ ...formData, discountConfiguration: { ...formData.discountConfiguration, type: 'PERCENTAGE' } }); setActiveDropdown(null); }} 
-                              className={`px-3 py-2 text-sm cursor-pointer transition-colors text-center ${formData.discountConfiguration.type === 'PERCENTAGE' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
-                            >
-                              %
-                            </div>
-                            <div 
-                              onClick={() => { setFormData({ ...formData, discountConfiguration: { ...formData.discountConfiguration, type: 'AMOUNT' } }); setActiveDropdown(null); }} 
-                              className={`px-3 py-2 text-sm cursor-pointer transition-colors text-center ${formData.discountConfiguration.type === 'AMOUNT' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
-                            >
-                              ₹
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      <select value={formData.discountConfiguration.type} onChange={(e: any) => setFormData({ ...formData, discountConfiguration: { ...formData.discountConfiguration, type: e.target.value } })} className="glass-input px-3 py-2.5 rounded-r-lg text-sm font-bold bg-surface-container cursor-pointer focus:ring-0 focus:border-primary/50">
+                        <option value="PERCENTAGE">%</option>
+                        <option value="AMOUNT">₹</option>
+                      </select>
                     </div>
                   )}
                 </div>
@@ -709,27 +901,20 @@ export default function CreateInvoicePage() {
 
               {/* Tax Rules */}
               <div className="flex flex-col">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-                  <h3 className="text-sm font-bold text-on-surface-variant uppercase tracking-wider">Tax Method</h3>
-                  {formData.taxConfiguration.mode === 'FIXED' && (
-                    <label className="flex items-center gap-1.5 cursor-pointer self-start sm:self-auto">
-                      <input type="checkbox" checked={formData.taxConfiguration.customTaxActive} onChange={(e) => setFormData({ ...formData, taxConfiguration: { ...formData.taxConfiguration, customTaxActive: e.target.checked } })} className="rounded text-primary w-3.5 h-3.5" />
-                      <span className="text-[11px] font-bold text-on-surface-variant uppercase">Custom</span>
-                    </label>
-                  )}
+                <h3 className="text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-3">Tax Method</h3>
+                <div className="flex bg-surface-container/50 p-1 rounded-xl mb-6 w-full border border-outline-variant/20">
+                  <button type="button" onClick={() => setFormData({ ...formData, taxConfiguration: { ...formData.taxConfiguration, mode: 'FIXED', customTaxActive: false } })} className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all ${formData.taxConfiguration.mode === 'FIXED' && !formData.taxConfiguration.customTaxActive ? 'bg-surface shadow-sm text-primary border border-outline-variant/10' : 'text-on-surface-variant hover:text-on-surface'}`}>
+                    Default
+                  </button>
+                  <button type="button" onClick={() => setFormData({ ...formData, taxConfiguration: { ...formData.taxConfiguration, mode: 'FIXED', customTaxActive: true } })} className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all ${formData.taxConfiguration.mode === 'FIXED' && formData.taxConfiguration.customTaxActive ? 'bg-surface shadow-sm text-primary border border-outline-variant/10' : 'text-on-surface-variant hover:text-on-surface'}`}>
+                    Custom
+                  </button>
+                  <button type="button" onClick={() => setFormData({ ...formData, taxConfiguration: { ...formData.taxConfiguration, mode: 'PER_PRODUCT' } })} className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all ${formData.taxConfiguration.mode === 'PER_PRODUCT' ? 'bg-surface shadow-sm text-primary border border-outline-variant/10' : 'text-on-surface-variant hover:text-on-surface'}`}>
+                    Per Item
+                  </button>
                 </div>
-                <div className="flex gap-6 mb-5">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="taxMode" checked={formData.taxConfiguration.mode === 'FIXED'} onChange={() => setFormData({ ...formData, taxConfiguration: { ...formData.taxConfiguration, mode: 'FIXED' } })} className="text-primary w-4 h-4" />
-                    <span className="text-sm font-semibold text-on-surface">Fixed for all</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" name="taxMode" checked={formData.taxConfiguration.mode === 'PER_PRODUCT'} onChange={() => setFormData({ ...formData, taxConfiguration: { ...formData.taxConfiguration, mode: 'PER_PRODUCT' } })} className="text-primary w-4 h-4" />
-                    <span className="text-sm font-semibold text-on-surface">Per Product</span>
-                  </label>
-                </div>
-                
-                <div className="h-[70px]">
+
+                <div className="h-[50px]">
                   {formData.taxConfiguration.mode === 'FIXED' && (
                     <div className="flex flex-col gap-2 relative">
                       {formData.taxConfiguration.customTaxActive ? (
@@ -741,8 +926,26 @@ export default function CreateInvoicePage() {
                           </div>
                         </div>
                       ) : (
-                        <div className="glass-input px-4 py-2.5 rounded-lg w-full text-sm font-semibold bg-surface-container/30 text-on-surface flex items-center justify-between">
-                          <span>{branchTaxConfig.label} ({branchTaxConfig.tax}%)</span>
+                        <div className="relative">
+                          <select 
+                            className="glass-input px-4 py-2.5 rounded-lg w-full text-sm font-semibold cursor-pointer focus:ring-0 focus:border-primary/50 appearance-none bg-surface-container/30 border-outline-variant/30 text-on-surface"
+                            value={branchTaxConfig.label}
+                            onChange={(e) => {
+                              const selectedTax = branchTaxes.find(t => t.label === e.target.value);
+                              if (selectedTax) {
+                                setBranchTaxConfig({ label: selectedTax.label, tax: selectedTax.percentage ?? selectedTax.value ?? 0 });
+                              }
+                            }}
+                          >
+                            {branchTaxes.length > 0 ? (
+                              branchTaxes.map((tax, idx) => (
+                                <option key={idx} value={tax.label} className="text-on-surface bg-surface">{tax.label} ({tax.percentage ?? tax.value ?? 0}%)</option>
+                              ))
+                            ) : (
+                              <option value="GST" className="text-on-surface bg-surface">GST (0%)</option>
+                            )}
+                          </select>
+                          <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-lg">expand_more</span>
                         </div>
                       )}
                     </div>
@@ -814,14 +1017,18 @@ export default function CreateInvoicePage() {
                                 {productSearchRows[item.id].results.map(p => (
                                   <div key={p.id} onMouseDown={(e) => { e.preventDefault(); handleProductSelect(p, item.id); }} className="px-3 py-2.5 hover:bg-primary/5 rounded-lg cursor-pointer transition-all duration-200 group flex justify-between items-center border-b border-outline-variant/10 last:border-0">
                                     <div className="flex items-center gap-3">
-                                      <div className="text-primary/70 flex items-center justify-center">
-                                        <span className="material-symbols-outlined text-[20px]">inventory_2</span>
+                                      <div className="text-primary/70 flex items-center justify-center w-8 h-8 shrink-0 bg-surface-container/50 rounded-md overflow-hidden border border-outline-variant/20">
+                                        {p.image ? (
+                                          <img src={getImageUrl(p.image)} alt={p.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                          <span className="material-symbols-outlined text-[18px]">inventory_2</span>
+                                        )}
                                       </div>
                                       <div className="flex flex-col gap-0.5">
                                         <span className="font-bold text-sm text-on-surface group-hover:text-primary transition-colors">{p.name}</span>
-                                        {(p.sku || p.hsnCode) && (
+                                        {(p.skuNumber || p.sku) && (
                                           <span className="text-[11px] text-on-surface-variant">
-                                            {[p.sku && `SKU: ${p.sku}`, p.hsnCode && `HSN: ${p.hsnCode}`].filter(Boolean).join(' • ')}
+                                            SKU: {p.skuNumber || p.sku}
                                           </span>
                                         )}
                                       </div>
@@ -870,7 +1077,7 @@ export default function CreateInvoicePage() {
                               <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1 block">Discount</label>
                               <div className="flex items-center gap-1 relative">
                                 <input type="number" value={item.discount?.value || 0} onChange={(e) => updateItem(item.id, 'discount', { ...item.discount, value: parseFloat(e.target.value) || 0 })} className="glass-input px-3 py-2 rounded-lg text-sm w-full font-semibold" />
-                                <div className="relative shrink-0" style={{ zIndex: activeDropdown === `itemDiscountType-${item.id}` ? 100 : 10 }}>
+                                <div className="dropdown-container relative shrink-0" style={{ zIndex: activeDropdown === `itemDiscountType-${item.id}` ? 100 : 10 }}>
                                   <button
                                     type="button"
                                     className="glass-input p-2 rounded-lg text-xs font-bold bg-surface-container/30 cursor-pointer flex items-center justify-between gap-1 min-w-[50px]"
@@ -881,15 +1088,15 @@ export default function CreateInvoicePage() {
                                   </button>
                                   
                                   {activeDropdown === `itemDiscountType-${item.id}` && (
-                                    <div className="absolute right-0 top-full mt-1 z-[110] bg-surface-container-highest rounded-lg border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 min-w-[50px]">
+                                    <div className="absolute right-0 top-full mt-1 z-[110] bg-surface rounded-lg border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 min-w-[50px]">
                                       <div 
-                                        onClick={() => { updateItem(item.id, 'discount', { ...item.discount, type: 'PERCENTAGE' }); setActiveDropdown(null); }} 
+                                        onMouseDown={() => { updateItem(item.id, 'discount', { ...item.discount, type: 'PERCENTAGE' }); setActiveDropdown(null); }} 
                                         className={`px-3 py-2 text-xs cursor-pointer transition-colors text-center ${item.discount?.type === 'PERCENTAGE' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                                       >
                                         %
                                       </div>
                                       <div 
-                                        onClick={() => { updateItem(item.id, 'discount', { ...item.discount, type: 'AMOUNT' }); setActiveDropdown(null); }} 
+                                        onMouseDown={() => { updateItem(item.id, 'discount', { ...item.discount, type: 'AMOUNT' }); setActiveDropdown(null); }} 
                                         className={`px-3 py-2 text-xs cursor-pointer transition-colors text-center ${item.discount?.type === 'AMOUNT' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                                       >
                                         ₹
@@ -970,7 +1177,7 @@ export default function CreateInvoicePage() {
                 </div>
                 <div>
                   <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1 block">Payment Method</label>
-                  <div className="relative w-full" style={{ zIndex: activeDropdown === 'paymentMethod' ? 100 : 10 }}>
+                  <div className="dropdown-container relative w-full" style={{ zIndex: activeDropdown === 'paymentMethod' ? 100 : 10 }}>
                     <button
                       type="button"
                       className="glass-input px-4 py-2.5 rounded-lg text-sm text-on-surface w-full font-semibold text-left flex items-center justify-between cursor-pointer"
@@ -986,7 +1193,7 @@ export default function CreateInvoicePage() {
                     </button>
                     
                     {activeDropdown === 'paymentMethod' && (
-                      <div className="absolute left-0 right-0 top-full mt-1 z-[110] bg-surface-container-highest rounded-lg border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
+                      <div className="absolute left-0 right-0 top-full mt-1 z-[110] bg-surface rounded-lg border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
                         {[
                           { value: 'CASH', label: 'Cash' },
                           { value: 'UPI', label: 'UPI' },
@@ -1074,12 +1281,14 @@ export default function CreateInvoicePage() {
                           const isHeic = file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif');
                           if (!allowedTypes.includes(file.type) && !isHeic && !file.type.startsWith('image/')) {
                             setError('Payment attachment must be a PDF or an Image.');
+                            setToast({ type: 'error', text: 'Payment attachment must be a PDF or an Image.' });
                             e.target.value = '';
                             return;
                           }
                           
                           if (file.size > 5 * 1024 * 1024) {
                             setError('Payment attachment must be less than 5MB.');
+                            setToast({ type: 'error', text: 'Payment attachment must be less than 5MB.' });
                             e.target.value = '';
                             return;
                           }
@@ -1111,6 +1320,7 @@ export default function CreateInvoicePage() {
               <span className="material-symbols-outlined text-primary">description</span> Terms & Conditions
             </h2>
             <textarea value={formData.termsAndConditions} onChange={(e) => setFormData({ ...formData, termsAndConditions: e.target.value })} className="glass-input w-full p-4 rounded-xl text-sm text-on-surface font-medium leading-relaxed" rows={4} placeholder="Enter invoice-specific terms here..."></textarea>
+            <p className="text-xs text-on-surface-variant mt-1">Enter (new line) will lead to a new term or condition</p>
           </div>
 
         </div>
@@ -1160,21 +1370,29 @@ export default function CreateInvoicePage() {
 
           {/* Attachments Dropzone */}
           <div className="glass-panel rounded-3xl p-6 md:p-8 shadow-sm border border-outline-variant/30">
-            <h3 className="text-sm font-bold text-on-surface mb-4 uppercase tracking-wide">Attachments</h3>
-            <div className="border-2 border-dashed border-primary/30 rounded-xl p-6 text-center hover:bg-primary/5 transition-colors relative group cursor-pointer">
-              <input type="file" multiple accept=".pdf,.xlsx,.docx,.png,.jpg,.jpeg,.ppt,.pptx,.heic,.heif" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-              <span className="material-symbols-outlined text-primary text-[32px] mb-2 group-hover:scale-110 transition-transform">cloud_upload</span>
-              <p className="text-sm font-bold text-on-surface">Click or drag files to attach</p>
-              <p className="text-xs text-on-surface-variant mt-1">PDF, Excel, Word, PPT, Images</p>
-            </div>
+            <h3 className="text-sm font-bold text-on-surface mb-4 uppercase tracking-wide">Attachment</h3>
+            
+            {attachments.length === 0 && (
+              <div className="border-2 border-dashed border-primary/30 rounded-xl p-6 text-center hover:bg-primary/5 transition-colors relative group cursor-pointer">
+                <input type="file" accept=".pdf,image/*,.heic" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                <span className="material-symbols-outlined text-primary text-[32px] mb-2 group-hover:scale-110 transition-transform">cloud_upload</span>
+                <p className="text-sm font-bold text-on-surface">Click or drag file to attach</p>
+                <p className="text-xs text-on-surface-variant mt-1">PDF or Image (Max 5MB)</p>
+              </div>
+            )}
 
             {attachments.length > 0 && (
-              <div className="mt-4 space-y-2">
+              <div className="space-y-2">
                 {attachments.map((file, i) => (
-                  <div key={i} className="flex justify-between items-center p-2 rounded-md bg-surface-container/50 border border-outline-variant/10">
-                    <span className="text-xs text-on-surface font-semibold truncate max-w-[200px]">{file.name}</span>
-                    <button onClick={() => setAttachments(attachments.filter((_, idx) => idx !== i))} className="text-on-surface-variant hover:text-error">
-                      <span className="material-symbols-outlined text-[14px]">close</span>
+                  <div key={i} className="flex justify-between items-center p-3 rounded-xl bg-surface-container/50 border border-outline-variant/20 shadow-sm">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <span className="material-symbols-outlined text-primary/70 shrink-0">
+                        {file.type === 'application/pdf' ? 'picture_as_pdf' : 'image'}
+                      </span>
+                      <span className="text-sm text-on-surface font-semibold truncate">{file.name}</span>
+                    </div>
+                    <button onClick={() => setAttachments([])} className="text-on-surface-variant hover:text-error bg-surface hover:bg-error/10 p-1.5 rounded-lg transition-colors shrink-0">
+                      <span className="material-symbols-outlined text-[16px] block">delete</span>
                     </button>
                   </div>
                 ))}
@@ -1194,6 +1412,14 @@ export default function CreateInvoicePage() {
       </footer>
       </div>
     </div>
+    {isCustomerModalOpen && (
+        <CustomerModal
+          isOpen={isCustomerModalOpen}
+          onClose={() => setIsCustomerModalOpen(false)}
+          branchId={selectedBranchId || ''}
+          onSaveSuccess={handleCustomerCreated}
+        />
+    )}
     </>
   );
 }

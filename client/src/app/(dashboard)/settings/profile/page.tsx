@@ -4,6 +4,146 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '../../../../lib/auth';
 
+interface ToastMessage {
+  type: 'success' | 'error';
+  text: string;
+}
+
+interface ToastProps {
+  message: ToastMessage | null;
+  onClose: () => void;
+  duration?: number; // ms, auto-dismiss
+}
+
+function Toast({ message, onClose, duration = 4000 }: ToastProps) {
+  const [visible, setVisible] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const remainingRef = React.useRef(duration);
+  const startedAtRef = React.useRef<number>(0);
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [progressKey, setProgressKey] = useState(0);
+
+  const clearTimer = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const scheduleClose = (ms: number) => {
+    clearTimer();
+    startedAtRef.current = Date.now();
+    remainingRef.current = ms;
+    timerRef.current = setTimeout(() => {
+      handleClose();
+    }, ms);
+  };
+
+  useEffect(() => {
+    if (!message) return;
+
+    setLeaving(false);
+    setPaused(false);
+    setProgressKey((k) => k + 1);
+    const enterTimer = setTimeout(() => setVisible(true), 10);
+
+    scheduleClose(duration);
+
+    return () => {
+      clearTimeout(enterTimer);
+      clearTimer();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [message]);
+
+  const handleClose = () => {
+    clearTimer();
+    setLeaving(true);
+    setVisible(false);
+    setTimeout(() => {
+      onClose();
+      setLeaving(false);
+    }, 300);
+  };
+
+  const handleMouseEnter = () => {
+    if (!message) return;
+    setPaused(true);
+    const elapsed = Date.now() - startedAtRef.current;
+    remainingRef.current = Math.max(remainingRef.current - elapsed, 0);
+    clearTimer();
+  };
+
+  const handleMouseLeave = () => {
+    if (!message) return;
+    setPaused(false);
+    scheduleClose(remainingRef.current);
+  };
+
+  if (!message && !leaving) return null;
+
+  const isSuccess = message?.type === 'success';
+
+  return (
+    <div
+      className="fixed top-6 right-6 z-[1100] pointer-events-none"
+      role="status"
+      aria-live="polite"
+    >
+      <div
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className={`pointer-events-auto relative overflow-hidden flex items-center gap-2.5 min-w-[220px] max-w-sm px-4 py-2.5 rounded-lg border shadow-xl backdrop-blur-sm transition-all duration-300 ease-out ${
+          isSuccess
+            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'
+            : 'bg-red-500/10 border-red-500/20 text-red-500'
+        } ${
+          visible
+            ? 'opacity-100 translate-x-0 translate-y-0'
+            : 'opacity-0 translate-x-4 -translate-y-1'
+        }`}
+      >
+        <span
+          className={`material-symbols-outlined text-[18px] shrink-0 ${
+            isSuccess ? 'text-emerald-600' : 'text-red-500'
+          }`}
+        >
+          {isSuccess ? 'check_circle' : 'error'}
+        </span>
+        <p className="flex-1 text-sm font-semibold leading-snug whitespace-normal break-words">{message?.text}</p>
+        <button
+          onClick={handleClose}
+          aria-label="Dismiss notification"
+          className="shrink-0 p-0.5 rounded-full hover:bg-black/10 transition-colors cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-[16px]">close</span>
+        </button>
+
+        {/* Countdown progress bar */}
+        <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-black/5">
+          <div
+            key={progressKey}
+            className={`h-full ${isSuccess ? 'bg-emerald-500' : 'bg-red-500'}`}
+            style={{
+              animation: `toast-countdown ${duration}ms linear forwards`,
+              animationPlayState: paused ? 'paused' : 'running',
+            }}
+          />
+        </div>
+      </div>
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        @keyframes toast-countdown {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+      `}} />
+    </div>
+  );
+}
+
 interface BranchInfo {
   _id: string;
   name: string;
@@ -47,9 +187,7 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ fullName: '', email: '', phoneNumber: '', profilePicture: '' });
   const [saving, setSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState({ type: '', text: '' });
-
-
+  const [toast, setToast] = useState<ToastMessage | null>(null);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -80,12 +218,25 @@ export default function ProfilePage() {
   }, [fetchProfile]);
 
   const handleSaveProfile = async () => {
+    // 1. Validate Phone Number (Must be exactly 10 digits)
+    const digitsOnly = editForm.phoneNumber.replace(/\D/g, '');
+    if (digitsOnly.length < 10) {
+      setToast({
+        type: 'error',
+        text: 'Mobile number must be at least 10 digit numbers.',
+      });
+      return;
+    }
+
     setSaving(true);
-    setSaveMessage({ type: '', text: '' });
+    setToast(null);
     try {
       const res = await apiFetch('/profile', {
         method: 'PUT',
-        body: JSON.stringify(editForm),
+        body: JSON.stringify({
+          ...editForm,
+          phoneNumber: digitsOnly, // Ensure clean digits are sent
+        }),
       });
       let data;
       try {
@@ -96,16 +247,15 @@ export default function ProfilePage() {
       }
 
       if (data.success) {
-        // Update localStorage with the new user data so sidebar reflects changes
         localStorage.setItem('user', JSON.stringify(data.user));
-        setSaveMessage({ type: 'success', text: 'Profile updated successfully!' });
+        setToast({ type: 'success', text: 'Profile updated successfully!' });
         setEditing(false);
         await fetchProfile();
       } else {
-        setSaveMessage({ type: 'error', text: data.message || 'Update failed.' });
+        setToast({ type: 'error', text: data.message || 'Update failed.' });
       }
     } catch (err: any) {
-      setSaveMessage({ type: 'error', text: err.message || 'Failed to connect to server.' });
+      setToast({ type: 'error', text: err.message || 'Failed to connect to server.' });
     } finally {
       setSaving(false);
     }
@@ -115,9 +265,8 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Optional: add max size validation (e.g., 2MB)
     if (file.size > 2 * 1024 * 1024) {
-      setSaveMessage({ type: 'error', text: 'Image must be less than 2MB.' });
+      setToast({ type: 'error', text: 'Image must be less than 2MB.' });
       return;
     }
 
@@ -125,7 +274,7 @@ export default function ProfilePage() {
     reader.onloadend = async () => {
       const base64String = reader.result as string;
       setSaving(true);
-      setSaveMessage({ type: '', text: '' });
+      setToast(null);
       try {
         const res = await apiFetch('/profile', {
           method: 'PUT',
@@ -141,20 +290,19 @@ export default function ProfilePage() {
 
         if (data.success) {
           localStorage.setItem('user', JSON.stringify(data.user));
-          setSaveMessage({ type: 'success', text: 'Profile picture updated!' });
+          setToast({ type: 'success', text: 'Profile picture updated!' });
           await fetchProfile();
         } else {
-          setSaveMessage({ type: 'error', text: data.message || 'Update failed.' });
+          setToast({ type: 'error', text: data.message || 'Update failed.' });
         }
       } catch (err: any) {
-        setSaveMessage({ type: 'error', text: err.message || 'Failed to connect to server.' });
+        setToast({ type: 'error', text: err.message || 'Failed to connect to server.' });
       } finally {
         setSaving(false);
       }
     };
     reader.readAsDataURL(file);
   };
-
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return 'Never';
@@ -201,7 +349,8 @@ export default function ProfilePage() {
 
   return (
     <div className="flex-1 overflow-y-auto relative bg-background selection:bg-primary/30">
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @keyframes fadeSlideUp {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
@@ -211,6 +360,8 @@ export default function ProfilePage() {
           animation: fadeSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
         }
       `}} />
+
+      <Toast message={toast} onClose={() => setToast(null)} />
 
       {/* Decorative Background */}
       <div className="fixed inset-0 pointer-events-none z-0">
@@ -237,27 +388,50 @@ export default function ProfilePage() {
                 View and manage your personal details, role definitions, and system authorization parameters.
               </p>
             </div>
+            {editing ? (
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    setEditing(false);
+                    setEditForm({
+                      fullName: user.fullName,
+                      email: user.email,
+                      phoneNumber: user.phoneNumber,
+                      profilePicture: user.profilePicture || '',
+                    });
+                    setToast(null);
+                  }}
+                  className="h-14 px-6 rounded-2xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 text-on-surface font-bold transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveProfile}
+                  disabled={saving}
+                  className="group relative h-14 px-8 rounded-2xl bg-primary text-on-primary font-bold flex items-center gap-3 overflow-hidden shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none cursor-pointer"
+                >
+                  <div className="absolute inset-0 w-full h-full bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out" />
+                  {saving ? (
+                    <><span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span><span>Saving...</span></>
+                  ) : (
+                    <><span className="material-symbols-outlined text-[18px]">save</span><span>Save Changes</span></>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setEditing(true)}
+                className="group relative h-14 px-8 rounded-2xl bg-primary text-on-primary font-bold flex items-center gap-3 overflow-hidden shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5 cursor-pointer"
+              >
+                <div className="absolute inset-0 w-full h-full bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-out" />
+                <span className="material-symbols-outlined">edit</span><span>Edit Profile</span>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Save message toast */}
-        {saveMessage.text && (
-          <div className={`mb-10 p-5 rounded-2xl border flex items-start gap-4 animate-fade-slide-up ${saveMessage.type === 'success'
-            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'
-            : 'bg-red-500/10 border-red-500/20 text-red-500'
-            }`}>
-            <span className={`material-symbols-outlined mt-0.5 p-1 rounded-full ${saveMessage.type === 'success' ? 'bg-emerald-500/20' : 'bg-red-500/20'}`}>
-              {saveMessage.type === 'success' ? 'check_circle' : 'error'}
-            </span>
-            <div>
-              <h4 className="font-bold text-lg mb-1">{saveMessage.type === 'success' ? 'Success' : 'Error'}</h4>
-              <p className="text-sm opacity-90 leading-relaxed">{saveMessage.text}</p>
-            </div>
-          </div>
-        )}
-
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-slide-up" style={{ animationDelay: '0.2s' }}>
-          
+
           {/* Profile Header Card */}
           <div className="lg:col-span-4 group relative bg-surface border border-outline-variant/30 rounded-[2rem] p-1 overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500 h-full order-1">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -276,16 +450,18 @@ export default function ProfilePage() {
                     </div>
                   )}
                 </div>
-                <label className="absolute bottom-1 right-1 w-10 h-10 rounded-full bg-primary border-2 border-surface text-on-primary flex items-center justify-center cursor-pointer hover:scale-110 shadow-lg transition-transform">
-                  <span className="material-symbols-outlined text-sm">edit</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleProfilePictureUpload}
-                    disabled={saving}
-                  />
-                </label>
+                {editing && (
+                  <label className="absolute bottom-1 right-1 w-10 h-10 rounded-full bg-primary border-2 border-surface text-on-primary flex items-center justify-center cursor-pointer hover:scale-110 shadow-lg transition-transform">
+                    <span className="material-symbols-outlined text-sm">upload</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleProfilePictureUpload}
+                      disabled={saving}
+                    />
+                  </label>
+                )}
               </div>
               <h2 className="text-2xl font-bold text-on-surface mb-2">{user.fullName}</h2>
               <div className="flex items-center gap-2 mb-2 flex-wrap justify-center">
@@ -349,50 +525,6 @@ export default function ProfilePage() {
                   </div>
                   Personal Information
                 </h3>
-                {!editing ? (
-                  <button
-                    onClick={() => setEditing(true)}
-                    className="w-full sm:w-auto h-12 px-6 rounded-xl bg-surface-container hover:bg-primary border border-outline-variant/30 text-on-surface hover:text-on-primary font-bold flex items-center justify-center gap-2 transition-all duration-300 cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">edit</span>
-                    Edit details
-                  </button>
-                ) : (
-                  <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto justify-end">
-                    <button
-                      onClick={() => {
-                        setEditing(false);
-                        setEditForm({
-                          fullName: user.fullName,
-                          email: user.email,
-                          phoneNumber: user.phoneNumber,
-                          profilePicture: user.profilePicture || '',
-                        });
-                        setSaveMessage({ type: '', text: '' });
-                      }}
-                      className="w-full sm:w-auto px-6 py-3 rounded-xl text-sm font-bold text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer text-center"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleSaveProfile}
-                      disabled={saving}
-                      className="w-full sm:w-auto bg-primary text-on-primary px-6 py-3 rounded-xl text-sm font-bold transition-all shadow-lg shadow-primary/30 hover:-translate-y-0.5 hover:shadow-primary/40 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      {saving ? (
-                        <>
-                          <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <span className="material-symbols-outlined text-[18px]">save</span>
-                          Save Changes
-                        </>
-                      )}
-                    </button>
-                  </div>
-                )}
               </div>
 
               {!editing ? (
@@ -429,9 +561,13 @@ export default function ProfilePage() {
                   <div>
                     <label className="block text-sm font-bold text-on-surface mb-2">Phone Number</label>
                     <input
-                      type="text"
+                      type="tel"
                       value={editForm.phoneNumber}
-                      onChange={(e) => setEditForm({ ...editForm, phoneNumber: e.target.value })}
+                      onChange={(e) => {
+                        const onlyNums = e.target.value.replace(/\D/g, '');
+                        setEditForm({ ...editForm, phoneNumber: onlyNums });
+                      }}
+                      placeholder="Enter 10-digit phone number"
                       className="w-full bg-surface-container border-2 border-transparent rounded-xl px-5 py-4 text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all font-medium"
                       maxLength={10}
                     />
@@ -460,7 +596,7 @@ export default function ProfilePage() {
                 </div>
                 Organization Details
               </h3>
-              
+
               <div className="space-y-8">
                 {company ? (
                   <div>
@@ -531,10 +667,6 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="mt-16 text-center text-on-surface-variant text-xs opacity-40 uppercase tracking-[0.3em] font-bold">
-          © 2026 Indux Technology • Secure Environment
-        </div>
       </div>
     </div>
   );

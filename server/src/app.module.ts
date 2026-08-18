@@ -22,6 +22,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { AdminModule } from './admin/admin.module';
 import { DocumentSettingsModule } from './document-settings/document-settings.module';
 import { WhatsappSettingsModule } from './whatsapp-settings/whatsapp-settings.module';
+import { ThemeSettingsModule } from './theme-settings/theme-settings.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { WhatsappSettingsModule } from './whatsapp-settings/whatsapp-settings.mo
     NotificationsModule,
     DocumentSettingsModule,
     WhatsappSettingsModule,
+    ThemeSettingsModule,
   ],
   controllers: [HealthController],
 })

@@ -31,7 +31,7 @@ if not exist "server\.env" (
 :: 2. Detect Local IP Address and Configure Mobile Env
 echo [*] Detecting your local IPv4 address...
 set LOCAL_IP=127.0.0.1
-for /f "usebackq tokens=*" %%i in (`powershell -NoProfile -Command "(Get-NetIPAddress -AddressFamily IPv4 | Where IPAddress -NotLike '127.*' | Where IPAddress -NotLike '169.254.*' | Select-Object -First 1).IPAddress"`) do set LOCAL_IP=%%i
+for /f "usebackq tokens=*" %%i in (`powershell -NoProfile -Command "(Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike '127.*' -and $_.IPAddress -notlike '169.254.*' -and $_.InterfaceAlias -notlike '*vEthernet*' -and $_.InterfaceAlias -notlike '*Virtual*' -and $_.InterfaceAlias -notlike '*WSL*' } | Select-Object -First 1).IPAddress"`) do set LOCAL_IP=%%i
 
 echo [SUCCESS] Detected local network IP address: %LOCAL_IP%
 echo [*] Creating/updating 'mobile\.env' with API endpoint pointing to: http://%LOCAL_IP%:5000/api/v1

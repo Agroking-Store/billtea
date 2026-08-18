@@ -25,10 +25,21 @@ import { useTheme } from "../../hooks/useTheme";
 
 export function CustomTabBar({ state, descriptors, navigation }: any) {
   const requestQuickAdd = useUiStore((store) => store.requestQuickAdd);
-  const currentRouteName = state.routes[state.index]?.name;
-  
   const [isFabExpanded, setIsFabExpanded] = React.useState(false);
   const animation = React.useRef(new Animated.Value(0)).current;
+  const { colors, isDark } = useTheme();
+
+  const focusedRoute = state.routes[state.index];
+  const focusedOptions = descriptors[focusedRoute.key]?.options;
+  const currentRouteName = focusedRoute?.name;
+
+  if (
+    focusedOptions?.tabBarStyle?.display === 'none' ||
+    currentRouteName?.includes('create') ||
+    currentRouteName?.startsWith('create-')
+  ) {
+    return null;
+  }
  const fabMode =
   currentRouteName === "dashboard" || currentRouteName === "quotations"
     ? "quotation"
@@ -111,7 +122,10 @@ export function CustomTabBar({ state, descriptors, navigation }: any) {
     outputRange: [0, 0, 1],
   });
 
-  const { colors, isDark } = useTheme();
+  const hiddenRoutes = ['create-quotation', 'create-invoice', 'create-expense', 'create-customer'];
+  if (hiddenRoutes.includes(currentRouteName)) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>

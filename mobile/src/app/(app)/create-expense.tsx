@@ -30,6 +30,7 @@ import {
 } from 'lucide-react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { GlassPanel } from '../../components/ui/GlassPanel';
+import { useBranch } from "../../components/BranchProvider";
 import { apiClient } from '../../api/client';
 
 // Backend only accepts these exact values for paymentMethod (see CreateExpenseDto)
@@ -66,9 +67,7 @@ export default function CreateExpenseScreen() {
   const insets = useSafeAreaInsets();
 
   // Branch
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
-  const [loadingBranches, setLoadingBranches] = useState(true);
+  const { branches, selectedBranchId, isLoadingBranches: loadingBranches } = useBranch();
 
   // Categories (depend on branch)
   const [categories, setCategories] = useState<string[]>([]);
@@ -93,26 +92,6 @@ export default function CreateExpenseScreen() {
     c.toLowerCase().includes(categorySearch.toLowerCase())
   );
 
-  // Load branches on mount (same pattern as products.tsx)
-  useEffect(() => {
-    async function loadBranches() {
-      try {
-        const res = await apiClient.get('/branches');
-        if (res.status === 200 && res.data?.success) {
-          const loaded = Array.isArray(res.data.branches) ? res.data.branches : [];
-          setBranches(loaded);
-          const mainBranch = loaded.find((b: Branch) => b.isMainBranch);
-          setSelectedBranchId(mainBranch?.id ?? loaded[0]?.id ?? null);
-        }
-      } catch (err) {
-        console.error('Failed to load branches:', err);
-        setError('Could not load branches.');
-      } finally {
-        setLoadingBranches(false);
-      }
-    }
-    loadBranches();
-  }, []);
 
   // Load categories whenever the branch changes
   useEffect(() => {
@@ -141,7 +120,7 @@ export default function CreateExpenseScreen() {
     if (!permission.granted) return;
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       quality: 0.8,
     });
 

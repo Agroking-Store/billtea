@@ -1,22 +1,23 @@
 'use client';
-
+import { getUser } from "@/lib/auth";
 import React, { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from '../../components/ThemeProvider';
 import { BranchProvider, useBranch } from '../../components/BranchProvider';
 import { SubscriptionProvider, useSubscription } from '../../components/SubscriptionProvider';
 import Link from 'next/link';
-import { isLoggedIn, logout } from '../../lib/auth';
+import { isLoggedIn, logout, API_BASE } from '../../lib/auth';
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const { isDark, toggleTheme } = useTheme();
   const pathname = usePathname();
+  
   const router = useRouter();
   const { branches, selectedBranchId, setSelectedBranchId, isLoadingBranches } = useBranch();
   const { isExpired, daysRemaining, isLoading: isLoadingSub } = useSubscription();
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [user, setUser] = useState<{ fullName: string; email: string; role?: string }>({
+  const [user, setUser] = useState<{ fullName: string; email: string; role?: string; profilePicture?: string; company?: { name: string; logo?: string }; companyName?: string; companyLogo?: string }>({
     fullName: 'Sarang Wagh',
     email: 'admin@indux.com',
     role: 'owner',
@@ -82,12 +83,42 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
       `}>
         <div className="flex items-center gap-3 relative border-b border-outline-variant/10 p-4 h-20 shrink-0 overflow-hidden whitespace-nowrap bg-surface-container-lowest/50">
           <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none"></div>
-          <div className="size-10 shrink-0 rounded-full bg-cover bg-center border border-primary/20 shadow-[0_0_15px_rgba(125,211,252,0.15)] z-10 relative">
+          <div 
+            onClick={() => {
+              router.push('/settings/company');
+              if (window.innerWidth < 768) setSidebarOpen(false);
+            }}
+            className="size-10 shrink-0 rounded-full border border-primary/20 shadow-[0_0_15px_rgba(125,211,252,0.15)] z-10 relative flex items-center justify-center bg-surface-container-highest overflow-hidden cursor-pointer hover:shadow-[0_0_20px_rgba(125,211,252,0.3)] transition-shadow"
+          >
             <div className="absolute inset-0 bg-primary/20 blur-md rounded-full -z-10"></div>
-            <div className="size-full rounded-full bg-cover bg-center" style={{ backgroundImage: "url('/images/logo.png')" }}></div>
+            {(user.company?.logo || user.companyLogo) ? (
+              <img src={`${API_BASE.replace('/api/v1', '')}${(user.company?.logo || user.companyLogo)}`} alt="Company Logo" className="size-full object-cover bg-white" />
+            ) : (
+              <img
+  src={
+    user.company?.logo ||
+    user.companyLogo ||
+    user.profilePicture ||
+    (isDark
+      ? "/Biltea-white-03.png"
+      : "/BillTea-dark-04.png")
+  }
+  alt={user.company?.name || user.companyName || "BillTea Logo"}
+  className="size-full object-contain"
+/>
+            )}
           </div>
           <div className={`z-10 flex-1 flex flex-col min-w-0 transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}>
-            <h1 className="text-on-surface font-black text-lg tracking-wide leading-tight truncate font-display">Indux Tech</h1>
+            <h1 
+              onClick={() => {
+                router.push('/settings/company');
+                if (window.innerWidth < 768) setSidebarOpen(false);
+              }}
+              className="text-on-surface font-black text-lg tracking-wide leading-tight truncate font-display cursor-pointer hover:text-primary transition-colors" 
+              title={user.company?.name || user.companyName || 'BillTea'}
+            >
+              {user.company?.name || user.companyName || 'BillTea'}
+            </h1>
             <div className="relative mt-0.5 group w-auto inline-flex items-center">
               {isLoadingBranches ? (
                 <div className="text-primary text-[10px] uppercase tracking-wider font-bold">Loading...</div>
@@ -163,7 +194,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden relative z-0">
+      <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
         
         {/* Top Navigation */}
         <header className="h-16 md:h-20 flex-shrink-0 border-b border-outline-variant/20 glass-panel bg-surface/40 backdrop-blur-xl flex items-center justify-between px-4 md:px-8 z-20 relative shadow-sm">
@@ -197,8 +228,12 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             </button>
 
             <Link href="/settings/profile" className="p-1 md:p-1.5 glass-panel rounded-xl md:pl-2 md:pr-4 border border-outline-variant/30 hover:border-primary/45 hover:bg-surface-container-highest/20 transition-all cursor-pointer flex items-center gap-3 shadow-sm hover:shadow-[0_0_15px_rgba(125,211,252,0.15)] group">
-              <div className="size-8 md:size-11 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0 overflow-hidden shadow-[0_0_10px_rgba(125,211,252,0.1)] group-hover:bg-primary/20 transition-colors">
-                <span className="material-symbols-outlined text-primary text-[20px] md:text-[28px] select-none">account_circle</span>
+              <div className="size-8 md:size-11 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0 overflow-hidden shadow-[0_0_10px_rgba(125,211,252,0.1)] group-hover:bg-primary/20 transition-colors">
+                {user.profilePicture ? (
+                  <img src={`${API_BASE.replace('/api/v1', '')}${user.profilePicture}`} alt={user.fullName} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="material-symbols-outlined text-primary text-[20px] md:text-[28px] select-none">account_circle</span>
+                )}
               </div>
               <div className="hidden md:flex flex-col">
                 <span className="text-sm font-bold text-on-surface leading-tight group-hover:text-primary transition-colors">{user.fullName}</span>

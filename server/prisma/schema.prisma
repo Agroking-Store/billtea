@@ -7,6 +7,512 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Company {
+  id                   String                @id @default(uuid())
+  name                 String
+  logo                 String                @default("")
+  identifiers          Json                  @default("[]")
+  isActive             Boolean               @default(true)
+  createdById          String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  tagline              String                @default("")
+  branches             Branch[]
+  createdBy            User?                 @relation("CompanyCreator", fields: [createdById], references: [id])
+  subscription         CompanySubscription?
+  usage                CompanyUsage?
+  customers            Customer[]
+  expenseCategories    ExpenseCategory[]
+  expenses             Expense[]
+  invoices             Invoice[]
+  notifications        Notification[]
+  products             Product[]
+  quotations           Quotation[]
+  subscriptionPayments SubscriptionPayment[]
+  themeSettings        ThemeSettings?
+  users                User[]                @relation("CompanyUsers")
+
+  @@map("companies")
+}
+
+model User {
+  id                       String            @id @default(uuid())
+  fullName                 String
+  phoneNumber              String            @unique
+  email                    String            @unique
+  password                 String
+  profilePicture           String            @default("")
+  role                     UserRole          @default(MANAGER)
+  isActive                 Boolean           @default(true)
+  companyId                String?
+  createdById              String?
+  lastLoginAt              DateTime?
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+  companiesCreated         Company[]         @relation("CompanyCreator")
+  customersCreated         Customer[]        @relation("UserCreatedCustomers")
+  expenseCategoriesCreated ExpenseCategory[] @relation("UserCreatedExpenseCategories")
+  expensesCreated          Expense[]         @relation("UserCreatedExpenses")
+  invoicesCreated          Invoice[]         @relation("UserCreatedInvoices")
+  invoicesUpdated          Invoice[]         @relation("UserUpdatedInvoices")
+  productsCreated          Product[]         @relation("UserCreatedProducts")
+  quotationsCreated        Quotation[]       @relation("UserCreatedQuotations")
+  quotationsUpdated        Quotation[]       @relation("UserUpdatedQuotations")
+  refreshTokens            RefreshToken[]
+  company                  Company?          @relation("CompanyUsers", fields: [companyId], references: [id])
+  createdBy                User?             @relation("UserCreator", fields: [createdById], references: [id])
+  createdUsers             User[]            @relation("UserCreator")
+  branches                 Branch[]          @relation("UserBranches")
+
+  @@map("users")
+}
+
+model Branch {
+  id                String             @id @default(uuid())
+  companyId         String
+  name              String
+  isMainBranch      Boolean            @default(false)
+  address           String             @default("")
+  city              String             @default("")
+  state             String             @default("")
+  pincode           String             @default("")
+  phone             String             @default("")
+  email             String             @default("")
+  bankName          String             @default("")
+  accountNumber     String             @default("")
+  ifscCode          String             @default("")
+  upiId             String             @default("")
+  signatureValue    String             @default("")
+  quotationTheme    String             @default("INDUX_MODERN")
+  themeColor        String             @default("#0ea5e9")
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  themeConfig       Json?
+  accountName       String             @default("")
+  taxes             Json               @default("[]")
+  company           Company            @relation(fields: [companyId], references: [id])
+  customers         Customer[]
+  documentSettings  DocumentSettings[]
+  expenseCategories ExpenseCategory[]
+  expenses          Expense[]
+  invoices          Invoice[]
+  products          Product[]
+  quotations        Quotation[]
+  whatsappSettings  WhatsappSettings?
+  users             User[]             @relation("UserBranches")
+
+  @@unique([companyId, name])
+  @@map("branches")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model Customer {
+  id                 String      @id @default(uuid())
+  companyId          String
+  branchId           String
+  customerName       String
+  companyName        String      @default("")
+  email              String      @default("")
+  mobileNumber       String
+  businessLabel      String      @default("")
+  businessLabelValue String      @default("")
+  address            String      @default("")
+  otherInfo          String      @default("")
+  isActive           Boolean     @default(true)
+  createdById        String?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  branch             Branch      @relation(fields: [branchId], references: [id])
+  company            Company     @relation(fields: [companyId], references: [id])
+  createdBy          User?       @relation("UserCreatedCustomers", fields: [createdById], references: [id])
+  invoices           Invoice[]
+  quotations         Quotation[]
+
+  @@map("customers")
+}
+
+model Product {
+  id             String          @id @default(uuid())
+  companyId      String
+  branchId       String
+  name           String
+  description    String          @default("")
+  image          String          @default("")
+  price          Float
+  hsnNumber      String          @default("")
+  skuNumber      String          @default("")
+  isActive       Boolean         @default(true)
+  createdById    String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  invoiceItems   InvoiceItem[]
+  branch         Branch          @relation(fields: [branchId], references: [id])
+  company        Company         @relation(fields: [companyId], references: [id])
+  createdBy      User?           @relation("UserCreatedProducts", fields: [createdById], references: [id])
+  quotationItems QuotationItem[]
+
+  @@map("products")
+}
+
+model Expense {
+  id            String           @id @default(uuid())
+  companyId     String
+  branchId      String
+  amount        Float
+  categoryId    String?
+  paymentMethod String
+  note          String           @default("")
+  date          DateTime
+  attachment    String           @default("")
+  createdById   String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  branch        Branch           @relation(fields: [branchId], references: [id])
+  category      ExpenseCategory? @relation(fields: [categoryId], references: [id])
+  company       Company          @relation(fields: [companyId], references: [id])
+  createdBy     User?            @relation("UserCreatedExpenses", fields: [createdById], references: [id])
+
+  @@map("expenses")
+}
+
+model ExpenseCategory {
+  id          String    @id @default(uuid())
+  companyId   String
+  branchId    String
+  name        String
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  branch      Branch    @relation(fields: [branchId], references: [id])
+  company     Company   @relation(fields: [companyId], references: [id])
+  createdBy   User?     @relation("UserCreatedExpenseCategories", fields: [createdById], references: [id])
+  expenses    Expense[]
+
+  @@unique([branchId, name])
+  @@map("expense_categories")
+}
+
+model Quotation {
+  id                      String                @id @default(uuid())
+  quotationNumber         String
+  sequenceNumber          Int                   @default(0)
+  companyId               String
+  branchId                String
+  customerId              String
+  customerSnapshot        Json                  @default("{}")
+  status                  QuotationStatus       @default(DRAFT)
+  quotationDate           DateTime
+  expiryDate              DateTime
+  billingAddressSnapshot  Json
+  shippingAddressSnapshot Json
+  shippingSameAsBilling   Boolean               @default(true)
+  discountConfiguration   Json
+  taxConfiguration        Json
+  subtotal                Float                 @default(0)
+  discountAmount          Float                 @default(0)
+  taxAmount               Float                 @default(0)
+  grandTotal              Float                 @default(0)
+  notes                   String                @default("")
+  followUpDate            DateTime?
+  termsAndConditions      Json                  @default("{}")
+  createdById             String?
+  updatedById             String?
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+  attachments             QuotationAttachment[]
+  items                   QuotationItem[]
+  branch                  Branch                @relation(fields: [branchId], references: [id])
+  company                 Company               @relation(fields: [companyId], references: [id])
+  createdBy               User?                 @relation("UserCreatedQuotations", fields: [createdById], references: [id])
+  customer                Customer              @relation(fields: [customerId], references: [id])
+  updatedBy               User?                 @relation("UserUpdatedQuotations", fields: [updatedById], references: [id])
+
+  @@unique([branchId, quotationNumber])
+  @@map("quotations")
+}
+
+model QuotationItem {
+  id                  String    @id @default(uuid())
+  quotationId         String
+  productId           String?
+  productSnapshot     Json
+  originalPrice       Float
+  originalDescription String    @default("")
+  originalImage       String    @default("")
+  editedPrice         Float
+  editedDescription   String    @default("")
+  editedImage         String    @default("")
+  quantity            Int       @default(1)
+  discount            Json      @default("{}")
+  tax                 Float     @default(0)
+  subtotal            Float     @default(0)
+  discountAmount      Float     @default(0)
+  taxAmount           Float     @default(0)
+  total               Float     @default(0)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  product             Product?  @relation(fields: [productId], references: [id])
+  quotation           Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+
+  @@map("quotation_items")
+}
+
+model QuotationAttachment {
+  id          String    @id @default(uuid())
+  quotationId String
+  fileName    String
+  fileSize    Int
+  mimeType    String
+  storagePath String
+  uploadedAt  DateTime  @default(now())
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+
+  @@map("quotation_attachments")
+}
+
+model Invoice {
+  id                      String              @id @default(uuid())
+  invoiceNumber           String
+  sequenceNumber          Int                 @default(0)
+  companyId               String
+  branchId                String
+  customerId              String
+  customerSnapshot        Json                @default("{}")
+  status                  InvoiceStatus       @default(UNPAID)
+  invoiceDate             DateTime
+  dueDate                 DateTime
+  billingAddressSnapshot  Json
+  shippingAddressSnapshot Json
+  shippingSameAsBilling   Boolean             @default(true)
+  discountConfiguration   Json
+  taxConfiguration        Json
+  subtotal                Float               @default(0)
+  discountAmount          Float               @default(0)
+  taxAmount               Float               @default(0)
+  grandTotal              Float               @default(0)
+  amountPaid              Float               @default(0)
+  amountDue               Float               @default(0)
+  notes                   String              @default("")
+  termsAndConditions      Json                @default("{}")
+  linkedQuotationId       String?
+  createdById             String?
+  updatedById             String?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  attachments             InvoiceAttachment[]
+  items                   InvoiceItem[]
+  payments                InvoicePayment[]
+  branch                  Branch              @relation(fields: [branchId], references: [id])
+  company                 Company             @relation(fields: [companyId], references: [id])
+  createdBy               User?               @relation("UserCreatedInvoices", fields: [createdById], references: [id])
+  customer                Customer            @relation(fields: [customerId], references: [id])
+  updatedBy               User?               @relation("UserUpdatedInvoices", fields: [updatedById], references: [id])
+
+  @@unique([branchId, invoiceNumber])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id                  String   @id @default(uuid())
+  invoiceId           String
+  productId           String?
+  productSnapshot     Json
+  originalPrice       Float
+  originalDescription String   @default("")
+  originalImage       String   @default("")
+  editedPrice         Float
+  editedDescription   String   @default("")
+  editedImage         String   @default("")
+  quantity            Int      @default(1)
+  discount            Json     @default("{}")
+  tax                 Float    @default(0)
+  subtotal            Float    @default(0)
+  discountAmount      Float    @default(0)
+  taxAmount           Float    @default(0)
+  total               Float    @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  invoice             Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product             Product? @relation(fields: [productId], references: [id])
+
+  @@map("invoice_items")
+}
+
+model InvoiceAttachment {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  fileName    String
+  fileSize    Int
+  mimeType    String
+  storagePath String
+  uploadedAt  DateTime @default(now())
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("invoice_attachments")
+}
+
+model InvoicePayment {
+  id            String        @id @default(uuid())
+  invoiceId     String
+  amount        Float
+  method        PaymentMethod
+  date          DateTime
+  note          String        @default("")
+  attachmentUrl String        @default("")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  invoice       Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("invoice_payments")
+}
+
+model SubscriptionPlan {
+  id                    String                @id @default(uuid())
+  name                  String
+  rank                  PlanRank
+  description           String                @default("")
+  displayOrder          Int                   @unique
+  isActive              Boolean               @default(true)
+  isDeleted             Boolean               @default(false)
+  isRecommended         Boolean               @default(false)
+  price                 Float
+  billingCycle          BillingCycle
+  quotationLimit        Int                   @default(0)
+  invoiceLimit          Int                   @default(0)
+  customerLimit         Int                   @default(0)
+  productLimit          Int                   @default(0)
+  branchLimit           Int                   @default(0)
+  staffLimit            Int                   @default(0)
+  whatsappMessageLimit  Int                   @default(0)
+  customQuotationThemes Boolean               @default(false)
+  customInvoiceThemes   Boolean               @default(false)
+  whatsappIntegration   Boolean               @default(false)
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  subscriptions         CompanySubscription[]
+
+  @@map("subscription_plans")
+}
+
+model CompanySubscription {
+  id         String             @id @default(uuid())
+  companyId  String             @unique
+  planId     String
+  status     SubscriptionStatus @default(TRIAL)
+  startDate  DateTime           @default(now())
+  expiryDate DateTime
+  paymentId  String?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  company    Company            @relation(fields: [companyId], references: [id])
+  plan       SubscriptionPlan   @relation(fields: [planId], references: [id])
+
+  @@map("company_subscriptions")
+}
+
+model SubscriptionPayment {
+  id                String           @id @default(uuid())
+  companyId         String
+  planId            String
+  amount            Float
+  currency          String           @default("INR")
+  razorpayOrderId   String           @default("")
+  razorpayPaymentId String           @default("")
+  razorpaySignature String           @default("")
+  status            SubPaymentStatus @default(PENDING)
+  paymentDate       DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  company           Company          @relation(fields: [companyId], references: [id])
+
+  @@map("subscription_payments")
+}
+
+model CompanyUsage {
+  id                   String   @id @default(uuid())
+  companyId            String   @unique
+  quotationsUsed       Int      @default(0)
+  invoicesUsed         Int      @default(0)
+  customersUsed        Int      @default(0)
+  productsUsed         Int      @default(0)
+  whatsappMessagesSent Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  company              Company  @relation(fields: [companyId], references: [id])
+
+  @@map("company_usage")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  companyId String
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  company   Company          @relation(fields: [companyId], references: [id])
+
+  @@map("notifications")
+}
+
+model DocumentSettings {
+  id            String       @id @default(uuid())
+  branchId      String
+  type          DocumentType
+  prefix        String
+  nextNumber    Int          @default(1)
+  topMessage    String
+  bottomMessage String
+  terms         String
+  showSku       Boolean      @default(false)
+  showHsn       Boolean      @default(true)
+  paymentMethod String?
+  branch        Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([branchId, type])
+  @@map("document_settings")
+}
+
+model WhatsappSettings {
+  id                String  @id @default(uuid())
+  branchId          String  @unique
+  instanceId        String
+  accessToken       String
+  autoSendInvoice   Boolean @default(true)
+  attachPdf         Boolean @default(true)
+  selectedTemplate  String  @default("standard")
+  invoiceTemplate   String
+  quotationTemplate String
+  isLinked          Boolean @default(true)
+  branch            Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@map("whatsapp_settings")
+}
+
+model ThemeSettings {
+  id         String   @id @default(uuid())
+  companyId  String   @unique
+  lightTheme Json     @default("{}")
+  darkTheme  Json     @default("{}")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("theme_settings")
+}
+
 enum UserRole {
   SUPER_ADMIN
   OWNER
@@ -70,575 +576,7 @@ enum PaymentMethod {
   CHEQUE
 }
 
-model Company {
-  id                   String                @id @default(uuid())
-  name                 String
-  logo                 String                @default("")
-  identifiers          Json                  @default("[]")
-  isActive             Boolean               @default(true)
-  createdById          String?
-  createdBy            User?                 @relation("CompanyCreator", fields: [createdById], references: [id])
-  branches             Branch[]
-  customers            Customer[]
-  products             Product[]
-  expenses             Expense[]
-  expenseCategories    ExpenseCategory[]
-  quotations           Quotation[]
-  invoices             Invoice[]
-  users                User[]                @relation("CompanyUsers")
-  subscription         CompanySubscription?
-  usage                CompanyUsage?
-  subscriptionPayments SubscriptionPayment[]
-  notifications        Notification[]
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-
-  @@map("companies")
-}
-
-model User {
-  id                       String            @id @default(uuid())
-  fullName                 String
-  phoneNumber              String            @unique
-  email                    String            @unique
-  password                 String
-  profilePicture           String            @default("")
-  role                     UserRole          @default(MANAGER)
-  isActive                 Boolean           @default(true)
-  companyId                String?
-  company                  Company?          @relation("CompanyUsers", fields: [companyId], references: [id])
-  createdById              String?
-  createdBy                User?             @relation("UserCreator", fields: [createdById], references: [id])
-  createdUsers             User[]            @relation("UserCreator")
-  companiesCreated         Company[]         @relation("CompanyCreator")
-  customersCreated         Customer[]        @relation("UserCreatedCustomers")
-  productsCreated          Product[]         @relation("UserCreatedProducts")
-  expensesCreated          Expense[]         @relation("UserCreatedExpenses")
-  expenseCategoriesCreated ExpenseCategory[] @relation("UserCreatedExpenseCategories")
-  quotationsCreated        Quotation[]       @relation("UserCreatedQuotations")
-  quotationsUpdated        Quotation[]       @relation("UserUpdatedQuotations")
-  invoicesCreated          Invoice[]         @relation("UserCreatedInvoices")
-  invoicesUpdated          Invoice[]         @relation("UserUpdatedInvoices")
-  branches                 Branch[]          @relation("UserBranches")
-  refreshTokens            RefreshToken[]
-  lastLoginAt              DateTime?
-  createdAt                DateTime          @default(now())
-  updatedAt                DateTime          @updatedAt
-
-  @@map("users")
-}
-
-model Branch {
-  id                String            @id @default(uuid())
-  companyId         String
-  company           Company           @relation(fields: [companyId], references: [id])
-  name              String
-  isMainBranch      Boolean           @default(false)
-  address           String            @default("")
-  city              String            @default("")
-  state             String            @default("")
-  pincode           String            @default("")
-  phone             String            @default("")
-  email             String            @default("")
-  bankName          String            @default("")
-  accountNumber     String            @default("")
-  ifscCode          String            @default("")
-  upiId             String            @default("")
-  signatureValue    String            @default("")
-  tax               Int               @default(0)
-  taxLabel          String            @default("")
-  quotationTheme    String            @default("INDUX_MODERN")
-  themeColor        String            @default("#0ea5e9")
-  isActive          Boolean           @default(true)
-  customers         Customer[]
-  products          Product[]
-  expenses          Expense[]
-  expenseCategories ExpenseCategory[]
-  quotations        Quotation[]
-  invoices          Invoice[]
-  users             User[]            @relation("UserBranches")
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-
-  themeConfig       Json?
-  documentSettings  DocumentSettings[]
-  whatsappSettings  WhatsappSettings?
-
-  @@unique([companyId, name])
-  @@map("branches")
-}
-
-model RefreshToken {
-  id        String   @id @default(uuid())
-  token     String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-
-  @@map("refresh_tokens")
-}
-
-model Customer {
-  id        String  @id @default(uuid())
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id])
-  branchId  String
-  branch    Branch  @relation(fields: [branchId], references: [id])
-
-  customerName       String
-  companyName        String @default("")
-  email              String @default("")
-  mobileNumber       String
-  businessLabel      String @default("")
-  businessLabelValue String @default("")
-  address            String @default("")
-  otherInfo          String @default("")
-
-  isActive    Boolean @default(true)
-  createdById String?
-  createdBy   User?   @relation("UserCreatedCustomers", fields: [createdById], references: [id])
-
-  quotations Quotation[]
-  invoices   Invoice[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("customers")
-}
-
-model Product {
-  id        String  @id @default(uuid())
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id])
-  branchId  String
-  branch    Branch  @relation(fields: [branchId], references: [id])
-
-  name        String
-  description String @default("")
-  image       String @default("")
-  price       Float
-  hsnNumber   String @default("")
-  skuNumber   String @default("")
-
-  isActive    Boolean @default(true)
-  createdById String?
-  createdBy   User?   @relation("UserCreatedProducts", fields: [createdById], references: [id])
-
-  quotationItems QuotationItem[]
-  invoiceItems   InvoiceItem[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("products")
-}
-
-model Expense {
-  id        String  @id @default(uuid())
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id])
-  branchId  String
-  branch    Branch  @relation(fields: [branchId], references: [id])
-
-  amount        Float
-  categoryId    String?
-  category      ExpenseCategory? @relation(fields: [categoryId], references: [id])
-  paymentMethod String
-  note          String           @default("")
-  date          DateTime
-  attachment    String           @default("")
-
-  createdById String?
-  createdBy   User?   @relation("UserCreatedExpenses", fields: [createdById], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("expenses")
-}
-
-model ExpenseCategory {
-  id        String  @id @default(uuid())
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id])
-  branchId  String
-  branch    Branch  @relation(fields: [branchId], references: [id])
-
-  name String
-
-  createdById String?
-  createdBy   User?   @relation("UserCreatedExpenseCategories", fields: [createdById], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  expenses Expense[]
-
-  @@unique([branchId, name])
-  @@map("expense_categories")
-}
-
-model Quotation {
-  id              String @id @default(uuid())
-  quotationNumber String
-  sequenceNumber  Int    @default(0)
-
-  companyId        String
-  company          Company  @relation(fields: [companyId], references: [id])
-  branchId         String
-  branch           Branch   @relation(fields: [branchId], references: [id])
-  customerId       String
-  customer         Customer @relation(fields: [customerId], references: [id])
-  customerSnapshot Json     @default("{}")
-
-  status        QuotationStatus @default(DRAFT)
-  quotationDate DateTime
-  expiryDate    DateTime
-
-  billingAddressSnapshot  Json
-  shippingAddressSnapshot Json
-  shippingSameAsBilling   Boolean @default(true)
-
-  discountConfiguration Json
-  taxConfiguration      Json
-
-  subtotal       Float @default(0)
-  discountAmount Float @default(0)
-  taxAmount      Float @default(0)
-  grandTotal     Float @default(0)
-
-  notes              String    @default("")
-  followUpDate       DateTime?
-  termsAndConditions Json      @default("{}")
-
-  createdById String?
-  createdBy   User?   @relation("UserCreatedQuotations", fields: [createdById], references: [id])
-  updatedById String?
-  updatedBy   User?   @relation("UserUpdatedQuotations", fields: [updatedById], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  items       QuotationItem[]
-  attachments QuotationAttachment[]
-
-  @@unique([branchId, quotationNumber])
-  @@map("quotations")
-}
-
-model QuotationItem {
-  id          String    @id @default(uuid())
-  quotationId String
-  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
-  productId   String?
-  product     Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
-
-  productSnapshot Json
-
-  originalPrice       Float
-  originalDescription String @default("")
-  originalImage       String @default("")
-
-  editedPrice       Float
-  editedDescription String @default("")
-  editedImage       String @default("")
-
-  quantity Int   @default(1)
-  discount Json  @default("{}")
-  tax      Float @default(0)
-
-  subtotal       Float @default(0)
-  discountAmount Float @default(0)
-  taxAmount      Float @default(0)
-  total          Float @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("quotation_items")
-}
-
-model QuotationAttachment {
-  id          String    @id @default(uuid())
-  quotationId String
-  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
-
-  fileName    String
-  fileSize    Int
-  mimeType    String
-  storagePath String
-
-  uploadedAt DateTime @default(now())
-
-  @@map("quotation_attachments")
-}
-
-model Invoice {
-  id             String @id @default(uuid())
-  invoiceNumber  String
-  sequenceNumber Int    @default(0)
-
-  companyId        String
-  company          Company  @relation(fields: [companyId], references: [id])
-  branchId         String
-  branch           Branch   @relation(fields: [branchId], references: [id])
-  customerId       String
-  customer         Customer @relation(fields: [customerId], references: [id])
-  customerSnapshot Json     @default("{}")
-
-  status      InvoiceStatus @default(UNPAID)
-  invoiceDate DateTime
-  dueDate     DateTime
-
-  billingAddressSnapshot  Json
-  shippingAddressSnapshot Json
-  shippingSameAsBilling   Boolean @default(true)
-
-  discountConfiguration Json
-  taxConfiguration      Json
-
-  subtotal       Float @default(0)
-  discountAmount Float @default(0)
-  taxAmount      Float @default(0)
-  grandTotal     Float @default(0)
-
-  amountPaid Float @default(0)
-  amountDue  Float @default(0)
-
-  notes              String @default("")
-  termsAndConditions Json   @default("{}")
-
-  linkedQuotationId String?
-
-  createdById String?
-  createdBy   User?   @relation("UserCreatedInvoices", fields: [createdById], references: [id])
-  updatedById String?
-  updatedBy   User?   @relation("UserUpdatedInvoices", fields: [updatedById], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  items       InvoiceItem[]
-  attachments InvoiceAttachment[]
-  payments    InvoicePayment[]
-
-  @@unique([branchId, invoiceNumber])
-  @@map("invoices")
-}
-
-model InvoiceItem {
-  id        String   @id @default(uuid())
-  invoiceId String
-  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  productId String?
-  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
-
-  productSnapshot Json
-
-  originalPrice       Float
-  originalDescription String @default("")
-  originalImage       String @default("")
-
-  editedPrice       Float
-  editedDescription String @default("")
-  editedImage       String @default("")
-
-  quantity Int   @default(1)
-  discount Json  @default("{}")
-  tax      Float @default(0)
-
-  subtotal       Float @default(0)
-  discountAmount Float @default(0)
-  taxAmount      Float @default(0)
-  total          Float @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("invoice_items")
-}
-
-model InvoiceAttachment {
-  id        String  @id @default(uuid())
-  invoiceId String
-  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-
-  fileName    String
-  fileSize    Int
-  mimeType    String
-  storagePath String
-
-  uploadedAt DateTime @default(now())
-
-  @@map("invoice_attachments")
-}
-
-model InvoicePayment {
-  id        String  @id @default(uuid())
-  invoiceId String
-  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-
-  amount        Float
-  method        PaymentMethod
-  date          DateTime
-  note          String        @default("")
-  attachmentUrl String        @default("")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("invoice_payments")
-}
-
-// ─── Subscription Management ───────────────────────────────────────
-
-model SubscriptionPlan {
-  id            String   @id @default(uuid())
-  name          String
-  rank          PlanRank
-  description   String   @default("")
-  displayOrder  Int      @unique
-  isActive      Boolean  @default(true)
-  isDeleted     Boolean  @default(false)
-  isRecommended Boolean  @default(false)
-
-  // Pricing
-  price        Float
-  billingCycle BillingCycle
-
-  // Usage Limits (0 = Unlimited)
-  quotationLimit       Int @default(0)
-  invoiceLimit         Int @default(0)
-  customerLimit        Int @default(0)
-  productLimit         Int @default(0)
-  branchLimit          Int @default(0)
-  staffLimit           Int @default(0)
-  whatsappMessageLimit Int @default(0)
-
-  // Feature Permissions
-  customQuotationThemes Boolean @default(false)
-  customInvoiceThemes   Boolean @default(false)
-  whatsappIntegration   Boolean @default(false)
-
-  // Relations
-  subscriptions CompanySubscription[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("subscription_plans")
-}
-
-model CompanySubscription {
-  id        String           @id @default(uuid())
-  companyId String           @unique
-  company   Company          @relation(fields: [companyId], references: [id])
-  planId    String
-  plan      SubscriptionPlan @relation(fields: [planId], references: [id])
-
-  status     SubscriptionStatus @default(TRIAL)
-  startDate  DateTime           @default(now())
-  expiryDate DateTime
-
-  paymentId String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("company_subscriptions")
-}
-
-model SubscriptionPayment {
-  id        String  @id @default(uuid())
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id])
-
-  planId   String
-  amount   Float
-  currency String @default("INR")
-
-  razorpayOrderId   String @default("")
-  razorpayPaymentId String @default("")
-  razorpaySignature String @default("")
-
-  status      SubPaymentStatus @default(PENDING)
-  paymentDate DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("subscription_payments")
-}
-
-model CompanyUsage {
-  id        String  @id @default(uuid())
-  companyId String  @unique
-  company   Company @relation(fields: [companyId], references: [id])
-
-  quotationsUsed       Int @default(0)
-  invoicesUsed         Int @default(0)
-  customersUsed        Int @default(0)
-  productsUsed         Int @default(0)
-  whatsappMessagesSent Int @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("company_usage")
-}
-
-model Notification {
-  id        String  @id @default(uuid())
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id])
-
-  type    NotificationType
-  title   String
-  message String
-  isRead  Boolean          @default(false)
-
-  createdAt DateTime @default(now())
-
-  @@map("notifications")
-}
-
 enum DocumentType {
   QUOTATION
   INVOICE
-}
-
-model DocumentSettings {
-  id             String       @id @default(uuid())
-  branchId       String
-  branch         Branch       @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  type           DocumentType
-  prefix         String
-  nextNumber     Int          @default(1)
-  topMessage     String       @db.Text
-  bottomMessage  String       @db.Text
-  terms          String       @db.Text
-  showSku        Boolean      @default(false)
-  showHsn        Boolean      @default(true)
-  paymentMethod  String?      @db.Text 
-
-  @@unique([branchId, type])
-  @@map("document_settings")
-}
-
-model WhatsappSettings {
-  id                String  @id @default(uuid())
-  branchId          String  @unique
-  branch            Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  instanceId        String
-  accessToken       String
-  autoSendInvoice   Boolean @default(true)
-  attachPdf         Boolean @default(true)
-  selectedTemplate  String  @default("standard")
-  invoiceTemplate   String  @db.Text
-  quotationTemplate String  @db.Text
-  isLinked          Boolean @default(true)
-
-  @@map("whatsapp_settings")
 }

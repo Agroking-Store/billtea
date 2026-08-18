@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,8 +13,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
-import { Stack, router } from 'expo-router';
+import { Stack, router, useFocusEffect } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../../hooks/useTheme';
 import {
@@ -25,63 +28,56 @@ import {
   Building2,
   X,
   Check,
+  Phone,
+  User as UserIcon,
 } from 'lucide-react-native';
 import { GlassPanel } from '../../../components/ui/GlassPanel';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppHeader } from '../../../components/ui/AppHeader';
+import { apiClient } from '../../../api/client';
+import { ENV } from '../../../config/env';
 
-const INITIAL_USERS = [
-  {
-    id: '1',
-    name: 'Robert Sterling',
-    email: 'robert.s@billaro.io',
-    role: 'Manager',
-    location: 'Main HQ, North Sector',
-    branches: [
-      { name: 'North Sector HQ', quotations: 12, invoices: 34, customers: 58, expenses: 9 },
-      { name: 'Downtown Branch', quotations: 4, invoices: 11, customers: 22, expenses: 3 },
-      { name: 'Riverside Branch', quotations: 0, invoices: 6, customers: 15, expenses: 0 },
-    ],
-    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDngezLLFtEpKS-aadPvNpA-X1a6IbHTsEjQuFDsDZHp0jbiukNqveV3sx5AGCnsmd0NEeev8WJ6JvjZRfiHYSypy0CO3LC3x3fhd_rtMytKfBkFpdvfmiRRO3EyrROM3_4OhElDQQnfPdDSUTBLp74VDSAKRNRPftSgsFJ8T6MK5Z1dMzWyN7aXiBWqm5wJJX_2K3pWjAmEoHVOi4uvJnYwmZBJf_09JAA9KoDOqTkQ17p0oSQnpt5',
-  },
-  {
-    id: '2',
-    name: 'Sarah Jenkins',
-    email: 'sarah.j@billaro.io',
-    role: 'Staff',
-    location: 'East Sector',
-    branches: [
-      { name: 'East Sector Branch', quotations: 7, invoices: 19, customers: 33, expenses: 5 },
-    ],
-    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCSL6NjlvTKtkJT_wucJsBSg0CqS1-Sp8lOTdF4PdZLolCcLx1novp5MYfZvCnzmo1TDMlz1lbpzu0cUgNeeXZGPCrdbsGD-ows_b0WoCFOERZN8EnEXX6xH4UtpBX2BHaNU3PSf5jah62ns9JFSFgLm-PnNb284QTLfqai2lxppiO5WyGvMJIqRkmGvBneWsemLVg43VIBeCKT3OWdWqGXN0lz1Th1dzEaaYjGhq9-uWvmNIcDGvMx',
-  },
-  {
-    id: '3',
-    name: 'David Chen',
-    email: 'david.c@billaro.io',
-    role: 'Staff',
-    location: 'Main HQ',
-    branches: [
-      { name: 'Main HQ Branch', quotations: 15, invoices: 28, customers: 47, expenses: 12 },
-      { name: 'West End Branch', quotations: 2, invoices: 8, customers: 14, expenses: 1 },
-    ],
-    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB25qAmpwM-uIKGiFmhVhSn3XcSi0FwdlU-CHV_lyWjUOkeeL6yFnMJkjEDRu-q5NUjPZaupewA8e-TDekFaV09HhjONLoipNlz7VmQmixhXDFqvCRemP5ZvSvw8_AKgxUKFwX8iNJgq37lihhEp6qCeB2pBeEE6gsJmIfo7ZqzaGovWxaCisn3Q3KLHtHzCDOEBD5V8SecY1PZU0kDDN5pRtm-qX9mbBB0aUnLGiYY5_s0O2mTaYBj',
-  },
-];
-
-// Breakpoint used to switch to a stacked / compact layout on narrow phones
-const SMALL_SCREEN_WIDTH = 380;
-
-type StaffMember = (typeof INITIAL_USERS)[number];
-
-type FormState = {
+type Branch = {
+  id: string;
   name: string;
-  email: string;
-  role: 'Manager' | 'Staff';
-  location: string;
+  isMainBranch?: boolean;
 };
 
-const EMPTY_FORM: FormState = { name: '', email: '', role: 'Staff', location: '' };
+type StaffMember = {
+  id: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  profilePicture?: string;
+  role: 'OWNER' | 'MANAGER' | string;
+  isActive: boolean;
+  branches: Branch[];
+  _count?: {
+    quotationsCreated?: number;
+    invoicesCreated?: number;
+    customersCreated?: number;
+    expensesCreated?: number;
+    productsCreated?: number;
+  };
+};
+
+type FormState = {
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  password: string;
+  selectedBranches: string[];
+};
+
+const EMPTY_FORM: FormState = {
+  fullName: '',
+  email: '',
+  phoneNumber: '',
+  password: '',
+  selectedBranches: [],
+};
+
+const SMALL_SCREEN_WIDTH = 380;
 
 export default function UserManagementScreen() {
   const { colors, isDark } = useTheme();
@@ -89,18 +85,74 @@ export default function UserManagementScreen() {
   const { width } = useWindowDimensions();
   const isSmallScreen = width < SMALL_SCREEN_WIDTH;
 
-  // ── Added: local state for staff list + add/edit modal ──
-  const [USERS, setUSERS] = useState<StaffMember[]>(INITIAL_USERS);
+  const [users, setUsers] = useState<StaffMember[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Modal State
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormState>(EMPTY_FORM);
   const [formError, setFormError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const fetchData = async () => {
+    try {
+      setError(null);
+      const [userRes, branchRes] = await Promise.all([
+        apiClient.get('/users'),
+        apiClient.get('/branches'),
+      ]);
+
+      if (userRes.data?.users) {
+        setUsers(userRes.data.users);
+      }
+      if (branchRes.data?.branches) {
+        setBranches(branchRes.data.branches);
+      }
+    } catch (err: any) {
+      console.error('Failed to load staff management data:', err);
+      setError(err.response?.data?.message || 'Failed to load staff list from database.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [])
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchData();
+  };
+
+  const getAvatarUrl = (user: StaffMember) => {
+    if (user.profilePicture && user.profilePicture.trim() !== '') {
+      if (user.profilePicture.startsWith('http://') || user.profilePicture.startsWith('https://')) {
+        return user.profilePicture;
+      }
+      const baseUrl = ENV.API_URL.replace('/api/v1', '');
+      return user.profilePicture.startsWith('/')
+        ? `${baseUrl}${user.profilePicture}`
+        : `${baseUrl}/${user.profilePicture}`;
+    }
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(user.fullName)}&background=0284c7&color=ffffff&bold=true`;
+  };
 
   const handleOpenCreateModal = () => {
     setModalMode('create');
     setSelectedUserId(null);
-    setFormData(EMPTY_FORM);
+    setFormData({
+      ...EMPTY_FORM,
+      selectedBranches: branches.map((b) => b.id),
+    });
     setFormError('');
     setIsModalVisible(true);
   };
@@ -109,101 +161,153 @@ export default function UserManagementScreen() {
     setModalMode('edit');
     setSelectedUserId(user.id);
     setFormData({
-      name: user.name,
-      email: user.email,
-      role: user.role as 'Manager' | 'Staff',
-      location: user.location,
+      fullName: user.fullName || '',
+      email: user.email || '',
+      phoneNumber: user.phoneNumber || '',
+      password: '',
+      selectedBranches: user.branches?.map((b) => b.id) || [],
     });
     setFormError('');
     setIsModalVisible(true);
   };
 
   const handleCloseModal = () => {
+    if (isSubmitting) return;
     setIsModalVisible(false);
   };
 
-  const handleFieldChange = (field: keyof FormState, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const handleBranchToggle = (branchId: string) => {
+    setFormData((prev) => {
+      const exists = prev.selectedBranches.includes(branchId);
+      if (exists) {
+        return { ...prev, selectedBranches: prev.selectedBranches.filter((id) => id !== branchId) };
+      } else {
+        return { ...prev, selectedBranches: [...prev.selectedBranches, branchId] };
+      }
+    });
   };
 
-  const handleSubmit = () => {
-    if (!formData.name.trim() || !formData.email.trim() || !formData.location.trim()) {
-      setFormError('Please fill in name, email, and location.');
+  const handleSubmit = async () => {
+    setFormError('');
+    if (!formData.fullName.trim()) {
+      setFormError('Full Name is required (at least 3 characters).');
+      return;
+    }
+    if (!formData.email.trim()) {
+      setFormError('Valid Email address is required.');
+      return;
+    }
+    if (!formData.phoneNumber.trim() || !/^\d{10}$/.test(formData.phoneNumber.trim())) {
+      setFormError('Phone number must be exactly 10 digits.');
       return;
     }
 
     if (modalMode === 'create') {
-      const newUser: StaffMember = {
-        id: Date.now().toString(),
-        name: formData.name.trim(),
-        email: formData.email.trim(),
-        role: formData.role,
-        location: formData.location.trim(),
-        branches: [],
-        avatar: 'https://ui-avatars.com/api/?name=' + encodeURIComponent(formData.name.trim()),
-      };
-      setUSERS((prev) => [...prev, newUser]);
-    } else if (selectedUserId) {
-      setUSERS((prev) =>
-        prev.map((u) =>
-          u.id === selectedUserId
-            ? {
-                ...u,
-                name: formData.name.trim(),
-                email: formData.email.trim(),
-                role: formData.role,
-                location: formData.location.trim(),
-              }
-            : u
-        )
-      );
+      if (!formData.password || formData.password.length < 6) {
+        setFormError('Password is required (minimum 6 characters).');
+        return;
+      }
+    } else {
+      if (formData.password && formData.password.length < 6) {
+        setFormError('New password must be at least 6 characters.');
+        return;
+      }
     }
 
-    setIsModalVisible(false);
+    setIsSubmitting(true);
+    try {
+      if (modalMode === 'create') {
+        const payload = {
+          fullName: formData.fullName.trim(),
+          email: formData.email.trim().toLowerCase(),
+          phoneNumber: formData.phoneNumber.trim(),
+          password: formData.password,
+          role: 'MANAGER',
+          branches: formData.selectedBranches,
+        };
+        await apiClient.post('/users/create', payload);
+        Alert.alert('Success', 'Staff member created successfully!');
+      } else if (selectedUserId) {
+        const payload: any = {
+          fullName: formData.fullName.trim(),
+          email: formData.email.trim().toLowerCase(),
+          phoneNumber: formData.phoneNumber.trim(),
+          role: 'MANAGER',
+          branches: formData.selectedBranches,
+        };
+        if (formData.password.trim()) {
+          payload.password = formData.password.trim();
+        }
+        await apiClient.put(`/users/${selectedUserId}`, payload);
+        Alert.alert('Success', 'Staff member updated successfully!');
+      }
+      setIsModalVisible(false);
+      fetchData();
+    } catch (err: any) {
+      console.error('Submit staff error:', err.response?.data || err.message);
+      let msg = err.response?.data?.message || 'Failed to save staff member details.';
+      if (Array.isArray(msg)) msg = msg.join(', ');
+      setFormError(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDelete = (user: StaffMember) => {
+    if (user.role === 'OWNER') {
+      Alert.alert('Action Restricted', 'Owner accounts cannot be deleted from staff management.');
+      return;
+    }
+
     Alert.alert(
       'Remove Staff Member',
-      `Are you sure you want to remove ${user.name}? This action cannot be undone.`,
+      `Are you sure you want to remove ${user.fullName}? This action will deactivate their account access.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            setUSERS((prev) => prev.filter((u) => u.id !== user.id));
+          onPress: async () => {
+            try {
+              await apiClient.delete(`/users/${user.id}`);
+              Alert.alert('Success', 'Staff member deactivated successfully.');
+              fetchData();
+            } catch (err: any) {
+              Alert.alert('Error', err.response?.data?.message || 'Failed to remove staff member.');
+            }
           },
         },
       ]
     );
   };
-  // ── End added state/handlers ──
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen options={{ headerShown: false }} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
-      {/* Background Gradient */}
       <LinearGradient
-        colors={isDark ? ['#081326', '#111b2f'] : [colors.background, colors.surface]}
+        colors={isDark ? ['#030712', '#0f172a', '#030712'] : ['#f8fafc', '#f1f5f9', '#e2e8f0']}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
 
-      {/* Global Header */}
       <AppHeader title="Staff Management" />
 
-      {/* Content */}
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingTop: 24, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
+        {/* Action Header */}
         <View style={[styles.actionBar, isSmallScreen && styles.actionBarSmall]}>
           <View style={isSmallScreen && styles.actionBarTextSmall}>
-            <Text style={[styles.title, { color: colors.text }]}>{USERS.length} Staff configured</Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Manage access and roles</Text>
+            <Text style={[styles.title, { color: colors.text }]}>
+              {loading ? 'Loading...' : `${users.length} Staff configured`}
+            </Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+              Manage team access and assigned branches
+            </Text>
           </View>
           <TouchableOpacity
             onPress={handleOpenCreateModal}
@@ -218,145 +322,178 @@ export default function UserManagementScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.userList}>
-          {USERS.map((user) => (
-            <GlassPanel key={user.id} style={styles.userCard}>
-              <View style={styles.cardContent}>
+        {error && (
+          <View style={[styles.errorBanner, { backgroundColor: colors.error + '20', borderColor: colors.error + '40' }]}>
+            <Text style={{ color: colors.error, fontSize: 13, fontWeight: '500' }}>{error}</Text>
+          </View>
+        )}
 
-                {/* Avatar and Info */}
-                <View style={[styles.userInfo, isSmallScreen && styles.userInfoSmall]}>
-                  <View
-                    style={[
-                      styles.avatarContainer,
-                      isSmallScreen && styles.avatarContainerSmall,
-                      { borderColor: colors.primary + '33' },
-                    ]}
-                  >
-                    <Image source={{ uri: user.avatar }} style={styles.avatar} />
-                  </View>
-                  <View style={styles.userDetails}>
-                    <Text style={[styles.userName, { color: colors.text }]} numberOfLines={1}>
-                      {user.name}
-                    </Text>
-                    <Text style={[styles.userEmail, { color: colors.textSecondary }]} numberOfLines={1}>
-                      {user.email}
-                    </Text>
-
-                    <View style={styles.roleLocationRow}>
+        {loading ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator color={colors.primary} size="large" />
+            <Text style={{ color: colors.textSecondary, marginTop: 12, fontSize: 14 }}>
+              Fetching staff details from database...
+            </Text>
+          </View>
+        ) : users.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <UserIcon size={48} color={colors.textSecondary} style={{ opacity: 0.5 }} />
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No Staff Found</Text>
+            <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+              You haven't added any staff members to your company yet.
+            </Text>
+            <TouchableOpacity
+              onPress={handleOpenCreateModal}
+              style={[styles.addButton, { backgroundColor: colors.primary, marginTop: 16 }]}
+            >
+              <Plus color="#ffffff" size={18} />
+              <Text style={{ color: '#ffffff', fontWeight: '700' }}>Add First Staff</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.userList}>
+            {users.map((user) => {
+              const counts = user._count || {};
+              return (
+                <GlassPanel key={user.id} style={styles.userCard}>
+                  <View style={styles.cardContent}>
+                    {/* User Profile Header */}
+                    <View style={[styles.userInfo, isSmallScreen && styles.userInfoSmall]}>
                       <View
                         style={[
-                          styles.roleBadge,
-                          {
-                            backgroundColor: user.role === 'Manager' ? colors.primary + '1A' : colors.secondary + '1A',
-                            borderColor: user.role === 'Manager' ? colors.primary + '33' : colors.secondary + '33',
-                          },
+                          styles.avatarContainer,
+                          isSmallScreen && styles.avatarContainerSmall,
+                          { borderColor: colors.primary + '33' },
                         ]}
                       >
-                        <Text
-                          style={[
-                            styles.roleText,
-                            { color: user.role === 'Manager' ? colors.primary : colors.secondary },
-                          ]}
-                        >
-                          {user.role}
-                        </Text>
+                        <Image source={{ uri: getAvatarUrl(user) }} style={styles.avatar} />
                       </View>
-
-                      <View style={styles.locationContainer}>
-                        <MapPin color={colors.textSecondary} size={14} />
-                        <Text style={[styles.locationText, { color: colors.textSecondary }]} numberOfLines={1}>
-                          {user.location}
+                      <View style={styles.userDetails}>
+                        <Text style={[styles.userName, { color: colors.text }]} numberOfLines={1}>
+                          {user.fullName}
                         </Text>
-                      </View>
-                    </View>
-                  </View>
-                </View>
+                        <Text style={[styles.userEmail, { color: colors.textSecondary }]} numberOfLines={1}>
+                          {user.email}
+                        </Text>
 
-                {/* Assigned Branches */}
-                <View style={[styles.branchesSection, { borderTopColor: colors.primary + '1A' }]}>
-                  <View style={styles.branchesHeader}>
-                    <Building2 color={colors.textSecondary} size={16} />
-                    <Text style={[styles.branchesLabel, { color: colors.text }]}>Assigned Branches</Text>
-                  </View>
+                        <View style={styles.roleLocationRow}>
+                          <View
+                            style={[
+                              styles.roleBadge,
+                              {
+                                backgroundColor:
+                                  user.role === 'OWNER'
+                                    ? colors.secondary + '26'
+                                    : colors.primary + '1A',
+                                borderColor:
+                                  user.role === 'OWNER'
+                                    ? colors.secondary + '4D'
+                                    : colors.primary + '33',
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.roleText,
+                                { color: user.role === 'OWNER' ? colors.secondary : colors.primary },
+                              ]}
+                            >
+                              {user.role}
+                            </Text>
+                          </View>
 
-                  <View style={styles.branchList}>
-                    {user.branches.map((branch) => {
-                      const stats = [
-  { key: 'quotations', label: 'Quotations', value: branch.quotations },
-  { key: 'invoices', label: 'Invoices', value: branch.invoices },
-  { key: 'customers', label: 'Customers', value: branch.customers },
-  { key: 'expenses', label: 'Expenses', value: branch.expenses },
-];
-                      return (
-                        <View
-                          key={branch.name}
-                          style={[
-                            styles.branchCard,
-                            { backgroundColor: colors.surfaceVariant + '26', borderColor: colors.primary + '1F' },
-                          ]}
-                        >
-                          <Text style={[styles.branchName, { color: colors.text }]} numberOfLines={1}>
-                            {branch.name}
-                          </Text>
-
-                          <View style={[styles.statGrid, isSmallScreen && styles.statGridSmall]}>
-                            {stats.map(({ key, label, value }) => (
-  <View
-    key={key}
-    style={[styles.statItem, isSmallScreen && styles.statItemSmall]}
-  >
-    <Text style={[styles.statValue, { color: colors.text }]}>
-      {value}
-    </Text>
-
-    <Text
-      style={[styles.statLabel, { color: colors.textSecondary }]}
-      numberOfLines={1}
-    >
-      {label}
-    </Text>
-  </View>
-))}
+                          <View style={styles.locationContainer}>
+                            <Phone color={colors.textSecondary} size={13} />
+                            <Text style={[styles.locationText, { color: colors.textSecondary }]} numberOfLines={1}>
+                              {user.phoneNumber}
+                            </Text>
                           </View>
                         </View>
-                      );
-                    })}
-                    {user.branches.length === 0 && (
-                      <Text style={[styles.noBranchesText, { color: colors.textSecondary }]}>
-                        No branches assigned
-                      </Text>
-                    )}
-                  </View>
-                </View>
+                      </View>
+                    </View>
 
-                {/* Actions */}
-                <View style={[styles.actionButtons, { borderTopColor: colors.primary + '1A' }]}>
-                  <TouchableOpacity
-                    onPress={() => handleOpenEditModal(user)}
-                    style={[styles.actionBtn, { backgroundColor: colors.surfaceVariant + '00' }]}
-                  >
-                    <Edit2 color={colors.textSecondary} size={20} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => handleDelete(user)}
-                    style={[styles.actionBtn, { backgroundColor: colors.error + '1A' }]}
-                  >
-                    <Trash2 color={colors.error} size={20} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </GlassPanel>
-          ))}
-        </View>
+                    {/* Assigned Branches */}
+                    <View style={[styles.branchesSection, { borderTopColor: colors.primary + '1A' }]}>
+                      <View style={styles.branchesHeader}>
+                        <Building2 color={colors.textSecondary} size={16} />
+                        <Text style={[styles.branchesLabel, { color: colors.text }]}>Assigned Branches</Text>
+                      </View>
+
+                      <View style={styles.branchList}>
+                        {user.branches && user.branches.length > 0 ? (
+                          user.branches.map((branch) => {
+                            const stats = [
+                              { key: 'quotations', label: 'Quotations', value: counts.quotationsCreated || 0 },
+                              { key: 'invoices', label: 'Invoices', value: counts.invoicesCreated || 0 },
+                              { key: 'customers', label: 'Customers', value: counts.customersCreated || 0 },
+                              { key: 'expenses', label: 'Expenses', value: counts.expensesCreated || 0 },
+                            ];
+                            return (
+                              <View
+                                key={branch.id || branch.name}
+                                style={[
+                                  styles.branchCard,
+                                  { backgroundColor: colors.surfaceVariant + '26', borderColor: colors.primary + '1F' },
+                                ]}
+                              >
+                                <Text style={[styles.branchName, { color: colors.text }]} numberOfLines={1}>
+                                  {branch.name}
+                                </Text>
+
+                                <View style={[styles.statGrid, isSmallScreen && styles.statGridSmall]}>
+                                  {stats.map(({ key, label, value }) => (
+                                    <View
+                                      key={key}
+                                      style={[styles.statItem, isSmallScreen && styles.statItemSmall]}
+                                    >
+                                      <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
+                                      <Text
+                                        style={[styles.statLabel, { color: colors.textSecondary }]}
+                                        numberOfLines={1}
+                                      >
+                                        {label}
+                                      </Text>
+                                    </View>
+                                  ))}
+                                </View>
+                              </View>
+                            );
+                          })
+                        ) : (
+                          <Text style={[styles.noBranchesText, { color: colors.textSecondary }]}>
+                            No branches assigned
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+
+                    {/* Card Actions */}
+                    <View style={[styles.actionButtons, { borderTopColor: colors.primary + '1A' }]}>
+                      <TouchableOpacity
+                        onPress={() => handleOpenEditModal(user)}
+                        style={[styles.actionBtn, { backgroundColor: colors.surfaceVariant + '40' }]}
+                      >
+                        <Edit2 color={colors.primary} size={18} />
+                      </TouchableOpacity>
+                      {user.role !== 'OWNER' && (
+                        <TouchableOpacity
+                          onPress={() => handleDelete(user)}
+                          style={[styles.actionBtn, { backgroundColor: colors.error + '1A' }]}
+                        >
+                          <Trash2 color={colors.error} size={18} />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                </GlassPanel>
+              );
+            })}
+          </View>
+        )}
       </ScrollView>
 
-      {/* ── Added: Add / Edit Staff Modal ── */}
-      <Modal
-        visible={isModalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={handleCloseModal}
-      >
+      {/* Add / Edit Staff Modal */}
+      <Modal visible={isModalVisible} animationType="slide" transparent onRequestClose={handleCloseModal}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.modalOverlay}
@@ -368,12 +505,12 @@ export default function UserManagementScreen() {
             <View style={[styles.modalHeader, { borderBottomColor: colors.primary + '1A' }]}>
               <View>
                 <Text style={[styles.modalTitle, { color: colors.text }]}>
-                  {modalMode === 'create' ? 'Add New Staff' : 'Edit Staff'}
+                  {modalMode === 'create' ? 'Add New Staff' : 'Edit Staff Profile'}
                 </Text>
                 <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
                   {modalMode === 'create'
-                    ? 'Create a staff account and assign a role.'
-                    : "Update this staff member's details."}
+                    ? 'Create a manager account and assign branch access.'
+                    : 'Update account info, password or branch permissions.'}
                 </Text>
               </View>
               <TouchableOpacity
@@ -386,7 +523,7 @@ export default function UserManagementScreen() {
 
             <ScrollView
               style={styles.modalBody}
-              contentContainerStyle={{ paddingBottom: 8 }}
+              contentContainerStyle={{ paddingBottom: 24 }}
               showsVerticalScrollIndicator={false}
             >
               {!!formError && (
@@ -395,11 +532,11 @@ export default function UserManagementScreen() {
                 </View>
               )}
 
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>Full Name</Text>
+              <Text style={[styles.fieldLabel, { color: colors.text }]}>Full Name *</Text>
               <TextInput
-                value={formData.name}
-                onChangeText={(v) => handleFieldChange('name', v)}
-                placeholder="e.g. Jane Doe"
+                value={formData.fullName}
+                onChangeText={(v) => setFormData((prev) => ({ ...prev, fullName: v }))}
+                placeholder="e.g. Robert Sterling"
                 placeholderTextColor={colors.textSecondary}
                 style={[
                   styles.input,
@@ -407,11 +544,11 @@ export default function UserManagementScreen() {
                 ]}
               />
 
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>Email</Text>
+              <Text style={[styles.fieldLabel, { color: colors.text }]}>Email Address *</Text>
               <TextInput
                 value={formData.email}
-                onChangeText={(v) => handleFieldChange('email', v)}
-                placeholder="jane@company.com"
+                onChangeText={(v) => setFormData((prev) => ({ ...prev, email: v }))}
+                placeholder="robert@example.com"
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -421,46 +558,76 @@ export default function UserManagementScreen() {
                 ]}
               />
 
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>Location</Text>
+              <Text style={[styles.fieldLabel, { color: colors.text }]}>Phone Number (10 Digits) *</Text>
               <TextInput
-                value={formData.location}
-                onChangeText={(v) => handleFieldChange('location', v)}
-                placeholder="e.g. Main HQ, North Sector"
+                value={formData.phoneNumber}
+                onChangeText={(v) => setFormData((prev) => ({ ...prev, phoneNumber: v }))}
+                placeholder="9876543210"
                 placeholderTextColor={colors.textSecondary}
+                keyboardType="phone-pad"
+                maxLength={10}
                 style={[
                   styles.input,
                   { color: colors.text, backgroundColor: colors.surfaceVariant + '26', borderColor: colors.primary + '1F' },
                 ]}
               />
 
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>Role</Text>
-              <View style={styles.roleToggleRow}>
-                {(['Manager', 'Staff'] as const).map((roleOption) => {
-                  const isSelected = formData.role === roleOption;
+              <Text style={[styles.fieldLabel, { color: colors.text }]}>
+                {modalMode === 'create' ? 'Password *' : 'New Password (Leave blank to keep existing)'}
+              </Text>
+              <TextInput
+                value={formData.password}
+                onChangeText={(v) => setFormData((prev) => ({ ...prev, password: v }))}
+                placeholder={modalMode === 'create' ? 'Minimum 6 characters' : 'Enter new password'}
+                placeholderTextColor={colors.textSecondary}
+                secureTextEntry
+                style={[
+                  styles.input,
+                  { color: colors.text, backgroundColor: colors.surfaceVariant + '26', borderColor: colors.primary + '1F' },
+                ]}
+              />
+
+              <Text style={[styles.fieldLabel, { color: colors.text, marginTop: 16 }]}>Branch Access Permissions</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 8 }}>
+                Select branches this staff member can access:
+              </Text>
+              <View style={styles.branchCheckboxGroup}>
+                {branches.map((b) => {
+                  const isSelected = formData.selectedBranches.includes(b.id);
                   return (
                     <TouchableOpacity
-                      key={roleOption}
-                      onPress={() => handleFieldChange('role', roleOption)}
+                      key={b.id}
+                      onPress={() => handleBranchToggle(b.id)}
                       style={[
-                        styles.roleToggleBtn,
+                        styles.branchCheckboxBtn,
                         {
                           backgroundColor: isSelected ? colors.primary + '1A' : colors.surfaceVariant + '26',
                           borderColor: isSelected ? colors.primary + '66' : colors.primary + '1A',
                         },
                       ]}
                     >
-                      {isSelected && <Check color={colors.primary} size={14} />}
-                      <Text
+                      <View
                         style={[
-                          styles.roleToggleText,
-                          { color: isSelected ? colors.primary : colors.textSecondary },
+                          styles.checkboxIcon,
+                          {
+                            backgroundColor: isSelected ? colors.primary : 'transparent',
+                            borderColor: isSelected ? colors.primary : colors.textSecondary,
+                          },
                         ]}
                       >
-                        {roleOption}
+                        {isSelected && <Check color="#ffffff" size={12} />}
+                      </View>
+                      <Text style={[styles.branchCheckboxText, { color: isSelected ? colors.primary : colors.text }]}>
+                        {b.name}
                       </Text>
                     </TouchableOpacity>
                   );
                 })}
+                {branches.length === 0 && (
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, fontStyle: 'italic' }}>
+                    No branches configured. Add branches first.
+                  </Text>
+                )}
               </View>
             </ScrollView>
 
@@ -468,23 +635,28 @@ export default function UserManagementScreen() {
             <View style={[styles.modalFooter, { borderTopColor: colors.primary + '1A' }]}>
               <TouchableOpacity
                 onPress={handleCloseModal}
+                disabled={isSubmitting}
                 style={[styles.footerBtn, styles.cancelBtn, { borderColor: colors.primary + '26' }]}
               >
                 <Text style={[styles.footerBtnText, { color: colors.textSecondary }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleSubmit}
+                disabled={isSubmitting}
                 style={[styles.footerBtn, styles.saveBtn, { backgroundColor: colors.primary }]}
               >
-                <Text style={[styles.footerBtnText, { color: colors.background }]}>
-                  {modalMode === 'create' ? 'Add Staff' : 'Save Changes'}
-                </Text>
+                {isSubmitting ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <Text style={[styles.footerBtnText, { color: '#ffffff' }]}>
+                    {modalMode === 'create' ? 'Save Staff' : 'Update Staff'}
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
-      {/* ── End added modal ── */}
     </View>
   );
 }
@@ -529,10 +701,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 1,
-    shadowColor: 'rgba(125, 211, 252, 0.1)',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 15,
   },
   addButtonSmall: {
     width: '100%',
@@ -540,6 +708,32 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: 14,
     fontWeight: '500',
+  },
+  errorBanner: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+  },
+  loadingWrap: {
+    paddingVertical: 60,
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    paddingVertical: 60,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    maxWidth: 280,
   },
   userList: {
     gap: 16,
@@ -600,7 +794,7 @@ const styles = StyleSheet.create({
   },
   roleText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   locationContainer: {
     flexDirection: 'row',
@@ -677,19 +871,18 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     alignItems: 'center',
     gap: 12,
-    paddingTop: 16,
+    paddingTop: 14,
     borderTopWidth: 1,
-    marginTop: 16,
+    marginTop: 14,
   },
   actionBtn: {
-    padding: 8,
-    borderRadius: 8,
+    padding: 10,
+    borderRadius: 10,
   },
-  // ── Added: modal styles ──
   modalOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
   },
   modalCard: {
     maxHeight: '85%',
@@ -749,22 +942,29 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
   },
-  roleToggleRow: {
-    flexDirection: 'row',
-    gap: 10,
+  branchCheckboxGroup: {
+    gap: 8,
     marginTop: 4,
   },
-  roleToggleBtn: {
+  branchCheckboxBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
     borderWidth: 1,
   },
-  roleToggleText: {
-    fontSize: 13,
+  checkboxIcon: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  branchCheckboxText: {
+    fontSize: 14,
     fontWeight: '600',
   },
   modalFooter: {

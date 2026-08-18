@@ -106,6 +106,20 @@ export class QuotationController {
           cb(null, `${uniqueSuffix}${ext}`);
         },
       }),
+      limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB limit
+      },
+      fileFilter: (req, file, cb) => {
+        if (
+          file.mimetype === 'application/pdf' ||
+          file.mimetype.startsWith('image/') ||
+          file.mimetype === 'application/octet-stream' && file.originalname.toLowerCase().endsWith('.heic')
+        ) {
+          cb(null, true);
+        } else {
+          cb(new BadRequestException('Only PDF and Images are allowed'), false);
+        }
+      },
     }),
   )
     @ApiOperation({ summary: 'Upload Attachment' })

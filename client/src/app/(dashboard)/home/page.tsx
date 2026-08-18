@@ -30,6 +30,19 @@ export default function DashboardHome() {
     setActiveDropdown(prev => prev === name ? null : name);
   };
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.dropdown-container')) {
+        setActiveDropdown(null);
+      }
+    };
+    if (activeDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeDropdown]);
+
   const [dateRangeType, setDateRangeType] = useState<string>('30_days');
   const [customStartDate, setCustomStartDate] = useState<string>('');
   const [customEndDate, setCustomEndDate] = useState<string>('');
@@ -249,13 +262,8 @@ export default function DashboardHome() {
 
   return (
     <>
-      {activeDropdown && (
-        <div 
-          className="fixed inset-0 z-40 cursor-default" 
-          onClick={() => setActiveDropdown(null)} 
-        />
-      )}
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 z-0 relative overflow-x-hidden selection:bg-primary/30">
+      
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 relative overflow-x-hidden selection:bg-primary/30">
       <style dangerouslySetInnerHTML={{
         __html: `
         @keyframes fadeSlideUp {
@@ -269,7 +277,7 @@ export default function DashboardHome() {
       `}} />
 
       {/* Premium Background */}
-      <div className="fixed inset-0 z-0 bg-surface pointer-events-none">
+      <div className="fixed inset-0 bg-surface pointer-events-none">
         <div className="absolute top-[-10%] left-[-5%] w-[50%] h-[50%] rounded-full bg-primary/5 blur-[120px]"></div>
         <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] rounded-full bg-tertiary/10 blur-[120px]"></div>
         <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-secondary/5 blur-[100px]"></div>
@@ -373,136 +381,122 @@ export default function DashboardHome() {
             </div>
 
             {/* Filters Row */}
-            <div className="glass-panel px-6 py-4 rounded-2xl flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 animate-fade-slide-up relative overflow-visible z-25" style={{ animationDelay: '0.3s' }}>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full xl:w-auto">
-                <div className="flex items-center gap-4 w-full sm:w-auto">
-                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider shrink-0 w-24 sm:w-auto">Branch Filter:</label>
-                  <div className="relative flex-1 sm:flex-none" style={{ zIndex: activeDropdown === 'branch' ? 50 : 10 }}>
-                    <button
-                      type="button"
-                      className="glass-input rounded-xl py-2 pl-4 pr-10 text-sm font-medium cursor-pointer w-full sm:w-[180px] focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface text-left flex items-center justify-between min-h-[38px]"
-                      onClick={() => toggleDropdown('branch')}
-                    >
-                      <span className="truncate">
-                        {branchId === '' ? 'All Branches' : branches.find(b => b.id === branchId)?.name || 'All Branches'}
-                      </span>
-                      <span className={`material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary text-[18px] transition-transform duration-200 ${activeDropdown === 'branch' ? 'rotate-180' : ''}`}>expand_more</span>
-                    </button>
-                    
-                    {activeDropdown === 'branch' && (
-                      <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface-container-highest rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
-                        <div 
-                          onClick={() => { setBranchId(''); setActiveDropdown(null); }} 
-                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${branchId === '' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
-                        >
-                          All Branches
-                        </div>
-                        {branches.map(b => (
-                          <div 
-                            key={b.id}
-                            onClick={() => { setBranchId(b.id); setActiveDropdown(null); }} 
-                            className={`px-4 py-3 text-sm cursor-pointer transition-colors ${branchId === b.id ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
-                          >
-                            {b.name}
-                          </div>
-                        ))}
+            <div className="glass-panel p-5 rounded-3xl flex flex-col lg:flex-row flex-wrap items-end gap-5 animate-fade-slide-up relative overflow-visible z-25" style={{ animationDelay: '0.3s' }}>
+              
+              {/* Branch Filter */}
+              <div className="flex flex-col gap-1.5 w-full sm:w-[calc(50%-10px)] lg:w-auto lg:flex-1 min-w-[200px]">
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">Branch</label>
+                <div className="dropdown-container relative w-full" style={{ zIndex: activeDropdown === 'branch' ? 50 : 10 }}>
+                  <button
+                    type="button"
+                    className="glass-input rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium cursor-pointer w-full focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface text-left flex items-center justify-between min-h-[42px]"
+                    onClick={() => toggleDropdown('branch')}
+                  >
+                    <span className="truncate">
+                      {branchId === '' ? 'All Branches' : branches.find(b => b.id === branchId)?.name || 'All Branches'}
+                    </span>
+                    <span className={`material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary text-[18px] transition-transform duration-200 ${activeDropdown === 'branch' ? 'rotate-180' : ''}`}>expand_more</span>
+                  </button>
+                  
+                  {activeDropdown === 'branch' && (
+                    <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
+                      <div 
+                        onMouseDown={() => { setBranchId(''); setActiveDropdown(null); }} 
+                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${branchId === '' ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
+                      >
+                        All Branches
                       </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4 w-full sm:w-auto">
-                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider shrink-0 w-24 sm:w-auto">Date Range:</label>
-                  <div className="relative flex-1 sm:flex-none" style={{ zIndex: activeDropdown === 'range' ? 50 : 10 }}>
-                    <button
-                      type="button"
-                      className="glass-input rounded-xl py-2 pl-4 pr-10 text-sm font-medium cursor-pointer w-full sm:w-[150px] focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface text-left flex items-center justify-between min-h-[38px]"
-                      onClick={() => toggleDropdown('range')}
-                    >
-                      <span>
-                        {dateRangeType === 'today' ? 'Today' :
-                         dateRangeType === '1_week' ? 'Last 7 Days' :
-                         dateRangeType === '15_days' ? 'Last 15 Days' :
-                         dateRangeType === '30_days' ? 'Last 30 Days' :
-                         dateRangeType === '6_months' ? 'Last 6 Months' :
-                         dateRangeType === '1_year' ? 'Last 1 Year' : 'Custom'}
-                      </span>
-                      <span className={`material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary text-[18px] transition-transform duration-200 ${activeDropdown === 'range' ? 'rotate-180' : ''}`}>expand_more</span>
-                    </button>
-                    
-                    {activeDropdown === 'range' && (
-                      <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface-container-highest rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
+                      {branches.map(b => (
                         <div 
-                          onClick={() => { setDateRangeType('today'); setActiveDropdown(null); }} 
-                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${dateRangeType === 'today' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
+                          key={b.id}
+                          onMouseDown={() => { setBranchId(b.id); setActiveDropdown(null); }} 
+                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${branchId === b.id ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
                         >
-                          Today
+                          {b.name}
                         </div>
-                        <div 
-                          onClick={() => { setDateRangeType('1_week'); setActiveDropdown(null); }} 
-                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${dateRangeType === '1_week' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
-                        >
-                          Last 7 Days
-                        </div>
-                        <div 
-                          onClick={() => { setDateRangeType('15_days'); setActiveDropdown(null); }} 
-                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${dateRangeType === '15_days' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
-                        >
-                          Last 15 Days
-                        </div>
-                        <div 
-                          onClick={() => { setDateRangeType('30_days'); setActiveDropdown(null); }} 
-                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${dateRangeType === '30_days' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
-                        >
-                          Last 30 Days
-                        </div>
-                        <div 
-                          onClick={() => { setDateRangeType('6_months'); setActiveDropdown(null); }} 
-                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${dateRangeType === '6_months' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
-                        >
-                          Last 6 Months
-                        </div>
-                        <div 
-                          onClick={() => { setDateRangeType('1_year'); setActiveDropdown(null); }} 
-                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${dateRangeType === '1_year' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
-                        >
-                          Last 1 Year
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider shrink-0">From</span>
-                    <input
-                      type="date"
-                      value={customStartDate}
-                      onChange={e => { setCustomStartDate(e.target.value); setDateRangeType('custom'); }}
-                      className="glass-input rounded-xl py-1.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider shrink-0">To</span>
-                    <input
-                      type="date"
-                      value={customEndDate}
-                      onChange={e => { setCustomEndDate(e.target.value); setDateRangeType('custom'); }}
-                      className="glass-input rounded-xl py-1.5 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface"
-                    />
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <button
-                onClick={() => { setBranchId(''); setDateRangeType('30_days'); }}
-                className="glass-button px-4 py-2 rounded-xl flex items-center justify-center gap-2 cursor-pointer hover:bg-surface-bright transition-colors text-sm font-bold text-on-surface hover:text-primary shrink-0 w-full xl:w-auto mt-4 xl:mt-0"
-                title="Reset Filters"
-              >
-                <span className="material-symbols-outlined text-[18px]">restart_alt</span>
-                Reset
-              </button>
+              {/* Date Range Filter */}
+              <div className="flex flex-col gap-1.5 w-full sm:w-[calc(50%-10px)] lg:w-auto lg:flex-1 min-w-[200px]">
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">Date Range</label>
+                <div className="dropdown-container relative w-full" style={{ zIndex: activeDropdown === 'range' ? 50 : 10 }}>
+                  <button
+                    type="button"
+                    className="glass-input rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium cursor-pointer w-full focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface text-left flex items-center justify-between min-h-[42px]"
+                    onClick={() => toggleDropdown('range')}
+                  >
+                    <span className="truncate">
+                      {dateRangeType === 'today' ? 'Today' :
+                       dateRangeType === '1_week' ? 'Last 7 Days' :
+                       dateRangeType === '15_days' ? 'Last 15 Days' :
+                       dateRangeType === '30_days' ? 'Last 30 Days' :
+                       dateRangeType === '6_months' ? 'Last 6 Months' :
+                       dateRangeType === '1_year' ? 'Last 1 Year' : 'Custom'}
+                    </span>
+                    <span className={`material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary text-[18px] transition-transform duration-200 ${activeDropdown === 'range' ? 'rotate-180' : ''}`}>expand_more</span>
+                  </button>
+                  
+                  {activeDropdown === 'range' && (
+                    <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface rounded-xl border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150">
+                      {[
+                        { id: 'today', label: 'Today' },
+                        { id: '1_week', label: 'Last 7 Days' },
+                        { id: '15_days', label: 'Last 15 Days' },
+                        { id: '30_days', label: 'Last 30 Days' },
+                        { id: '6_months', label: 'Last 6 Months' },
+                        { id: '1_year', label: 'Last 1 Year' },
+                        { id: 'custom', label: 'Custom' }
+                      ].map(option => (
+                        <div 
+                          key={option.id}
+                          onMouseDown={() => { setDateRangeType(option.id); setActiveDropdown(null); }} 
+                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${dateRangeType === option.id ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
+                        >
+                          {option.label}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Custom Date Inputs */}
+              <div className={`flex flex-col sm:flex-row gap-5 w-full lg:w-auto lg:flex-1 transition-all duration-300 ${dateRangeType === 'custom' ? 'opacity-100' : 'opacity-60 grayscale-[50%]'}`}>
+                <div className="flex flex-col gap-1.5 w-full sm:w-[calc(50%-10px)]">
+                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">From</label>
+                  <input
+                    type="date"
+                    value={customStartDate}
+                    onChange={e => { setCustomStartDate(e.target.value); setDateRangeType('custom'); }}
+                    className="glass-input rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface w-full min-h-[42px]"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5 w-full sm:w-[calc(50%-10px)]">
+                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">To</label>
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    onChange={e => { setCustomEndDate(e.target.value); setDateRangeType('custom'); }}
+                    className="glass-input rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface w-full min-h-[42px]"
+                  />
+                </div>
+              </div>
+
+              {/* Reset Button */}
+              <div className="w-full lg:w-auto flex justify-end">
+                <button
+                  onClick={() => { setBranchId(''); setDateRangeType('30_days'); }}
+                  className="glass-button h-[42px] px-6 rounded-xl flex items-center justify-center gap-2 cursor-pointer hover:bg-surface-bright transition-all duration-300 text-sm font-bold text-on-surface hover:text-primary shadow-sm w-full lg:w-auto hover:shadow-md"
+                  title="Reset Filters"
+                >
+                  <span className="material-symbols-outlined text-[18px]">restart_alt</span>
+                  Reset
+                </button>
+              </div>
             </div>
 
             {/* Charts Grid */}
@@ -835,11 +829,11 @@ export default function DashboardHome() {
               return (
                 <>
                   <Link href={`/invoices/new?copyFromQuotation=${activeQuotation.id}`}>
-                    <button onClick={closePdfViewer} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-highest/50 hover:bg-purple-400/10 hover:text-purple-400 border border-transparent hover:border-purple-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Convert to Invoice">
+                    <button onClick={closePdfViewer} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface/50 hover:bg-purple-400/10 hover:text-purple-400 border border-transparent hover:border-purple-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Convert to Invoice">
                       <span className="material-symbols-outlined text-[20px]">receipt_long</span>
                     </button>
                   </Link>
-                  <button onClick={() => handleSend(activeQuotation.id, 'quotation')} disabled={isSendingId === activeQuotation.id} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-highest/50 hover:bg-emerald-400/10 hover:text-emerald-400 border border-transparent hover:border-emerald-400/20 text-on-surface-variant transition-all cursor-pointer tooltip disabled:opacity-50" title="Send">
+                  <button onClick={() => handleSend(activeQuotation.id, 'quotation')} disabled={isSendingId === activeQuotation.id} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface/50 hover:bg-emerald-400/10 hover:text-emerald-400 border border-transparent hover:border-emerald-400/20 text-on-surface-variant transition-all cursor-pointer tooltip disabled:opacity-50" title="Send">
                     {isSendingId === activeQuotation.id ? <span className="material-symbols-outlined text-[20px] animate-spin">refresh</span> : <span className="material-symbols-outlined text-[20px]">send</span>}
                   </button>
                   <button 
@@ -851,7 +845,7 @@ export default function DashboardHome() {
                         followUpDate: activeQuotation.followUpDate ? new Date(activeQuotation.followUpDate).toISOString().split('T')[0] : ''
                       });
                     }}
-                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-highest/50 hover:bg-amber-400/10 hover:text-amber-400 border border-transparent hover:border-amber-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Notes & Reminder">
+                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface/50 hover:bg-amber-400/10 hover:text-amber-400 border border-transparent hover:border-amber-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Notes & Reminder">
                     <span className="material-symbols-outlined text-[20px]">sticky_note_2</span>
                   </button>
                 </>
@@ -861,10 +855,10 @@ export default function DashboardHome() {
               if (!activeInvoice) return null;
               return (
                 <>
-                  <button onClick={() => { closePdfViewer(); setPaymentModalInvoice({ id: activeInvoice.id, invoiceNumber: activeInvoice.invoiceNumber, amountDue: activeInvoice.amountDue }); }} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-highest/50 hover:bg-purple-400/10 hover:text-purple-400 border border-transparent hover:border-purple-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Add Payment">
+                  <button onClick={() => { closePdfViewer(); setPaymentModalInvoice({ id: activeInvoice.id, invoiceNumber: activeInvoice.invoiceNumber, amountDue: activeInvoice.amountDue }); }} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface/50 hover:bg-purple-400/10 hover:text-purple-400 border border-transparent hover:border-purple-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Add Payment">
                     <span className="material-symbols-outlined text-[20px]">payments</span>
                   </button>
-                  <button onClick={() => handleSend(activeInvoice.id, 'invoice')} disabled={isSendingId === activeInvoice.id} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-highest/50 hover:bg-emerald-400/10 hover:text-emerald-400 border border-transparent hover:border-emerald-400/20 text-on-surface-variant transition-all cursor-pointer tooltip disabled:opacity-50" title="Send">
+                  <button onClick={() => handleSend(activeInvoice.id, 'invoice')} disabled={isSendingId === activeInvoice.id} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface/50 hover:bg-emerald-400/10 hover:text-emerald-400 border border-transparent hover:border-emerald-400/20 text-on-surface-variant transition-all cursor-pointer tooltip disabled:opacity-50" title="Send">
                     {isSendingId === activeInvoice.id ? <span className="material-symbols-outlined text-[20px] animate-spin">refresh</span> : <span className="material-symbols-outlined text-[20px]">send</span>}
                   </button>
                 </>

@@ -12,7 +12,7 @@ import {
   Dimensions,
   ActivityIndicator
 } from 'react-native';
-import { Stack, router } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
   ArrowLeft, 
@@ -32,7 +32,8 @@ import {
   Upload,
   Info
 } from 'lucide-react-native';
-import { useTheme } from '../../hooks/useTheme';
+import { useTheme } from "../../hooks/useTheme";
+import { useBranch } from "../../components/BranchProvider";
 import { GlassPanel } from '../../components/ui/GlassPanel';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -52,14 +53,14 @@ interface LineItem {
 }
 
 export default function CreateInvoiceScreen() {
+  const { id } = useLocalSearchParams<{ id?: string }>();
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
+  const { selectedBranchId } = useBranch();
 
   // --- STATE DEFINITIONS ---
   
   // Backend Configuration
-  const [branches, setBranches] = useState<any[]>([]);
-  const [selectedBranchId, setSelectedBranchId] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Quotation Selection
@@ -135,27 +136,50 @@ export default function CreateInvoiceScreen() {
   useEffect(() => {
     async function loadInitialData() {
       try {
-        // Load Branches
-        const branchRes = await apiClient.get('/branches');
-        if (branchRes.status === 200 && Array.isArray(branchRes.data)) {
-          setBranches(branchRes.data);
-          const mainBranch = branchRes.data.find(b => b.isMain) || branchRes.data[0];
-          if (mainBranch) {
-            setSelectedBranchId(mainBranch.id);
-          }
-        }
-
         // Load Quotations
-        const quoRes = await apiClient.get('/quotations');
+        const quoRes = await apiClient.get('/quotations', { params: { branchId: selectedBranchId } });
         if (quoRes.status === 200 && Array.isArray(quoRes.data)) {
           setQuotations(quoRes.data);
+        }
+
+        // If editing an existing invoice, pre-fill all details
+        if (id) {
+          const invRes = await apiClient.get(`/invoices/${id}`);
+          if (invRes.status === 200 && invRes.data) {
+            const inv = invRes.data;
+            if (inv.customer) {
+              setSelectedClient(inv.customer.companyName || inv.customer.customerName);
+              setSelectedCustomerId(inv.customerId || inv.customer.id);
+              setContactName(inv.customerSnapshot?.customerName || inv.customer.customerName || "");
+              setMobile(inv.customerSnapshot?.mobileNumber || inv.customer.mobileNumber || "");
+              setEmail(inv.customerSnapshot?.email || inv.customer.email || "");
+              if (inv.billingAddress) {
+                setBillingAddress(typeof inv.billingAddress === 'object' ? inv.billingAddress.street || '' : inv.billingAddress);
+              }
+            }
+            if (inv.items && Array.isArray(inv.items)) {
+              setLineItems(inv.items.map((item: any) => ({
+                id: item.id || `item-${Date.now()}-${Math.random()}`,
+                productId: item.productId,
+                productName: item.productSnapshot?.name || item.description || "",
+                description: item.description || "",
+                unitPrice: item.price || 0,
+                quantity: item.quantity || 1,
+                image: item.image || undefined,
+              })));
+            }
+            if (inv.notes) setNotes(inv.notes);
+            if (inv.termsAndConditions) setTerms(inv.termsAndConditions);
+            if (inv.invoiceDate) setInvoiceDate(formatDateString(new Date(inv.invoiceDate)));
+            if (inv.dueDate) setDueDate(formatDateString(new Date(inv.dueDate)));
+          }
         }
       } catch (err) {
         console.error('Failed to load initial data:', err);
       }
     }
     loadInitialData();
-  }, []);
+  }, [id, selectedBranchId]);
 
   // --- SEARCH HANDLERS ---
   
@@ -163,7 +187,7 @@ export default function CreateInvoiceScreen() {
     setSelectedClient(text);
     setIsSearchingCustomers(true);
     try {
-      const res = await apiClient.get(`/invoices/customers/search?q=${encodeURIComponent(text)}`);
+      const res = await apiClient.get(`/invoices/customers/search?q=${encodeURIComponent(text)}`, { params: { branchId: selectedBranchId } });
       if (res.status === 200 && Array.isArray(res.data)) {
         setCustomers(res.data);
       }
@@ -255,7 +279,7 @@ export default function CreateInvoiceScreen() {
     setActiveProductSearchIdx(index);
     
     try {
-      const res = await apiClient.get(`/invoices/products/search?q=${encodeURIComponent(text)}`);
+      const res = await apiClient.get(`/invoices/products/search?q=${encodeURIComponent(text)}`, { params: { branchId: selectedBranchId } });
       if (res.status === 200 && Array.isArray(res.data)) {
         setProductList(res.data);
       }
@@ -447,9 +471,11 @@ export default function CreateInvoiceScreen() {
         } : undefined
       };
 
-      const res = await apiClient.post('/invoices', payload);
+      const res = id 
+        ? await apiClient.put(`/invoices/${id}`, payload)
+        : await apiClient.post('/invoices', payload);
       
-      if (res.status === 201) {
+      if (res.status === 200 || res.status === 201) {
         const createdInvoice = res.data;
         
         // Handle Payment Attachment Upload if exists
@@ -477,8 +503,8 @@ export default function CreateInvoiceScreen() {
 
         Alert.alert(
           "Success",
-          "Invoice created successfully!",
-          [{ text: "OK", onPress: () => router.replace('/(app)/quotations') }] // router replacement back to quotations screen
+          id ? "Invoice updated successfully!" : "Invoice created successfully!",
+          [{ text: "OK", onPress: () => router.replace('/(app)/quotations') }]
         );
       } else {
         Alert.alert("Error", res.data?.message || "Failed to create invoice.");
@@ -527,7 +553,7 @@ export default function CreateInvoiceScreen() {
           >
             <ArrowLeft color={colors.primary} size={18} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.primary }]}>New Invoice</Text>
+          <Text style={[styles.headerTitle, { color: colors.primary }]}>{id ? "Edit Invoice" : "New Invoice"}</Text>
           <TouchableOpacity 
             style={[styles.headerBtn, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '33' }]}
             activeOpacity={0.7}
@@ -550,38 +576,67 @@ export default function CreateInvoiceScreen() {
         keyboardShouldPersistTaps="handled"
       >
         
-        {/* Quotation Selection */}
-        <GlassPanel style={styles.sectionCard}>
-          <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Select Quotation</Text>
-          <View style={styles.dropdownContainer}>
-            <View style={[styles.dropdownTrigger, { backgroundColor: colors.background + '66', borderColor: colors.border }]}>
-              <Search color={colors.textSecondary} size={16} style={styles.dropdownSearchIcon} />
-              <TextInput
-                value={selectedQuotationNo}
-                onChangeText={(text) => {
-                  setSelectedQuotationNo(text);
-                  setQuotationSearchQuery(text);
-                  setShowQuotationDropdown(true);
-                }}
-                onFocus={() => {
-                  setShowQuotationDropdown(true);
-                }}
-                style={[styles.dropdownTriggerInput, { color: colors.text }]}
-                placeholder="Search quotations..."
-                placeholderTextColor={colors.textSecondary + '80'}
-              />
-              <TouchableOpacity onPress={() => setShowQuotationDropdown(!showQuotationDropdown)}>
-                <ChevronDown color={colors.textSecondary} size={18} />
-              </TouchableOpacity>
-            </View>
-            
+        {/* Quotation Selection - Only for NEW Invoices */}
+        {!id && (
+          <View style={{ position: 'relative', zIndex: 50, marginBottom: 12 }}>
+            <GlassPanel style={styles.sectionCard}>
+              <Text style={[styles.inputLabel, { color: colors.textSecondary }]}>Select Quotation</Text>
+              <View style={styles.dropdownContainer}>
+                <View style={[styles.dropdownTrigger, { backgroundColor: colors.background + '66', borderColor: colors.border }]}>
+                  <Search color={colors.textSecondary} size={16} style={styles.dropdownSearchIcon} />
+                  <TextInput
+                    value={selectedQuotationNo}
+                    onChangeText={(text) => {
+                      setSelectedQuotationNo(text);
+                      setQuotationSearchQuery(text);
+                      setShowQuotationDropdown(true);
+                    }}
+                    onFocus={() => {
+                      setShowQuotationDropdown(true);
+                    }}
+                    style={[styles.dropdownTriggerInput, { color: colors.text }]}
+                    placeholder="Search quotations..."
+                    placeholderTextColor={colors.textSecondary + '80'}
+                  />
+                  <TouchableOpacity onPress={() => setShowQuotationDropdown(!showQuotationDropdown)}>
+                    <ChevronDown color={colors.textSecondary} size={18} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {selectedQuotationId !== "" && (
+                <View style={[styles.linkedQuotationRow, { backgroundColor: colors.surfaceVariant + '33', borderColor: colors.primary + '1A' }]}>
+                  <View style={[styles.avatarWrapper, { borderColor: colors.primary + '33' }]}>
+                    <Image 
+                      source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDomVgL2a5ZiZgRYKaFu7uX873ViwvEEGmF9TBnIQOYhJApXJb7W4z07hH4p7cvDqaRadY5nq3s4jfr8CqbWLJ6x8kMv-deL-lxhBAr7U4_wv8L4KcbHD3X3uzf-J1Rct4ZSwMwtk9log0-U3GHRnQM-FL1MyUiY5jCbV1gYMDb0haWmY2Vt4K0yGl0LbfM3c3UdnKHCgXNdVVvV91vvtdfNp4yate73hHsPQ_HTAk-3aJa5arWP2p5' }} 
+                      style={styles.avatar} 
+                    />
+                  </View>
+                  <View>
+                    <Text style={[styles.avatarName, { color: colors.text }]}>{contactName}</Text>
+                    <Text style={[styles.avatarPhone, { color: colors.textSecondary }]}>{mobile}</Text>
+                  </View>
+                </View>
+              )}
+            </GlassPanel>
+
+            {/* Rendered OUTSIDE GlassPanel so it isn't clipped by the card's overflow:hidden */}
             {showQuotationDropdown && filteredQuotations.length > 0 && (
-              <View style={[styles.dropdownList, { backgroundColor: colors.surfaceVariant, borderColor: colors.glassBorder }]}>
+              <View
+                style={[
+                  styles.dropdownList,
+                  styles.dropdownListFloating,
+                  { backgroundColor: colors.surfaceVariant, borderColor: colors.glassBorder },
+                ]}
+              >
                 {filteredQuotations.map((q) => (
-                  <TouchableOpacity 
-                    key={q.id} 
+                  <TouchableOpacity
+                    key={q.id}
                     style={[styles.dropdownItem, { borderBottomColor: colors.border + '33' }]}
-                    onPress={() => handleSelectQuotation(q)}
+                    onPress={() => {
+                      handleSelectQuotation(q);
+                      setShowQuotationDropdown(false);
+                    }}
                   >
                     <Text style={[styles.dropdownItemText, { color: colors.text }]}>
                       {q.quotationNumber} - {q.customer?.customerName}
@@ -591,22 +646,7 @@ export default function CreateInvoiceScreen() {
               </View>
             )}
           </View>
-
-          {selectedQuotationId !== "" && (
-            <View style={[styles.linkedQuotationRow, { backgroundColor: colors.surfaceVariant + '33', borderColor: colors.primary + '1A' }]}>
-              <View style={[styles.avatarWrapper, { borderColor: colors.primary + '33' }]}>
-                <Image 
-                  source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDomVgL2a5ZiZgRYKaFu7uX873ViwvEEGmF9TBnIQOYhJApXJb7W4z07hH4p7cvDqaRadY5nq3s4jfr8CqbWLJ6x8kMv-deL-lxhBAr7U4_wv8L4KcbHD3X3uzf-J1Rct4ZSwMwtk9log0-U3GHRnQM-FL1MyUiY5jCbV1gYMDb0haWmY2Vt4K0yGl0LbfM3c3UdnKHCgXNdVVvV91vvtdfNp4yate73hHsPQ_HTAk-3aJa5arWP2p5' }} 
-                  style={styles.avatar} 
-                />
-              </View>
-              <View>
-                <Text style={[styles.avatarName, { color: colors.text }]}>{contactName}</Text>
-                <Text style={[styles.avatarPhone, { color: colors.textSecondary }]}>{mobile}</Text>
-              </View>
-            </View>
-          )}
-        </GlassPanel>
+        )}
 
         {/* Customer Details */}
         <GlassPanel style={styles.sectionCard}>
@@ -1335,6 +1375,17 @@ const styles = StyleSheet.create({
     zIndex: 45,
     maxHeight: 180,
     overflow: 'hidden',
+  },
+  dropdownListFloating: {
+    top: 90,
+    left: 20,
+    right: 20,
+    zIndex: 60,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   dropdownItem: {
     paddingVertical: 12,

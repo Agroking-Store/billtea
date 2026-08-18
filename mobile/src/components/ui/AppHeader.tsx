@@ -8,10 +8,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Home, Search, Filter } from 'lucide-react-native';
+import { Home, Search, Filter, X, ArrowLeft } from 'lucide-react-native';
 import { useTheme } from '../../hooks/useTheme';
 
-const HEADER_CONTENT_HEIGHT = 56;
+const HEADER_CONTENT_HEIGHT = 60; // Increased for a more premium look
 
 interface AppHeaderProps {
   /** The page title to display */
@@ -36,6 +36,14 @@ interface AppHeaderProps {
   searchPlaceholder?: string;
   /** Called when the search input loses focus */
   onSearchBlur?: () => void;
+  /** When true, shows Close (X) icon instead of filter icon */
+  showCloseButton?: boolean;
+  /** Called when Close (X) icon is pressed */
+  onClosePress?: () => void;
+  /** Expanded content inside header (e.g. Filter Expansion) */
+  children?: React.ReactNode;
+  /** When true, shows a Back button instead of a Home button */
+  showBackButton?: boolean;
 }
 
 export function AppHeader({
@@ -50,6 +58,10 @@ export function AppHeader({
   onSearchTextChange,
   searchPlaceholder = 'Search...',
   onSearchBlur,
+  showCloseButton = false,
+  onClosePress,
+  children,
+  showBackButton = false,
 }: AppHeaderProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -67,22 +79,31 @@ export function AppHeader({
         styles.container,
         { 
           paddingTop: insets.top,
-          backgroundColor: colors.glassBackground,
+          backgroundColor: colors.glassBackground || (colors as any).surface,
           borderBottomWidth: 1,
-          borderBottomColor: colors.glassBorder,
+          borderBottomColor: colors.glassBorder || (colors as any).border,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.05,
+          shadowRadius: 12,
+          elevation: 4,
         },
       ]}
     >
       <View style={styles.content}>
-        {/* Left: Home button */}
+        {/* Left: Home or Back button */}
         <Pressable
-          onPress={handleHomePress}
+          onPress={showBackButton ? () => router.back() : handleHomePress}
           style={({ pressed }) => [
             styles.iconButton,
             pressed && styles.iconButtonPressed,
           ]}
         >
-          <Home size={22} color={colors.textSecondary} strokeWidth={2.2} />
+          {showBackButton ? (
+            <ArrowLeft size={24} color={colors.textSecondary} strokeWidth={2.2} />
+          ) : (
+            <Home size={22} color={colors.textSecondary} strokeWidth={2.2} />
+          )}
         </Pressable>
 
         {/* Center: Title or Search Input */}
@@ -106,42 +127,57 @@ export function AppHeader({
           )}
         </View>
 
-        {/* Right: Filter + Search icons (only shown when callbacks are provided) */}
-        {showRightActions && (
-          <View style={styles.rightActions}>
-            {onFilterPress && (
-              <Pressable
-                onPress={onFilterPress}
-                style={({ pressed }) => [
-                  styles.iconButton,
-                  pressed && styles.iconButtonPressed,
-                ]}
-              >
-                <Filter
-                  size={22}
-                  color={filterActive ? colors.primary : colors.textSecondary}
-                  strokeWidth={2.2}
-                />
-              </Pressable>
-            )}
-            {onSearchPress && (
-              <Pressable
-                onPress={onSearchPress}
-                style={({ pressed }) => [
-                  styles.iconButton,
-                  pressed && styles.iconButtonPressed,
-                ]}
-              >
-                <Search
-                  size={22}
-                  color={searchActive ? colors.primary : colors.textSecondary}
-                  strokeWidth={2.2}
-                />
-              </Pressable>
-            )}
-          </View>
+        {/* Right: Filter + Search icons OR Close X button */}
+        {showCloseButton ? (
+          <Pressable
+            onPress={onClosePress || onFilterPress}
+            style={({ pressed }) => [
+              styles.iconButton,
+              pressed && styles.iconButtonPressed,
+            ]}
+          >
+            <X size={22} color={colors.textSecondary} strokeWidth={2.2} />
+          </Pressable>
+        ) : (
+          showRightActions && (
+            <View style={styles.rightActions}>
+              {onFilterPress && (
+                <Pressable
+                  onPress={onFilterPress}
+                  style={({ pressed }) => [
+                    styles.iconButton,
+                    pressed && styles.iconButtonPressed,
+                  ]}
+                >
+                  <Filter
+                    size={22}
+                    color={filterActive ? colors.primary : colors.textSecondary}
+                    strokeWidth={2.2}
+                  />
+                </Pressable>
+              )}
+              {onSearchPress && (
+                <Pressable
+                  onPress={onSearchPress}
+                  style={({ pressed }) => [
+                    styles.iconButton,
+                    pressed && styles.iconButtonPressed,
+                  ]}
+                >
+                  <Search
+                    size={22}
+                    color={searchActive ? colors.primary : colors.textSecondary}
+                    strokeWidth={2.2}
+                  />
+                </Pressable>
+              )}
+            </View>
+          )
         )}
       </View>
+
+      {/* Render Header Extension / Children (Filter Panel Expansion) */}
+      {children}
     </View>
   );
 }
@@ -173,9 +209,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontSize: 20,
-    fontWeight: '600',
-    letterSpacing: 0.5,
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   searchInput: {
     flex: 1,

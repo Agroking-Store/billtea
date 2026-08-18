@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/auth';
 import PdfViewerModal from '@/components/PdfViewerModal';
@@ -15,6 +15,7 @@ interface Quotation {
   customer: {
     customerName: string;
     companyName: string;
+    mobileNumber?: string;
   };
   notes?: string;
   followUpDate?: string;
@@ -29,6 +30,145 @@ type SortKey = 'quotationNumber' | 'customer' | 'quotationDate' | 'grandTotal' |
 interface SortConfig {
   key: SortKey;
   direction: SortDirection;
+}
+
+interface ToastMessage {
+  type: 'success' | 'error';
+  text: string;
+}
+
+interface ToastProps {
+  message: ToastMessage | null;
+  onClose: () => void;
+  duration?: number;
+}
+
+function Toast({ message, onClose, duration = 4000 }: ToastProps) {
+  const [visible, setVisible] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const remainingRef = useRef(duration);
+  const startedAtRef = useRef<number>(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [progressKey, setProgressKey] = useState(0);
+
+  const clearTimer = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const scheduleClose = (ms: number) => {
+    clearTimer();
+    startedAtRef.current = Date.now();
+    remainingRef.current = ms;
+    timerRef.current = setTimeout(() => {
+      handleClose();
+    }, ms);
+  };
+
+  useEffect(() => {
+    if (!message) return;
+
+    setLeaving(false);
+    setPaused(false);
+    setProgressKey((k) => k + 1);
+    const enterTimer = setTimeout(() => setVisible(true), 10);
+
+    scheduleClose(duration);
+
+    return () => {
+      clearTimeout(enterTimer);
+      clearTimer();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [message]);
+
+  const handleClose = () => {
+    clearTimer();
+    setLeaving(true);
+    setVisible(false);
+    setTimeout(() => {
+      onClose();
+      setLeaving(false);
+    }, 300);
+  };
+
+  const handleMouseEnter = () => {
+    if (!message) return;
+    setPaused(true);
+    const elapsed = Date.now() - startedAtRef.current;
+    remainingRef.current = Math.max(remainingRef.current - elapsed, 0);
+    clearTimer();
+  };
+
+  const handleMouseLeave = () => {
+    if (!message) return;
+    setPaused(false);
+    scheduleClose(remainingRef.current);
+  };
+
+  if (!message && !leaving) return null;
+
+  const isSuccess = message?.type === 'success';
+
+  return (
+    <div
+      className="fixed top-6 right-6 z-[1100] pointer-events-none"
+      role="status"
+      aria-live="polite"
+    >
+      <div
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className={`pointer-events-auto relative overflow-hidden flex items-center gap-2.5 min-w-[220px] max-w-sm px-4 py-2.5 rounded-lg border shadow-xl backdrop-blur-sm transition-all duration-300 ease-out ${
+          isSuccess
+            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'
+            : 'bg-red-500/10 border-red-500/20 text-red-500'
+        } ${
+          visible
+            ? 'opacity-100 translate-x-0 translate-y-0'
+            : 'opacity-0 translate-x-4 -translate-y-1'
+        }`}
+      >
+        <span
+          className={`material-symbols-outlined text-[18px] shrink-0 ${
+            isSuccess ? 'text-emerald-600' : 'text-red-500'
+          }`}
+        >
+          {isSuccess ? 'check_circle' : 'error'}
+        </span>
+        <p className="flex-1 text-sm font-semibold leading-snug truncate">{message?.text}</p>
+        <button
+          onClick={handleClose}
+          aria-label="Dismiss notification"
+          className="shrink-0 p-0.5 rounded-full hover:bg-black/10 transition-colors cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-[16px]">close</span>
+        </button>
+
+        <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-black/5">
+          <div
+            key={progressKey}
+            className={`h-full ${isSuccess ? 'bg-emerald-500' : 'bg-red-500'}`}
+            style={{
+              animation: `toast-countdown ${duration}ms linear forwards`,
+              animationPlayState: paused ? 'paused' : 'running',
+            }}
+          />
+        </div>
+      </div>
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        @keyframes toast-countdown {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+      `}} />
+    </div>
+  );
 }
 
 export default function QuotationsPage() {
@@ -46,24 +186,41 @@ export default function QuotationsPage() {
   const [isSendingId, setIsSendingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Toast State
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+
   // ---- Filters state (Customer / Date range) ----
   const [customerFilter, setCustomerFilter] = useState('');
+  const [companyFilter, setCompanyFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
-  // ---- Sorting state (asc <-> desc toggle, same as Invoices/Customers/Products) ----
+  // ---- Sorting state ----
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
   // ---- Pagination state ----
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const [activeDropdown, setActiveDropdown] = useState<'customer' | 'status' | 'entries' | null>(null);
+  const [activeDropdown, setActiveDropdown] = useState<'customer' | 'company' | 'status' | 'entries' | null>(null);
 
-  const toggleDropdown = (name: 'customer' | 'status' | 'entries') => {
+  const toggleDropdown = (name: 'customer' | 'company' | 'status' | 'entries') => {
     setActiveDropdown(prev => prev === name ? null : name);
   };
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.dropdown-container')) {
+        setActiveDropdown(null);
+      }
+    };
+    if (activeDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeDropdown]);
 
   useEffect(() => {
     if (selectedBranchId) {
@@ -73,6 +230,25 @@ export default function QuotationsPage() {
       setLoading(false);
     }
   }, [selectedBranchId]);
+
+  // Check for persistent toast messages (e.g. after redirecting from New Quotation)
+  const checkToast = () => {
+    try {
+      const stored = sessionStorage.getItem('quotationToast');
+      if (stored) {
+        setToast(JSON.parse(stored));
+        sessionStorage.removeItem('quotationToast');
+      }
+    } catch (e) {
+      // Ignore
+    }
+  };
+
+  useEffect(() => {
+    checkToast();
+    window.addEventListener('focus', checkToast);
+    return () => window.removeEventListener('focus', checkToast);
+  }, []);
 
   const stats = React.useMemo(() => {
     const total = quotations.length;
@@ -108,14 +284,16 @@ export default function QuotationsPage() {
       setIsDeleting(true);
       const res = await apiFetch(`/quotations/${quotationToDelete}`, { method: 'DELETE' });
       if (res.ok) {
-        fetchQuotations();
+        await fetchQuotations();
         setQuotationToDelete(null);
+        setToast({ type: 'success', text: 'Quotation deleted successfully!' });
       } else {
         const errData = await res.json();
-        alert(errData.message || 'Failed to delete quotation');
+        const msg = errData.message || 'Failed to delete quotation';
+        setToast({ type: 'error', text: msg });
       }
     } catch (err: any) {
-      alert('Failed to delete quotation');
+      setToast({ type: 'error', text: 'Failed to delete quotation' });
     } finally {
       setIsDeleting(false);
     }
@@ -136,33 +314,107 @@ export default function QuotationsPage() {
       if (res.ok) {
         setNotesModalData(null);
         fetchQuotations();
+        setToast({ type: 'success', text: 'Notes updated successfully!' });
       } else {
         const errData = await res.json();
-        alert(errData.message || 'Failed to save notes');
+        setToast({ type: 'error', text: errData.message || 'Failed to save notes' });
       }
     } catch (err: any) {
-      alert('Failed to save notes');
+      setToast({ type: 'error', text: 'Failed to save notes' });
     } finally {
       setIsSavingNotes(false);
     }
   };
 
-  const handleSend = async (id: string) => {
+  const handleSend = async (quotationInput: string | Quotation) => {
+    // 1. Resolve target quotation object
+    let targetQuotation: Quotation | undefined;
+    if (typeof quotationInput === 'string') {
+      targetQuotation = quotations.find((q) => q.id === quotationInput);
+    } else {
+      targetQuotation = quotationInput;
+    }
+
+    if (!targetQuotation || !targetQuotation.id) {
+      alert('Quotation details not found.');
+      return;
+    }
+
+    const quotation = targetQuotation;
+
+    // 2. Prepare English message template & WhatsApp URL
+    const customerName = quotation.customer?.customerName || quotation.customer?.companyName || 'Valued Customer';
+    const grandTotalFormatted = quotation.totals?.grandTotal
+      ? `₹${quotation.totals.grandTotal.toLocaleString('en-IN')}`
+      : '₹0';
+    const formattedDate = quotation.quotationDate
+      ? new Date(quotation.quotationDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+      : 'N/A';
+
+    const message = `Hello ${customerName},
+
+Here are the details for your Quotation:
+
+📌 *Quotation No:* ${quotation.quotationNumber}
+📅 *Date:* ${formattedDate}
+💰 *Total Amount:* ${grandTotalFormatted}
+
+Please find the attached Quotation PDF document for complete item details and terms.
+
+Thank you for your business! Please feel free to reach out if you have any questions or require further adjustments.
+
+Best regards,
+BillTea`;
+
+    // Format customer mobile number if available
+    let rawPhone = quotation.customer?.mobileNumber || '';
+    let cleanPhone = rawPhone.replace(/\D/g, '');
+    if (cleanPhone.length === 10) {
+      cleanPhone = '91' + cleanPhone;
+    }
+
+    const encodedText = encodeURIComponent(message);
+    const waUrl = cleanPhone
+      ? `https://wa.me/${cleanPhone}?text=${encodedText}`
+      : `https://wa.me/?text=${encodedText}`;
+
+    // 3. Open WhatsApp IMMEDIATELY directly on user click event (never gets blocked or closed!)
+    window.open(waUrl, '_blank');
+
     try {
-      setIsSendingId(id);
-      const res = await apiFetch(`/quotations/${id}`, {
+      setIsSendingId(quotation.id);
+
+      // 4. Download PDF file for user in background
+      try {
+        const pdfRes = await apiFetch(`/quotations/${quotation.id}/pdf?t=${Date.now()}`, { method: 'GET' });
+        if (pdfRes.ok) {
+          const pdfBlob = await pdfRes.blob();
+          const downloadUrl = window.URL.createObjectURL(pdfBlob);
+          const a = document.createElement('a');
+          a.href = downloadUrl;
+          a.download = `Quotation-${quotation.quotationNumber}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            window.URL.revokeObjectURL(downloadUrl);
+            document.body.removeChild(a);
+          }, 1000);
+        }
+      } catch (err) {
+        console.error('Failed to fetch quotation PDF for download', err);
+      }
+
+      // 5. Update status to SENT in backend
+      const res = await apiFetch(`/quotations/${quotation.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'SENT' }),
       });
       if (res.ok) {
         fetchQuotations();
-      } else {
-        const errData = await res.json();
-        alert(errData.message || 'Failed to send quotation');
       }
     } catch (err: any) {
-      alert('Failed to send quotation');
+      console.error('Send quotation error:', err);
     } finally {
       setIsSendingId(null);
     }
@@ -188,7 +440,7 @@ export default function QuotationsPage() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (err) {
-      alert('Failed to download PDF. Please try again.');
+      setToast({ type: 'error', text: 'Failed to download PDF. Please try again.' });
     }
   };
 
@@ -207,7 +459,7 @@ export default function QuotationsPage() {
       const url = window.URL.createObjectURL(blob);
       setViewerPdfUrl({ url, title: `Quotation-${quotationNumber}.pdf`, id });
     } catch (err) {
-      alert('Failed to load PDF preview. Please try again.');
+      setToast({ type: 'error', text: 'Failed to load PDF preview. Please try again.' });
     } finally {
       setIsLoadingPdf(false);
     }
@@ -230,7 +482,6 @@ export default function QuotationsPage() {
     }
   };
 
-  // ---- Unique customer list for the filter dropdown ----
   const uniqueCustomers = useMemo(() => {
     const names = new Set<string>();
     quotations.forEach((q) => {
@@ -239,7 +490,14 @@ export default function QuotationsPage() {
     return Array.from(names).sort((a, b) => a.localeCompare(b));
   }, [quotations]);
 
-  // ---- Search / filter (text search + customer + date range) ----
+  const uniqueCompanies = useMemo(() => {
+    const names = new Set<string>();
+    quotations.forEach((q) => {
+      if (q.customer?.companyName) names.add(q.customer.companyName);
+    });
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [quotations]);
+
   const filteredQuotations = quotations.filter((q) => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -258,6 +516,10 @@ export default function QuotationsPage() {
     }
 
     if (customerFilter && q.customer?.customerName !== customerFilter) {
+      return false;
+    }
+
+    if (companyFilter && q.customer?.companyName !== companyFilter) {
       return false;
     }
 
@@ -283,11 +545,14 @@ export default function QuotationsPage() {
 
     return true;
   });
+
   const hasActiveFilters = Boolean(
-    searchQuery || customerFilter || statusFilter || fromDate || toDate
+    searchQuery || customerFilter || companyFilter || statusFilter || fromDate || toDate
   );
+
   const handleClearFilters = () => {
     setCustomerFilter('');
+    setCompanyFilter('');
     setStatusFilter('');
     setFromDate('');
     setToDate('');
@@ -295,11 +560,6 @@ export default function QuotationsPage() {
     setCurrentPage(1);
   };
 
-
-
-  // The "most recent" quotation is the one you're allowed to delete.
-  // Derived from actual quotationDate (not row position/index), so it stays
-  // correct no matter how the table is sorted or paginated.
   const mostRecentQuotationId = useMemo(() => {
     if (quotations.length === 0) return null;
     return quotations.reduce((latest, q) =>
@@ -307,7 +567,6 @@ export default function QuotationsPage() {
     ).id;
   }, [quotations]);
 
-  // ---- Sort click handler: asc <-> desc toggle (consistent with other pages) ----
   const requestSort = useCallback((key: SortKey) => {
     if (!key) return;
     setCurrentPage(1);
@@ -319,7 +578,6 @@ export default function QuotationsPage() {
     });
   }, []);
 
-  // ---- Apply sort ----
   const sortedQuotations = useMemo(() => {
     if (!sortConfig) return filteredQuotations;
 
@@ -347,7 +605,6 @@ export default function QuotationsPage() {
     });
   }, [filteredQuotations, sortConfig]);
 
-  // ---- Apply pagination ----
   const totalItems = sortedQuotations.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 
@@ -355,10 +612,9 @@ export default function QuotationsPage() {
     if (currentPage > totalPages) setCurrentPage(totalPages);
   }, [totalPages, currentPage]);
 
-  // Reset to page 1 whenever the search query or filters change.
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, customerFilter, fromDate, toDate]);
+  }, [searchQuery, customerFilter, companyFilter, fromDate, toDate]);
 
   const paginatedQuotations = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -377,7 +633,6 @@ export default function QuotationsPage() {
     setCurrentPage(Math.min(Math.max(1, page), totalPages));
   };
 
-  // ---- Small helper to render a sortable header cell (icons aligned with Invoices/Customers/Products) ----
   const renderSortableHeader = (label: string, key: SortKey, align: 'left' | 'right' = 'left') => {
     const isActive = sortConfig?.key === key;
     const icon = !isActive ? 'unfold_more' : sortConfig!.direction === 'asc' ? 'expand_less' : 'expand_more';
@@ -403,14 +658,10 @@ export default function QuotationsPage() {
 
   return (
     <>
-      {activeDropdown && (
-        <div
-          className="fixed inset-0 z-40 cursor-default"
-          onClick={() => setActiveDropdown(null)}
-        />
-      )}
+      <Toast message={toast} onClose={() => setToast(null)} />
+
       <div
-        className="flex-1 overflow-y-auto p-4 md:p-8 z-0 relative overflow-x-hidden selection:bg-primary/30 [&::-webkit-scrollbar]:hidden w-full max-w-full min-w-0"
+        className="flex-1 overflow-y-auto p-4 md:p-8 relative overflow-x-hidden selection:bg-primary/30 [&::-webkit-scrollbar]:hidden w-full max-w-full min-w-0"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         <style dangerouslySetInnerHTML={{
@@ -426,7 +677,7 @@ export default function QuotationsPage() {
       `}} />
 
         {/* Premium Background */}
-        <div className="fixed inset-0 z-0 bg-surface pointer-events-none">
+        <div className="fixed inset-0 bg-surface pointer-events-none">
           <div className="absolute top-[-10%] left-[-5%] w-[50%] h-[50%] rounded-full bg-primary/5 blur-[120px]"></div>
           <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] rounded-full bg-tertiary/10 blur-[120px]"></div>
           <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-secondary/5 blur-[100px]"></div>
@@ -517,7 +768,7 @@ export default function QuotationsPage() {
 
           {/* Filters Section */}
           <section
-            className="glass-panel rounded-3xl p-6 transition-transform duration-300 hover:-translate-y-1 animate-fade-slide-up relative overflow-visible shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]"
+            className="glass-panel rounded-3xl p-6 transition-transform duration-300 hover:-translate-y-1 animate-fade-slide-up relative z-20 overflow-visible shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)]"
             style={{ animationDelay: '0.15s' }}
           >
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
@@ -539,34 +790,34 @@ export default function QuotationsPage() {
             </div>
 
             {/* Filter Controls */}
-            <div className="flex flex-wrap items-end gap-6 relative z-10">
-              <div className="flex-1 min-w-[220px] relative" style={{ zIndex: activeDropdown === 'customer' ? 50 : 10 }}>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-on-surface-variant mb-2 ml-1">
+            <div className="flex flex-wrap items-end gap-4 lg:gap-5 relative z-10 w-full">
+              <div className="dropdown-container flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[160px] relative" style={{ zIndex: activeDropdown === 'customer' ? 50 : 10 }}>
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">
                   Customer
                 </label>
                 <div className="relative">
                   <button
                     type="button"
-                    className="w-full bg-surface-container border border-outline-variant/30 rounded-xl pl-4 pr-10 py-3 text-sm font-medium text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all text-left flex items-center justify-between min-h-[46px]"
+                    className="glass-input rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium cursor-pointer w-full focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface text-left flex items-center justify-between min-h-[42px]"
                     onClick={() => toggleDropdown('customer')}
                   >
-                    <span>{customerFilter || 'All Customers'}</span>
-                    <span className={`material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] transition-transform duration-200 ${activeDropdown === 'customer' ? 'rotate-180' : ''}`}>expand_more</span>
+                    <span className="truncate">{customerFilter || 'All Customers'}</span>
+                    <span className={`material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary text-[18px] transition-transform duration-200 ${activeDropdown === 'customer' ? 'rotate-180' : ''}`}>expand_more</span>
                   </button>
 
                   {activeDropdown === 'customer' && (
-                    <div className="absolute top-full left-0 right-0 mt-1 z-[60] bg-surface-container-highest rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
+                    <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
                       <div
-                        onClick={() => { setCustomerFilter(''); setActiveDropdown(null); }}
-                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${customerFilter === '' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
+                        onMouseDown={() => { setCustomerFilter(''); setActiveDropdown(null); }}
+                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${customerFilter === '' ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
                       >
                         All Customers
                       </div>
                       {uniqueCustomers.map((name) => (
                         <div
                           key={name}
-                          onClick={() => { setCustomerFilter(name); setActiveDropdown(null); }}
-                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${customerFilter === name ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
+                          onMouseDown={() => { setCustomerFilter(name); setActiveDropdown(null); }}
+                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${customerFilter === name ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
                         >
                           {name}
                         </div>
@@ -576,39 +827,75 @@ export default function QuotationsPage() {
                 </div>
               </div>
 
-              <div className="flex-1 min-w-[200px] relative" style={{ zIndex: activeDropdown === 'status' ? 50 : 10 }}>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-on-surface-variant mb-2 ml-1">
+              <div className="dropdown-container flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[160px] relative" style={{ zIndex: activeDropdown === 'company' ? 50 : 10 }}>
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">
+                  Company
+                </label>
+                <div className="relative">
+                  <button
+                    type="button"
+                    className="glass-input rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium cursor-pointer w-full focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface text-left flex items-center justify-between min-h-[42px]"
+                    onClick={() => toggleDropdown('company')}
+                  >
+                    <span className="truncate">{companyFilter || 'All Companies'}</span>
+                    <span className={`material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary text-[18px] transition-transform duration-200 ${activeDropdown === 'company' ? 'rotate-180' : ''}`}>expand_more</span>
+                  </button>
+
+                  {activeDropdown === 'company' && (
+                    <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
+                      <div
+                        onMouseDown={() => { setCompanyFilter(''); setActiveDropdown(null); }}
+                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${companyFilter === '' ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
+                      >
+                        All Companies
+                      </div>
+                      {uniqueCompanies.map((name) => (
+                        <div
+                          key={name}
+                          onMouseDown={() => { setCompanyFilter(name); setActiveDropdown(null); }}
+                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${companyFilter === name ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
+                        >
+                          {name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="dropdown-container flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[140px] relative" style={{ zIndex: activeDropdown === 'status' ? 50 : 10 }}>
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">
                   Status
                 </label>
                 <div className="relative">
                   <button
                     type="button"
-                    className="w-full bg-surface-container border border-outline-variant/30 rounded-xl pl-4 pr-10 py-3 text-sm font-medium text-on-surface focus:outline-none focus:bg-surface focus:border-primary/40 focus:ring-4 focus:ring-primary/10 transition-all text-left flex items-center justify-between min-h-[46px] cursor-pointer"
+                    className="glass-input rounded-xl py-2.5 pl-4 pr-10 text-sm font-medium cursor-pointer w-full focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface text-left flex items-center justify-between min-h-[42px]"
                     onClick={() => toggleDropdown('status')}
                   >
-                    <span>
+                    <span className="truncate">
                       {statusFilter === '' && 'All Status'}
                       {statusFilter === 'DRAFT' && 'Draft'}
                       {statusFilter === 'SENT' && 'Sent'}
                       {statusFilter === 'ACCEPTED' && 'Accepted'}
                       {statusFilter === 'EXPIRED' && 'Expired'}
                     </span>
-                    <span className={`material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] transition-transform duration-200 ${activeDropdown === 'status' ? 'rotate-180' : ''}`}>expand_more</span>
+                    <span className={`material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-primary text-[18px] transition-transform duration-200 ${activeDropdown === 'status' ? 'rotate-180' : ''}`}>expand_more</span>
                   </button>
 
                   {activeDropdown === 'status' && (
-                    <div className="absolute top-full left-0 right-0 mt-1 z-[60] bg-surface-container-highest rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
-                      <div 
-                        onClick={() => { setStatusFilter(''); setActiveDropdown(null); }} 
-                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${statusFilter === '' ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
+                    <div className="absolute top-full left-0 right-0 mt-2 z-[60] bg-surface rounded-xl border border-primary/10 overflow-y-auto max-h-60 shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 no-scrollbar">
+                      <div
+                        onMouseDown={() => { setStatusFilter(''); setActiveDropdown(null); }}
+                        className={`px-4 py-3 text-sm cursor-pointer transition-colors ${statusFilter === '' ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
                       >
                         All Status
                       </div>
                       {['DRAFT', 'SENT', 'ACCEPTED', 'EXPIRED'].map((status) => (
-                        <div 
+                        <div
                           key={status}
-                          onClick={() => { setStatusFilter(status); setActiveDropdown(null); }} 
-                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${statusFilter === status ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
+                          onMouseDown={() => { setStatusFilter(status); setActiveDropdown(null); }}
+                          className={`px-4 py-3 text-sm cursor-pointer transition-colors ${statusFilter === status ? 'bg-primary/10 text-primary font-bold' : 'text-on-surface hover:bg-primary/5'}`}
                         >
                           {status === 'DRAFT' && 'Draft'}
                           {status === 'SENT' && 'Sent'}
@@ -621,38 +908,39 @@ export default function QuotationsPage() {
                 </div>
               </div>
 
-              <div className="flex-1 min-w-[200px]">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-on-surface-variant mb-2 ml-1">
+              <div className="flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[140px]">
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">
                   From Date
                 </label>
                 <input
-                  className="w-full glass-input rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                  className="glass-input rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface w-full min-h-[42px]"
                   type="date"
                   value={fromDate}
                   onChange={(e) => setFromDate(e.target.value)}
                 />
               </div>
 
-              <div className="flex-1 min-w-[200px]">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-on-surface-variant mb-2 ml-1">
+              <div className="flex flex-col gap-1.5 w-full sm:w-[calc(50%-8px)] lg:w-auto lg:flex-1 min-w-[140px]">
+                <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1">
                   To Date
                 </label>
                 <input
-                  className="w-full glass-input rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+                  className="glass-input rounded-xl py-2 px-3 text-sm font-medium focus:ring-2 focus:ring-primary/20 transition-all bg-surface/50 hover:bg-surface w-full min-h-[42px]"
                   type="date"
                   value={toDate}
                   onChange={(e) => setToDate(e.target.value)}
                 />
               </div>
 
-              <div className="mt-8 flex flex-wrap gap-4 relative z-10">
+              <div className="w-full lg:w-auto flex justify-end">
                 <button
                   disabled={!hasActiveFilters}
-                  className="px-6 py-2.5 rounded-xl text-sm font-semibold text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface border border-outline-variant/20 hover:border-outline-variant/40 transition-all cursor-pointer flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-on-surface-variant disabled:hover:border-outline-variant/20"
+                  className="glass-button h-[42px] px-6 rounded-xl flex items-center justify-center gap-2 cursor-pointer hover:bg-surface-bright transition-all duration-300 text-sm font-bold text-on-surface hover:text-primary shadow-sm w-full lg:w-auto hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
                   onClick={handleClearFilters}
+                  title="Reset Filters"
                 >
                   <span className="material-symbols-outlined text-[18px]">undo</span>
-                  Reset Filters
+                  Reset
                 </button>
               </div>
             </div>
@@ -660,17 +948,16 @@ export default function QuotationsPage() {
 
           {/* Glassmorphic Data Table Container */}
           <div className="glass-panel rounded-3xl overflow-hidden relative z-10 animate-fade-slide-up shadow-[0_10px_30px_-15px_rgba(0,0,0,0.1)] w-full max-w-full min-w-0" style={{ animationDelay: '0.3s' }}>
-            {/* Glow Accent */}
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent"></div>
 
             {/* Table Controls */}
             <div className="p-6 border-b border-outline-variant/20 flex flex-col sm:flex-row justify-between items-center gap-4 bg-surface-container-lowest">
-              <div className="flex items-center gap-3 text-sm font-medium text-on-surface-variant relative" style={{ zIndex: activeDropdown === 'entries' ? 50 : 10 }}>
+              <div className="dropdown-container flex items-center gap-3 text-sm font-medium text-on-surface-variant relative" style={{ zIndex: activeDropdown === 'entries' ? 50 : 10 }}>
                 <span>Show</span>
                 <div className="relative">
                   <button
                     type="button"
-                    className="glass-input text-sm pl-3 pr-9 py-1.5 rounded-lg text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/50 cursor-pointer bg-surface-container-highest flex items-center justify-between min-w-[70px]"
+                    className="glass-input text-sm pl-3 pr-9 py-1.5 rounded-lg text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary/50 cursor-pointer bg-surface flex items-center justify-between min-w-[70px]"
                     onClick={() => toggleDropdown('entries')}
                   >
                     <span>{pageSize}</span>
@@ -678,21 +965,21 @@ export default function QuotationsPage() {
                   </button>
 
                   {activeDropdown === 'entries' && (
-                    <div className="absolute top-full left-0 mt-1 z-[60] bg-surface-container-highest rounded-lg border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 min-w-[70px]">
+                    <div className="absolute top-full left-0 mt-1 z-[60] bg-surface rounded-lg border border-primary/10 overflow-hidden shadow-2xl animate-in fade-in slide-in-from-top-1 duration-150 min-w-[70px]">
                       <div
-                        onClick={() => { handlePageSizeChange(10); setActiveDropdown(null); }}
+                        onMouseDown={() => { handlePageSizeChange(10); setActiveDropdown(null); }}
                         className={`px-3 py-2 text-sm cursor-pointer transition-colors ${pageSize === 10 ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         10
                       </div>
                       <div
-                        onClick={() => { handlePageSizeChange(25); setActiveDropdown(null); }}
+                        onMouseDown={() => { handlePageSizeChange(25); setActiveDropdown(null); }}
                         className={`px-3 py-2 text-sm cursor-pointer transition-colors ${pageSize === 25 ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         25
                       </div>
                       <div
-                        onClick={() => { handlePageSizeChange(50); setActiveDropdown(null); }}
+                        onMouseDown={() => { handlePageSizeChange(50); setActiveDropdown(null); }}
                         className={`px-3 py-2 text-sm cursor-pointer transition-colors ${pageSize === 50 ? 'bg-primary/20 text-primary font-semibold' : 'text-on-surface hover:bg-primary/10'}`}
                       >
                         50
@@ -714,7 +1001,7 @@ export default function QuotationsPage() {
               </div>
             </div>
 
-            {/* The Table */}
+            {/* Desktop Table */}
             <div className="hidden lg:block overflow-x-auto w-full max-w-full">
               <table className="w-full text-left text-sm whitespace-nowrap border-separate border-spacing-0">
                 <thead className="text-xs text-on-surface-variant uppercase bg-surface-container-low/50 border-b border-primary/10">
@@ -754,7 +1041,7 @@ export default function QuotationsPage() {
                         <tr key={quotation.id} className="hover:bg-primary/5 transition-colors duration-200">
                           <td className="px-6 py-4 font-semibold text-primary">{quotation.quotationNumber}</td>
                           <td className="px-6 py-4 flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-surface-container-highest border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
+                            <div className="w-8 h-8 rounded-full bg-surface border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
                               {quotation.customer?.customerName?.substring(0, 2).toUpperCase() || 'NA'}
                             </div>
                             <div className="flex flex-col">
@@ -794,7 +1081,7 @@ export default function QuotationsPage() {
                                     <span className="material-symbols-outlined text-[16px]">receipt_long</span>
                                   </button>
                                 </Link>
-                                <button onClick={() => handleSend(quotation.id)} disabled={isSendingId === quotation.id} className="glass-button-icon p-1 rounded-md transition-all hover:text-emerald-400 hover:border-emerald-400/30 hover:bg-emerald-400/10 tooltip cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" title="Send">
+                                <button onClick={() => handleSend(quotation)} disabled={isSendingId === quotation.id} className="glass-button-icon p-1 rounded-md transition-all hover:text-emerald-400 hover:border-emerald-400/30 hover:bg-emerald-400/10 tooltip cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" title="Send">
                                   {isSendingId === quotation.id ? <span className="material-symbols-outlined text-[16px] animate-spin">refresh</span> : <span className="material-symbols-outlined text-[16px]">send</span>}
                                 </button>
                                 <button
@@ -815,8 +1102,8 @@ export default function QuotationsPage() {
                                   onClick={() => isMostRecent && setQuotationToDelete(quotation.id)}
                                   disabled={!isMostRecent}
                                   className={`glass-button-icon p-1 rounded-md transition-all tooltip ${isMostRecent
-                                      ? 'hover:text-error hover:border-error/30 hover:bg-error/10 cursor-pointer'
-                                      : 'opacity-30 cursor-not-allowed'
+                                    ? 'hover:text-error hover:border-error/30 hover:bg-error/10 cursor-pointer'
+                                    : 'opacity-30 cursor-not-allowed'
                                     }`}
                                   title={isMostRecent ? 'Delete' : 'Only the most recent quotation can be deleted'}
                                 >
@@ -825,7 +1112,7 @@ export default function QuotationsPage() {
                                 <div className="w-px h-4 bg-primary/20 mx-1"></div>
                                 <button
                                   onClick={() => setOpenActionId(null)}
-                                  className="glass-button-icon p-1 rounded-md transition-all hover:text-on-surface-variant hover:bg-surface-container-highest tooltip cursor-pointer" title="Close">
+                                  className="glass-button-icon p-1 rounded-md transition-all hover:text-on-surface-variant hover:bg-surface tooltip cursor-pointer" title="Close">
                                   <span className="material-symbols-outlined text-[16px]">close</span>
                                 </button>
                               </div>
@@ -839,7 +1126,7 @@ export default function QuotationsPage() {
                                     <span className="material-symbols-outlined text-[16px]">receipt_long</span>
                                   </button>
                                 </Link>
-                                <button onClick={() => handleSend(quotation.id)} disabled={isSendingId === quotation.id} className="glass-button-icon p-1 rounded-md transition-all hover:text-emerald-400 hover:border-emerald-400/30 hover:bg-emerald-400/10 tooltip cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" title="Send">
+                                <button onClick={() => handleSend(quotation)} disabled={isSendingId === quotation.id} className="glass-button-icon p-1 rounded-md transition-all hover:text-emerald-400 hover:border-emerald-400/30 hover:bg-emerald-400/10 tooltip cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed" title="Send">
                                   {isSendingId === quotation.id ? <span className="material-symbols-outlined text-[16px] animate-spin">refresh</span> : <span className="material-symbols-outlined text-[16px]">send</span>}
                                 </button>
                                 <div className="w-px h-4 bg-primary/20 mx-1"></div>
@@ -888,7 +1175,7 @@ export default function QuotationsPage() {
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-surface-container-highest border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
+                        <div className="w-9 h-9 rounded-full bg-surface border border-primary/20 flex items-center justify-center text-primary font-bold text-xs">
                           {quotation.customer?.customerName?.substring(0, 2).toUpperCase() || 'NA'}
                         </div>
                         <div className="flex flex-col">
@@ -912,7 +1199,6 @@ export default function QuotationsPage() {
                         </div>
                       </div>
 
-                      {/* Actions Toggle Panel */}
                       <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-primary/5">
                         {openActionId === quotation.id ? (
                           <div className="flex flex-wrap items-center justify-end gap-2 w-full animate-in fade-in duration-300">
@@ -934,7 +1220,7 @@ export default function QuotationsPage() {
                                 <span className="material-symbols-outlined text-[16px]">receipt_long</span>
                               </button>
                             </Link>
-                            <button onClick={() => handleSend(quotation.id)} disabled={isSendingId === quotation.id} className="glass-button-icon p-2 rounded-md hover:text-emerald-400 hover:bg-emerald-400/10 cursor-pointer disabled:opacity-50" title="Send">
+                            <button onClick={() => handleSend(quotation)} disabled={isSendingId === quotation.id} className="glass-button-icon p-2 rounded-md hover:text-emerald-400 hover:bg-emerald-400/10 cursor-pointer disabled:opacity-50" title="Send">
                               {isSendingId === quotation.id ? <span className="material-symbols-outlined text-[16px] animate-spin">refresh</span> : <span className="material-symbols-outlined text-[16px]">send</span>}
                             </button>
                             <button
@@ -962,7 +1248,7 @@ export default function QuotationsPage() {
                             <div className="w-px h-5 bg-primary/20"></div>
                             <button
                               onClick={() => setOpenActionId(null)}
-                              className="glass-button-icon p-2 rounded-md hover:bg-surface-container-highest cursor-pointer" title="Close">
+                              className="glass-button-icon p-2 rounded-md hover:bg-surface cursor-pointer" title="Close">
                               <span className="material-symbols-outlined text-[16px]">close</span>
                             </button>
                           </div>
@@ -976,7 +1262,7 @@ export default function QuotationsPage() {
                                 <span className="material-symbols-outlined text-[16px]">receipt_long</span>
                               </button>
                             </Link>
-                            <button onClick={() => handleSend(quotation.id)} disabled={isSendingId === quotation.id} className="glass-button-icon p-2 rounded-md hover:text-emerald-400 hover:bg-emerald-400/10 cursor-pointer disabled:opacity-50" title="Send">
+                            <button onClick={() => handleSend(quotation)} disabled={isSendingId === quotation.id} className="glass-button-icon p-2 rounded-md hover:text-emerald-400 hover:bg-emerald-400/10 cursor-pointer disabled:opacity-50" title="Send">
                               {isSendingId === quotation.id ? <span className="material-symbols-outlined text-[16px] animate-spin">refresh</span> : <span className="material-symbols-outlined text-[16px]">send</span>}
                             </button>
                             <div className="w-px h-5 bg-primary/20"></div>
@@ -1004,7 +1290,7 @@ export default function QuotationsPage() {
                   <button
                     onClick={() => goToPage(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface-container-highest border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     Previous
                   </button>
@@ -1016,7 +1302,7 @@ export default function QuotationsPage() {
                   <button
                     onClick={() => goToPage(currentPage + 1)}
                     disabled={currentPage === totalPages}
-                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    className="px-3 py-1.5 text-sm font-medium rounded-md text-on-surface-variant hover:bg-surface hover:text-on-surface border border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     Next
                   </button>
@@ -1029,7 +1315,6 @@ export default function QuotationsPage() {
           {quotationToDelete && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-background/80 backdrop-blur-md animate-fade-slide-up" style={{ animationDuration: '0.3s' }}>
               <div className="bg-surface w-full max-w-md rounded-[2rem] p-8 shadow-2xl shadow-error/10 border border-outline-variant/20 relative overflow-hidden">
-                {/* Glow effect */}
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-error/50 to-transparent"></div>
 
                 <div className="flex items-start gap-4">
@@ -1127,6 +1412,7 @@ export default function QuotationsPage() {
               </div>
             </div>
           )}
+
           {/* PDF Viewer Modal */}
           {viewerPdfUrl && (
             <PdfViewerModal
@@ -1141,11 +1427,11 @@ export default function QuotationsPage() {
                 return (
                   <>
                     <Link href={`/invoices/new?copyFromQuotation=${activeQuotation.id}`}>
-                      <button onClick={closePdfViewer} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-highest/50 hover:bg-purple-400/10 hover:text-purple-400 border border-transparent hover:border-purple-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Convert to Invoice">
+                      <button onClick={closePdfViewer} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface/50 hover:bg-purple-400/10 hover:text-purple-400 border border-transparent hover:border-purple-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Convert to Invoice">
                         <span className="material-symbols-outlined text-[20px]">receipt_long</span>
                       </button>
                     </Link>
-                    <button onClick={() => handleSend(activeQuotation.id)} disabled={isSendingId === activeQuotation.id} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-highest/50 hover:bg-emerald-400/10 hover:text-emerald-400 border border-transparent hover:border-emerald-400/20 text-on-surface-variant transition-all cursor-pointer tooltip disabled:opacity-50 disabled:cursor-not-allowed" title="Send">
+                    <button onClick={() => handleSend(activeQuotation.id)} disabled={isSendingId === activeQuotation.id} className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface/50 hover:bg-emerald-400/10 hover:text-emerald-400 border border-transparent hover:border-emerald-400/20 text-on-surface-variant transition-all cursor-pointer tooltip disabled:opacity-50 disabled:cursor-not-allowed" title="Send">
                       {isSendingId === activeQuotation.id ? <span className="material-symbols-outlined text-[20px] animate-spin">refresh</span> : <span className="material-symbols-outlined text-[20px]">send</span>}
                     </button>
                     <button
@@ -1157,7 +1443,7 @@ export default function QuotationsPage() {
                           followUpDate: activeQuotation.followUpDate ? new Date(activeQuotation.followUpDate).toISOString().split('T')[0] : ''
                         });
                       }}
-                      className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container-highest/50 hover:bg-amber-400/10 hover:text-amber-400 border border-transparent hover:border-amber-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Notes & Reminder">
+                      className="w-10 h-10 flex items-center justify-center rounded-xl bg-surface/50 hover:bg-amber-400/10 hover:text-amber-400 border border-transparent hover:border-amber-400/20 text-on-surface-variant transition-all cursor-pointer tooltip" title="Notes & Reminder">
                       <span className="material-symbols-outlined text-[20px]">sticky_note_2</span>
                     </button>
                   </>
@@ -1170,7 +1456,7 @@ export default function QuotationsPage() {
           <footer className="relative z-10 w-full opacity-40 text-center flex items-center justify-center gap-4 mt-8">
             <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-on-surface-variant to-transparent"></div>
             <p className="text-xs font-bold tracking-[0.2em] text-on-surface-variant uppercase">
-              BillTea
+              BillTea • Quotations
             </p>
             <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-on-surface-variant to-transparent"></div>
           </footer>

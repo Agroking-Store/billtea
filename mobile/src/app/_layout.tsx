@@ -10,6 +10,8 @@ import { useThemeStore } from '../store/themeStore';
 
 SplashScreen.preventAutoHideAsync();
 
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const { isAuthenticated, isLoading, restoreToken } = useAuthStore();
@@ -56,9 +58,11 @@ export default function RootLayout() {
   const isDark = theme === 'Dark' || (theme === 'System' && colorScheme === 'dark');
 
   return (
-    <ThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <Slot />
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
+        <AnimatedSplashOverlay />
+        <Slot />
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
